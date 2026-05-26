@@ -50,8 +50,10 @@ export const BINANCE_PERIOD: Record<string, string> = {
   "1D": "1d",
 }
 
+import { ENV } from "../../../app/config/env"
+
 const BINANCE_BASE = "https://api.binance.com"
-const GMX_BASE = import.meta.env.VITE_ORACLE_URL ?? "https://arbitrum-api.gmxinfra.io"
+const GMX_BASE = ENV.ORACLE_URL
 
 // GMX v2 price decimals: rawPrice = usdPrice × 10^(30 − tokenDecimals)
 const TOKEN_DECIMALS: Record<string, number> = {
