@@ -6,7 +6,7 @@ function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}…`
 }
 
-export function ConnectButton() {
+export function ConnectButton({ compactMobile = false }: { compactMobile?: boolean }) {
   const { address, status, connect, disconnect } = useWallet()
   const [open, setOpen] = useState(false)
   const [walletModalOpen, setWalletModalOpen] = useState(false)
@@ -120,7 +120,12 @@ export function ConnectButton() {
           aria-controls={open ? dropdownId : undefined}
         >
           <span className="mr-1.5 inline-block size-2 rounded-full bg-green-500" />
-          {shortenAddress(address)}
+          <span className={compactMobile ? "hidden sm:inline" : ""}>{shortenAddress(address)}</span>
+          {compactMobile && (
+            <span className="sm:hidden" aria-hidden="true">
+              Wallet
+            </span>
+          )}
         </Button>
         {open && (
           <div
@@ -202,7 +207,12 @@ export function ConnectButton() {
         aria-expanded={walletModalOpen}
         aria-controls={walletModalOpen ? "wallet-connect-dialog" : undefined}
       >
-        Connect
+        <span className={compactMobile ? "hidden sm:inline" : ""}>Connect</span>
+        {compactMobile && (
+          <span className="sm:hidden" aria-hidden="true">
+            Wallet
+          </span>
+        )}
       </Button>
 
       {walletModalOpen && (

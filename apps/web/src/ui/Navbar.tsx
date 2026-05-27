@@ -114,7 +114,7 @@ export function Navbar({ variant }: Props) {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <ConnectButton />
+          <ConnectButton compactMobile />
           {!isApp && (
             <Button
               variant="default"
