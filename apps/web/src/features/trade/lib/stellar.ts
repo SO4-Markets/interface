@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { formatUsd } from "@/shared/lib/format"
 import { explorerTxUrl, NETWORK } from "@/app/config/network"
 import { queryClient } from "@/app/providers/QueryProvider"
+import { MARKETS } from "../data/markets"
 import {
   buildCreateOrderTransaction,
   buildCancelOrderTransaction,
@@ -143,15 +144,42 @@ export async function createDecreaseOrder(params: DecreaseOrderParams): Promise<
 
 /** Swap one token for another */
 export async function createSwapOrder(params: SwapOrderParams): Promise<string> {
+  if (!isValidAccount(params.account)) {
+    throw new Error("Connect your wallet before placing an order.")
+  }
+
+  const knownMarketAddresses = new Set(MARKETS.map((m) => m.address))
+  const invalidPools = params.swapPath.filter((addr) => !knownMarketAddresses.has(addr))
+  if (invalidPools.length > 0) {
+    throw new Error(`Invalid swap path: unknown pool address(es): ${invalidPools.join(", ")}`)
+  }
+
   const toastId = toast.loading(`Swapping ${params.fromToken} → ${params.toToken}…`)
-  await fakeTxDelay()
 
-  toast.success(`Swap submitted`, {
-    id: toastId,
-    description: `${params.amountIn} ${params.fromToken} → ${params.minAmountOut} ${params.toToken} (not real)`,
-  })
+  try {
+    const contractParams = toSwapOrderParams(params)
+    const tx = await buildSwapOrderTransaction(contractParams)
+    const signedXdr = await prepareAndSign(tx, walletKit, NETWORK.networkPassphrase)
+    const { hash } = await sendAndPoll(signedXdr)
 
-  return "DUMMY_TX_HASH"
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.tokenBalances(CHAIN_ID, params.account),
+    })
+
+    toast.success(`Swap submitted`, {
+      id: toastId,
+      description: `${params.amountIn} ${params.fromToken} → ${params.minAmountOut} ${params.toToken} | Tx: ${hash.slice(0, 8)}…`,
+      action: {
+        label: "View on Stellar Expert",
+        onClick: () => window.open(explorerTxUrl(hash), "_blank", "noopener,noreferrer"),
+      },
+    })
+
+    return hash
+  } catch (error) {
+    toast.error(parseSorobanError(error), { id: toastId })
+    throw error
+  }
 }
 
 /** Cancel a pending limit/trigger order */
