@@ -3,6 +3,7 @@ import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk"
 import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter"
 import { HANA_ID } from "@creit.tech/stellar-wallets-kit/modules/hana"
 import { XBULL_ID } from "@creit.tech/stellar-wallets-kit/modules/xbull"
+
 import { QRCodeSVG } from "qrcode.react"
 
 import { Button } from "@workspace/ui/components/button"
@@ -385,7 +386,7 @@ function Spinner() {
   )
 }
 
-function formatAddress(address: string) {
+export function formatAddress(address: string) {
   if (address.length <= 12) {
     return address
   }

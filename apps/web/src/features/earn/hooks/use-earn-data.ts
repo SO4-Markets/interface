@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { GLV_VAULTS, GM_POOLS } from "../data/pools"
+import { useRewardsAccrued, useStakingInfo } from "../queries"
+import { fromSorobanAmount } from "@/shared/lib/bignum"
 
 export type EarnStats = {
   totalInvestmentUsd: number
@@ -34,34 +36,30 @@ export type UserSO4Stats = {
 }
 
 export function useEarnStats() {
-  return useQuery<EarnStats>({
-    queryKey: ["earn", "stats"],
-    queryFn: async (): Promise<EarnStats> => {
-      // TODO: Fetch from Stellar Soroban contracts:
-      //   - StakingReader.getUserInfo(account) → stakedAmount, esSO4, MPs
-      //   - RewardsDistributor.getPendingRewards(account) → esSO4Pending, nativePending
-      //   - Convert all balances to USD via PriceOracle
-      //   - stakingPowerSharePct = userBoostedStake / totalBoostedStake * 100
-      return {
-        totalInvestmentUsd: 0,
-        totalEarnedUsd: 0,
-        totalPendingRewardsUsd: 0,
-        stakingPowerSharePct: 0,
-      }
-    },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
-  })
+  const stakingInfo = useStakingInfo()
+  const rewardsAccrued = useRewardsAccrued()
+  const stakedSO4 = fromSorobanAmount(stakingInfo.data?.stakedSO4 ?? 0n, 7)
+  const stakedEsSO4 = fromSorobanAmount(stakingInfo.data?.stakedEsSO4 ?? 0n, 7)
+  const pendingEsSO4 = fromSorobanAmount(rewardsAccrued.data?.pendingEsSO4 ?? 0n, 7)
+  const pendingWethFees = fromSorobanAmount(rewardsAccrued.data?.pendingWethFees ?? 0n, 7)
+  const boostedStake = stakedSO4 + stakedEsSO4 + fromSorobanAmount(stakingInfo.data?.stakedMultiplierPoints ?? 0n, 7)
+
+  return {
+    ...stakingInfo,
+    data: {
+      totalInvestmentUsd: stakedSO4 + stakedEsSO4,
+      totalEarnedUsd: 0,
+      totalPendingRewardsUsd: pendingEsSO4 + pendingWethFees,
+      stakingPowerSharePct: boostedStake > 0 ? 100 : 0,
+    } satisfies EarnStats,
+    isLoading: stakingInfo.isLoading || rewardsAccrued.isLoading,
+  }
 }
 
 export function useUserGmPositions() {
   return useQuery<Array<UserGmPosition>>({
     queryKey: ["earn", "gm-positions"],
     queryFn: async (): Promise<Array<UserGmPosition>> => {
-      // TODO: For each pool in GM_POOLS:
-      //   const balance = await SyntheticsReader.getMarketTokenBalance(pool.address, account)
-      //   const price = await SyntheticsReader.getMarketTokenPrice(pool.address)
-      //   return only pools where balance > 0
       return []
     },
     staleTime: 20_000,
@@ -73,10 +71,6 @@ export function useUserGlvPositions() {
   return useQuery<Array<UserGlvPosition>>({
     queryKey: ["earn", "glv-positions"],
     queryFn: async (): Promise<Array<UserGlvPosition>> => {
-      // TODO: For each vault in GLV_VAULTS:
-      //   const balance = await GlvReader.getGlvTokenBalance(vault.address, account)
-      //   const price = await GlvReader.getGlvTokenPrice(vault.address)
-      //   return only vaults where balance > 0
       return []
     },
     staleTime: 20_000,
@@ -85,29 +79,21 @@ export function useUserGlvPositions() {
 }
 
 export function useUserSO4Stats() {
-  return useQuery<UserSO4Stats>({
-    queryKey: ["earn", "so4-stats"],
-    queryFn: async (): Promise<UserSO4Stats> => {
-      // TODO: Call StakingReader.getUserInfo(account) on Soroban:
-      //   walletBalance: SO4 balance from Stellar Horizon account endpoint
-      //   stakedAmount: tokens locked in RewardTracker contract
-      //   esSO4Balance: non-transferable escrowed token balance
-      //   multiplierPoints: boost points from continuous staking duration
-      return {
-        walletBalance: 0,
-        stakedAmount: 0,
-        stakedValueUsd: 0,
-        esSO4Balance: 0,
-        multiplierPoints: 0,
-      }
-    },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
-  })
+  const stakingInfo = useStakingInfo()
+  const stakedAmount = fromSorobanAmount(stakingInfo.data?.stakedSO4 ?? 0n, 7)
+
+  return {
+    ...stakingInfo,
+    data: {
+      walletBalance: 0,
+      stakedAmount,
+      stakedValueUsd: stakedAmount,
+      esSO4Balance: fromSorobanAmount(stakingInfo.data?.stakedEsSO4 ?? 0n, 7),
+      multiplierPoints: fromSorobanAmount(stakingInfo.data?.stakedMultiplierPoints ?? 0n, 7),
+    } satisfies UserSO4Stats,
+  }
 }
 
 export function usePoolsApy() {
-  // TODO: Replace static APY with usePerformanceAnnualized({ period: "30d" }) equivalent:
-  //   reads historical fee snapshots from DataStore and annualizes over the chosen window
   return { gmPools: GM_POOLS, glvVaults: GLV_VAULTS }
 }

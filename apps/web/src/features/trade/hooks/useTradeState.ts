@@ -9,8 +9,8 @@
 //     once state complexity grows — see GMX's SyntheticsStateContext pattern
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { MARKETS, getMarketsForIndexToken } from "../data/markets"
-import { INDEX_TOKENS, STABLE_TOKENS } from "../data/tokens"
+import { useMarkets } from "./useMarkets"
+import { useTokenList } from "./useTokenList"
 
 export type TradeType = "Long" | "Short" | "Swap"
 export type TradeMode = "Market" | "Limit" | "Trigger"
@@ -94,6 +94,8 @@ function saveToStorage(state: TradeState) {
 }
 
 export function useTradeState() {
+  const { markets, getMarketsForIndexToken } = useMarkets()
+  const { indexTokens, stableTokens } = useTokenList()
   const [state, setState] = useState<TradeState>(loadFromStorage)
 
   // Persist every change
@@ -131,7 +133,7 @@ export function useTradeState() {
   // Markets available for the selected index token
   const availableMarkets = useMemo(
     () => getMarketsForIndexToken(state.toTokenAddress),
-    [state.toTokenAddress],
+    [getMarketsForIndexToken, state.toTokenAddress],
   )
 
   // When trade type changes, reset mode if unavailable
@@ -156,19 +158,21 @@ export function useTradeState() {
   // When index token changes, pick first available market and set default collaterals
   const setToTokenAddress = useCallback(
     (address: string) => {
-      const markets = getMarketsForIndexToken(address)
-      const marketAddress = markets[0]?.address ?? state.marketAddress
-      const market = markets[0]
+      const marketsList = getMarketsForIndexToken(address)
+      const market = marketsList[0]
+      const marketAddress = market?.address ?? state.marketAddress
 
       const collaterals = { ...state.collaterals }
-      collaterals[market.address] = {
-        long: market.longTokenAddress,
-        short: market.shortTokenAddress,
+      if (market) {
+        collaterals[market.address] = {
+          long: market.longTokenAddress,
+          short: market.shortTokenAddress,
+        }
       }
 
       update({ toTokenAddress: address, marketAddress, collaterals })
     },
-    [state.marketAddress, state.collaterals, update],
+    [state.marketAddress, state.collaterals, getMarketsForIndexToken, update],
   )
 
   // Set collateral for the active market + direction
@@ -232,9 +236,9 @@ export function useTradeState() {
     tradeFlags,
     availableTradeModes,
     availableMarkets,
-    indexTokens: INDEX_TOKENS,
-    stableTokens: STABLE_TOKENS,
-    allMarkets: MARKETS,
+    indexTokens,
+    stableTokens,
+    allMarkets: markets,
     // Setters
     setTradeType,
     setTradeMode: (tradeMode: TradeMode) => update({ tradeMode }),

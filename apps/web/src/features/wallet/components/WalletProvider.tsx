@@ -36,14 +36,14 @@ export function WalletProvider({
 
     try {
       await walletKit.setWallet(walletId)
-      const address = await walletKit.getAddress()
+      const connectedAddress = await walletKit.getAddress()
 
-      if (!address) {
+      if (!connectedAddress) {
         setStatus("error")
         throw new Error("Failed to retrieve wallet address")
       }
 
-      setConnected(address, walletId)
+      setConnected(connectedAddress, walletId)
     } catch (error) {
       setStatus("error")
       throw error instanceof Error ? error : new Error("Wallet connection failed")
@@ -55,9 +55,7 @@ export function WalletProvider({
     setDisconnected()
   }
 
-  const signTransaction = async (xdr: string) => {
-    return walletKit.signTransaction(xdr)
-  }
+  const signTransaction = async (xdr: string) => walletKit.signTransaction(xdr)
 
   const contextValue = useMemo(
     () => ({ walletKit, address, walletId, status, connect, disconnect, signTransaction }),
@@ -71,28 +69,4 @@ export function useWalletContext() {
   const ctx = useContext(WalletContext)
   if (!ctx) throw new Error("useWallet must be used within WalletProvider")
   return ctx
-import { useEffect } from "react"
-import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk"
-import { useWalletStore } from "../store/wallet-store"
-
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const { address, setConnected, setDisconnected } = useWalletStore()
-
-  useEffect(() => {
-    if (!address) return
-
-    StellarWalletsKit.getAddress()
-      .then(({ address: liveAddress }) => {
-        if (liveAddress === address) {
-          setConnected(liveAddress, "kit")
-        } else {
-          setDisconnected()
-        }
-      })
-      .catch(() => {
-        setDisconnected()
-      })
-  }, [address, setConnected, setDisconnected])
-
-  return <>{children}</>
 }

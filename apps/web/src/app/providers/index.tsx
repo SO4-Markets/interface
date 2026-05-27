@@ -1,9 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useRef } from "react"
+import { Component, createContext, useCallback, useContext, useEffect, useRef } from "react"
 import { QueryProvider } from "./QueryProvider"
-import type { ReactNode } from "react"
+import type { ErrorInfo, ReactNode } from "react"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { NETWORK } from "@/app/config/network"
 import { ThemeProvider } from "@/ui/theme-provider"
+import { ErrorPage } from "@/app/error-page"
 
 export type WalletStatus = "disconnected" | "connecting" | "connected" | "error"
 
@@ -97,12 +98,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   )
 }
 
+type ErrorBoundaryState = { hasError: boolean }
+
+class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[ErrorBoundary]", error, info.componentStack)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorPage onReset={() => this.setState({ hasError: false })} />
+    }
+    return this.props.children
+  }
+}
+
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <QueryProvider>
-      <WalletProvider>
-        <ThemeProvider>{children}</ThemeProvider>
-      </WalletProvider>
-    </QueryProvider>
+    <ErrorBoundary>
+      <QueryProvider>
+        <WalletProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </WalletProvider>
+      </QueryProvider>
+    </ErrorBoundary>
   )
 }

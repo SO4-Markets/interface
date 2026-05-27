@@ -3,8 +3,13 @@ import { CONTRACTS } from "@/app/config/contracts"
 import { i128ToScVal } from "./scval"
 
 export type StakerInfo = {
-  stakedAmount: bigint
+  stakedSO4: bigint
+  stakedEsSO4: bigint
+  stakedMultiplierPoints: bigint
+  pendingEsSO4Rewards: bigint
+  pendingWethFees: bigint
   esSO4Balance: bigint
+  stakedAmount: bigint
   accruedRewards: bigint
 }
 
@@ -37,6 +42,11 @@ export class StakingRouterClient implements StakingRouterBinding {
 
   async getStakerInfo(_account: string): Promise<StakerInfo> {
     return {
+      stakedSO4: 0n,
+      stakedEsSO4: 0n,
+      stakedMultiplierPoints: 0n,
+      pendingEsSO4Rewards: 0n,
+      pendingWethFees: 0n,
       stakedAmount: 0n,
       esSO4Balance: 0n,
       accruedRewards: 0n,

@@ -7,11 +7,9 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { createIncreaseOrder, createSwapOrder } from "../../lib/stellar"
 import { formatUsd } from "../../lib/trade-math"
 import type { useTradeState } from "../../hooks/useTradeState"
-import { queryKeys } from "../../lib/query-keys"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 type Props = {
@@ -34,10 +32,10 @@ export function ConfirmationDialog({
   totalFeesUsd,
 }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const queryClient = useQueryClient()
   const account = useWalletStore((state) => state.address)
 
-  const { tradeFlags, toTokenAddress, collateralAddress, leverage, fromAmount } = tradeState
+  const { tradeFlags, toTokenAddress, collateralAddress, leverage, fromAmount, triggerPrice } =
+    tradeState
 
   async function handleConfirm() {
     setIsSubmitting(true)
@@ -53,20 +51,21 @@ export function ConfirmationDialog({
           swapPath: [],             // TODO: compute optimal swap path through liquidity pools
         })
       } else {
+        if (!account) {
+          throw new Error("Connect your wallet before placing an order.")
+        }
         await createIncreaseOrder({
-          account: account ?? "GDUMMY...STELLAR",
+          account,
           marketAddress: tradeState.marketAddress,
           collateralToken: collateralAddress,
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
-          acceptablePrice: entryPrice,    // TODO: apply slippage via applySlippageToPrice()
+          acceptablePrice: entryPrice,
+          triggerPrice: tradeFlags.isMarket ? undefined : Number(triggerPrice) || entryPrice,
           orderType: tradeFlags.isMarket ? "MarketIncrease" : "LimitIncrease",
           leverage,
         })
-        if (account) {
-          await queryClient.invalidateQueries({ queryKey: queryKeys.positions("stellar-mainnet", account) })
-        }
       }
       onClose()
     } finally {

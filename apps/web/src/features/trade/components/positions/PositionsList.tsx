@@ -1,11 +1,12 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
-import {  usePositions } from "../../hooks/usePositions"
+import { usePositions } from "../../hooks/usePositions"
+import { useFundingRate } from "../../hooks/useFundingRate"
 import { createDecreaseOrder } from "../../lib/stellar"
-import type {Position} from "../../hooks/usePositions";
+import type { Position } from "../../hooks/usePositions"
 import { formatPct, formatUsd } from "@/shared/lib/format"
 import { queryKeys } from "../../lib/query-keys"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
@@ -14,8 +15,40 @@ type Props = {
   onSelectPosition?: (position: Position) => void
 }
 
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "0m"
+  const totalSeconds = Math.floor(ms / 1000)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
+
+function useFundingCountdown(nextEpochTs: number | undefined): string {
+  const [remaining, setRemaining] = useState<number>(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (nextEpochTs === undefined) return
+
+    function tick() {
+      setRemaining(Math.max(0, nextEpochTs! - Date.now()))
+    }
+
+    tick()
+    intervalRef.current = setInterval(tick, 1000)
+
+    return () => {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current)
+    }
+  }, [nextEpochTs])
+
+  return formatCountdown(remaining)
+}
+
 export function PositionsList({ onSelectPosition }: Props) {
   const { data: positions = [], isLoading } = usePositions()
+  const { data: fundingRate } = useFundingRate()
+  const countdown = useFundingCountdown(fundingRate?.nextEpochTs)
   const account = useWalletStore((state) => state.address)
   const queryClient = useQueryClient()
   const [closing, setClosing] = useState<string | null>(null)
@@ -31,14 +64,16 @@ export function PositionsList({ onSelectPosition }: Props) {
         marketAddress: position.marketAddress,
         collateralToken: position.collateralToken,
         collateralDeltaAmount: position.collateralAmount,
-        sizeDeltaUsd: position.sizeUsd,   // full close
+        sizeDeltaUsd: position.sizeUsd, // full close
         isLong: position.isLong,
         acceptablePrice: position.markPrice,
         orderType: "MarketDecrease",
         receiveToken: position.collateralToken,
       })
       if (account) {
-        await queryClient.invalidateQueries({ queryKey: queryKeys.positions("stellar-mainnet", account) })
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.positions("stellar-mainnet", account),
+        })
       }
     } finally {
       setClosing(null)
@@ -74,6 +109,7 @@ export function PositionsList({ onSelectPosition }: Props) {
             <th className="px-4 py-2">Mark</th>
             <th className="px-4 py-2">Liq.</th>
             <th className="px-4 py-2">PnL</th>
+            <th className="px-4 py-2">Next Funding</th>
             <th className="px-4 py-2" />
           </tr>
         </thead>
@@ -107,6 +143,9 @@ export function PositionsList({ onSelectPosition }: Props) {
                   {p.pnl >= 0 ? "+" : ""}
                   {formatUsd(p.pnl)} ({formatPct(p.pnlPercent)})
                 </span>
+              </td>
+              <td className="px-4 py-2 font-mono tabular-nums text-muted-foreground">
+                {countdown}
               </td>
               <td className="px-4 py-2">
                 <Button
