@@ -1,4 +1,7 @@
 import { useState, type ComponentProps } from "react"
+import { FREIGHTER_ID } from "@creit.tech/stellar-wallets-kit/modules/freighter.module"
+import { HANA_ID } from "@creit.tech/stellar-wallets-kit/modules/hana.module"
+import { XBULL_ID } from "@creit.tech/stellar-wallets-kit/modules/xbull.module"
 
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -16,6 +19,31 @@ type ConnectButtonProps = Omit<
   ComponentProps<typeof Button>,
   "aria-label" | "children" | "onClick" | "type"
 >
+
+type WalletOption = {
+  id: string
+  name: string
+  installUrl: string
+}
+
+const WALLET_OPTIONS: WalletOption[] = [
+  {
+    id: FREIGHTER_ID,
+    name: "Freighter",
+    installUrl: "https://freighter.app",
+  },
+  {
+    id: XBULL_ID,
+    name: "xBull",
+    installUrl: "https://xbull.app",
+  },
+  {
+    id: HANA_ID,
+    name: "Hana",
+    installUrl:
+      "https://chromewebstore.google.com/detail/hana-wallet/jfdlamikmbghhapbgfoogdffldioobgl",
+  },
+]
 
 export function ConnectButton({ className, ...props }: ConnectButtonProps) {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
