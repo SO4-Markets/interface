@@ -1,29 +1,37 @@
-// Calculates all fees for the current trade before submission
-// TODO: Replace with real values from Soroban DataStore once contracts are deployed.
-//   Fee sources:
-//     - positionFeeFactor    (DataStore: positionFeeFactorKey(market, isIncrease))
-//     - priceImpact          (computed from pool balance + positionImpactFactor)
-//     - executionFee         (dynamic gas estimate from Soroban)
-//     - borrowingFee         (only for existing positions on increase)
+import { useQuery } from "@tanstack/react-query"
+import { fetchFeeConfig } from "../lib/data-store"
+import { queryKeys } from "../lib/query-keys"
+import { useTokenPrices } from "./useTokenPrices"
+
+const PRICE_IMPACT_BPS = 5
 
 export type TradeFees = {
-  positionFeeUsd: number       // open/close fee (basis points of size)
-  priceImpactUsd: number       // market impact (positive = rebate, negative = cost)
-  executionFeeUsd: number      // keeper execution gas cost
+  positionFeeUsd: number
+  priceImpactUsd: number
+  executionFeeUsd: number
   totalFeesUsd: number
   feesBreakdown: { label: string; valueUsd: number }[]
 }
 
-// TODO: Read positionFeeFactor from useMarketsInfo once DataStore read is live
-const POSITION_FEE_BPS = 10   // 0.1% — GMX-style
-const PRICE_IMPACT_BPS = 5    // 0.05% — simplified placeholder
+const CHAIN_ID = "stellar-mainnet"
 
 export function useTradeFees(params: {
   sizeUsd: number
   marketAddress: string
   isIncrease: boolean
+  tradeType?: "Long" | "Short" | "Swap"
 }): TradeFees {
-  const { sizeUsd } = params
+  const { sizeUsd, marketAddress, tradeType = "Long" } = params
+
+  const { data: feeConfig } = useQuery({
+    queryKey: queryKeys.feeConfig(CHAIN_ID, marketAddress),
+    queryFn: () => fetchFeeConfig(marketAddress),
+    staleTime: 120_000,
+    enabled: !!marketAddress,
+  })
+
+  const { getMidPrice } = useTokenPrices()
+  const xlmPrice = getMidPrice("XLM")
 
   if (!sizeUsd || sizeUsd <= 0) {
     return {
@@ -35,11 +43,16 @@ export function useTradeFees(params: {
     }
   }
 
-  // TODO: Compute real price impact from pool balance imbalance
-  const positionFeeUsd = (sizeUsd * POSITION_FEE_BPS) / 10_000
-  const priceImpactUsd = -(sizeUsd * PRICE_IMPACT_BPS) / 10_000   // negative = cost
-  // TODO: Estimate execution fee from current Stellar network base fee
-  const executionFeeUsd = 0.05
+  const feeBps =
+    tradeType === "Swap"
+      ? (feeConfig?.swapFeeBps ?? 10)
+      : (feeConfig?.positionFeeBps ?? 10)
+
+  const executionFeeXlm = feeConfig?.minExecutionFeeXlm ?? 0.3
+  const executionFeeUsd = executionFeeXlm * (xlmPrice || 0.17)
+
+  const positionFeeUsd = (sizeUsd * feeBps) / 10_000
+  const priceImpactUsd = -(sizeUsd * PRICE_IMPACT_BPS) / 10_000
 
   const totalFeesUsd = positionFeeUsd + Math.abs(priceImpactUsd) + executionFeeUsd
 
@@ -49,7 +62,7 @@ export function useTradeFees(params: {
     executionFeeUsd,
     totalFeesUsd,
     feesBreakdown: [
-      { label: "Position fee", valueUsd: positionFeeUsd },
+      { label: tradeType === "Swap" ? "Swap fee" : "Position fee", valueUsd: positionFeeUsd },
       { label: "Price impact", valueUsd: priceImpactUsd },
       { label: "Execution fee", valueUsd: executionFeeUsd },
     ],

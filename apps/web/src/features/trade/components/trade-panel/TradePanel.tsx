@@ -36,7 +36,7 @@ export function TradePanel() {
   const collateralUsd = parseFloat(fromAmount || "0") * getMidPrice(collateralAddress)
   const sizeUsd = tradeFlags.isSwap ? collateralUsd : sizeFromCollateralAndLeverage(collateralUsd, leverage)
 
-  const fees = useTradeFees({ sizeUsd, marketAddress, isIncrease: true })
+  const fees = useTradeFees({ sizeUsd, marketAddress, isIncrease: true, tradeType })
 
   const liquidationPrice = useMemo(() => {
     if (!tradeFlags.isPosition || sizeUsd <= 0 || entryPrice <= 0) return 0

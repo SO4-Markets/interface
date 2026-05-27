@@ -26,6 +26,7 @@ export function TradeInfoRows({
     sizeUsd,
     marketAddress,
     isIncrease: true,
+    tradeType,
   })
 
   const isLong = tradeType === "Long"

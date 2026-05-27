@@ -22,6 +22,10 @@ export const queryKeys = {
   orders: (chainId: string, account: string) =>
     ["orders", chainId, account] as const,
 
+  // Fee parameters from DataStore
+  feeConfig: (chainId: string, marketAddress: string) =>
+    ["feeConfig", chainId, marketAddress] as const,
+
   // Trade history
   tradeHistory: (chainId: string, account: string, page: number) =>
     ["tradeHistory", chainId, account, page] as const,
