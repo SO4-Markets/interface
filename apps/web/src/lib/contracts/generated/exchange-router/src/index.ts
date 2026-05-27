@@ -72,3 +72,50 @@ export function createOrderArgs(params: CreateOrderParams): Array<xdr.ScVal> {
     optionalScVal(params.receiveToken, addressScVal),
   ]
 }
+
+export function orderKeyScVal(key: OrderKey): xdr.ScVal {
+  return xdr.ScVal.scvMap([
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol("account"),
+      val: addressScVal(key.account),
+    }),
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol("index"),
+      val: u64ScVal(key.index),
+    }),
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol("market"),
+      val: addressScVal(key.market),
+    }),
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol("order_type"),
+      val: symbolScVal(key.orderType),
+    }),
+  ])
+}
+
+export function cancelOrderArgs(account: string, key: OrderKey): Array<xdr.ScVal> {
+  return [addressScVal(account), orderKeyScVal(key)]
+}
+
+export interface SwapOrderParams {
+  account: string
+  fromToken: string
+  toToken: string
+  amountIn: bigint
+  minAmountOut: bigint
+  swapPath: Array<string>
+  executionFee: bigint
+}
+
+export function swapOrderArgs(params: SwapOrderParams): Array<xdr.ScVal> {
+  return [
+    addressScVal(params.account),
+    addressScVal(params.fromToken),
+    addressScVal(params.toToken),
+    i128ScVal(params.amountIn),
+    i128ScVal(params.minAmountOut),
+    xdr.ScVal.scvVec(params.swapPath.map(addressScVal)),
+    i128ScVal(params.executionFee),
+  ]
+}

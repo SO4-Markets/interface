@@ -1,8 +1,8 @@
 import { toSorobanAmount } from "@/shared/lib/bignum"
 import { getMarket } from "../data/markets"
 import { getToken } from "../data/tokens"
-import type { CreateOrderParams } from "@/lib/contracts/generated/exchange-router/src"
-import type { IncreaseOrderParams } from "./stellar"
+import type { CreateOrderParams, SwapOrderParams as ContractSwapParams } from "@/lib/contracts/generated/exchange-router/src"
+import type { IncreaseOrderParams, DecreaseOrderParams, SwapOrderParams } from "./stellar"
 
 const USD_DECIMALS = 30
 const XLM_DECIMALS = 7
@@ -58,5 +58,43 @@ export function toCreateOrderParams(params: IncreaseOrderParams): CreateOrderPar
     orderType: params.orderType,
     executionFee: encodeExecutionFeeXlm(),
     receiveToken: null,
+  }
+}
+
+/** Map UI decrease-order params to ExchangeRouter.createOrder contract params. */
+export function toDecreaseOrderParams(params: DecreaseOrderParams): CreateOrderParams {
+  const market = getMarket(params.marketAddress)
+  const indexToken = market?.indexTokenAddress ?? params.marketAddress
+
+  const triggerPrice =
+    params.triggerPrice != null
+      ? encodeOraclePrice(params.triggerPrice, indexToken)
+      : null
+
+  return {
+    account: params.account,
+    market: params.marketAddress,
+    collateralToken: params.collateralToken,
+    collateralAmount: encodeTokenAmount(params.collateralDeltaAmount, params.collateralToken),
+    sizeDelta: encodeUsdAmount(params.sizeDeltaUsd),
+    isLong: params.isLong,
+    acceptablePrice: encodeOraclePrice(params.acceptablePrice, indexToken),
+    triggerPrice,
+    orderType: params.orderType,
+    executionFee: encodeExecutionFeeXlm(),
+    receiveToken: params.receiveToken,
+  }
+}
+
+/** Map UI swap-order params to ExchangeRouter.createSwapOrder contract params. */
+export function toSwapOrderParams(params: SwapOrderParams): ContractSwapParams {
+  return {
+    account: params.account,
+    fromToken: params.fromToken,
+    toToken: params.toToken,
+    amountIn: encodeTokenAmount(params.amountIn, params.fromToken),
+    minAmountOut: encodeTokenAmount(params.minAmountOut, params.toToken),
+    swapPath: params.swapPath,
+    executionFee: encodeExecutionFeeXlm(),
   }
 }
