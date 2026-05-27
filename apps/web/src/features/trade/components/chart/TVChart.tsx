@@ -1,8 +1,8 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "../../lib/query-keys"
 import { ChartHeader } from "./ChartHeader"
 import { TVChartContainer } from "./TVChartContainer"
-import { queryKeys } from "../../lib/query-keys"
 
 const PERIODS = ["1m", "5m", "15m", "1h", "4h", "1D"] as const
 type Period = (typeof PERIODS)[number]

@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { fetchOracleCandles, type OhlcBar } from "../lib/oracle"
+import {  fetchOracleCandles } from "../lib/oracle"
 import { queryKeys } from "../lib/query-keys"
+import type {OhlcBar} from "../lib/oracle";
 
 export function useOracleCandles(symbol: string | undefined, period: string) {
-  return useQuery<OhlcBar[]>({
+  return useQuery<Array<OhlcBar>>({
     queryKey: queryKeys.oracleCandles(symbol ?? "", period),
     queryFn: () => fetchOracleCandles(symbol!, period, 500),
     enabled: !!symbol,

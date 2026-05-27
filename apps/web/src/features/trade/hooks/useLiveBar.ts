@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { BINANCE_SYMBOL, BINANCE_PERIOD, fetchOracleCandles, type OhlcBar } from "../lib/oracle"
+import { BINANCE_PERIOD, BINANCE_SYMBOL,  fetchOracleCandles } from "../lib/oracle"
+import type {OhlcBar} from "../lib/oracle";
 
 type BinanceKlineMsg = {
   e: "kline"
@@ -63,10 +64,10 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
         if (!isHiddenRef.current) {
           try {
             const bars = await fetchOracleCandles(symbol!, period, 1)
-            if (mounted && bars.length > 0) setLiveBar(bars[bars.length - 1])
+            if (bars.length > 0) setLiveBar(bars[bars.length - 1])
           } catch { /* silent retry */ }
         }
-        if (mounted) pollTimerRef.current = setTimeout(tick, POLL_MS)
+        pollTimerRef.current = setTimeout(tick, POLL_MS)
       }
 
       pollTimerRef.current = setTimeout(tick, POLL_MS)

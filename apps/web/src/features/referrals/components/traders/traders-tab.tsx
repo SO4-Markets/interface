@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import { useTraderStats, type TimePeriod } from "../../hooks/use-referrals-data"
+import {  useTraderStats } from "../../hooks/use-referrals-data"
 import { setTraderReferralCode, validateReferralCode } from "../../lib/referrals"
 import { TimePeriodFilter } from "../shared/time-period-filter"
 import { StatChartCard } from "../shared/stat-chart-card"
+import type {TimePeriod} from "../../hooks/use-referrals-data";
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {

@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useUserSO4Stats } from "../../hooks/use-earn-data"
-import { vestEsSO4, compoundRewards } from "../../lib/earn"
+import { compoundRewards, vestEsSO4 } from "../../lib/earn"
 import { formatToken } from "@/shared/lib/format"
 
 

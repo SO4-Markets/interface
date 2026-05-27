@@ -1,7 +1,7 @@
 import { cn } from "@workspace/ui/lib/utils"
 import type { TimePeriod } from "../../hooks/use-referrals-data"
 
-const PERIODS: { value: TimePeriod; label: string }[] = [
+const PERIODS: Array<{ value: TimePeriod; label: string }> = [
   { value: "24h", label: "24h" },
   { value: "7d", label: "7d" },
   { value: "30d", label: "30d" },

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { GM_POOLS, GLV_VAULTS } from "../data/pools"
+import { GLV_VAULTS, GM_POOLS } from "../data/pools"
 
 export type EarnStats = {
   totalInvestmentUsd: number
@@ -55,9 +55,9 @@ export function useEarnStats() {
 }
 
 export function useUserGmPositions() {
-  return useQuery<UserGmPosition[]>({
+  return useQuery<Array<UserGmPosition>>({
     queryKey: ["earn", "gm-positions"],
-    queryFn: async (): Promise<UserGmPosition[]> => {
+    queryFn: async (): Promise<Array<UserGmPosition>> => {
       // TODO: For each pool in GM_POOLS:
       //   const balance = await SyntheticsReader.getMarketTokenBalance(pool.address, account)
       //   const price = await SyntheticsReader.getMarketTokenPrice(pool.address)
@@ -70,9 +70,9 @@ export function useUserGmPositions() {
 }
 
 export function useUserGlvPositions() {
-  return useQuery<UserGlvPosition[]>({
+  return useQuery<Array<UserGlvPosition>>({
     queryKey: ["earn", "glv-positions"],
-    queryFn: async (): Promise<UserGlvPosition[]> => {
+    queryFn: async (): Promise<Array<UserGlvPosition>> => {
       // TODO: For each vault in GLV_VAULTS:
       //   const balance = await GlvReader.getGlvTokenBalance(vault.address, account)
       //   const price = await GlvReader.getGlvTokenPrice(vault.address)

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
-import { fetch24hPriceDelta, type PriceDelta24h } from "../lib/oracle"
+import {  fetch24hPriceDelta } from "../lib/oracle"
 import { queryKeys } from "../lib/query-keys"
+import type {PriceDelta24h} from "../lib/oracle";
 
 export function usePriceDelta24h(symbol: string | undefined) {
   return useQuery<PriceDelta24h | null>({

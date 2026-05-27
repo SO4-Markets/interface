@@ -1,11 +1,11 @@
 import { useState } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { Navbar } from "../../../ui/Navbar"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
+import { useAffiliateStats, useTraderStats } from "../hooks/use-referrals-data"
 import { TradersTab } from "./traders/traders-tab"
 import { AffiliatesTab } from "./affiliates/affiliates-tab"
 import { DistributionsTab } from "./distributions/distributions-tab"
 import { ReferralsSidebar } from "./referrals-sidebar"
-import { useTraderStats, useAffiliateStats } from "../hooks/use-referrals-data"
 
 type ReferralsTab = "traders" | "affiliates" | "distributions"
 

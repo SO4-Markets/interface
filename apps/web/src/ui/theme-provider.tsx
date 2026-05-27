@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import {  createContext, useContext, useEffect, useState } from "react"
+import type {ReactNode} from "react";
 
 export type Theme = "dark" | "light" | "system"
 
@@ -24,7 +25,7 @@ function resolve(theme: Theme): "dark" | "light" {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === "undefined") return "system"
-    return (localStorage.getItem(STORAGE_KEY) as Theme) ?? "system"
+    return (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "system"
   })
 
   const setTheme = (next: Theme) => {

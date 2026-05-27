@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react"
-import { MARKETS, type Market } from "../../data/markets"
+import { useEffect, useRef, useState } from "react"
+import { MARKETS  } from "../../data/markets"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { usePriceDelta24h } from "../../hooks/usePriceDelta24h"
+import type {Market} from "../../data/markets";
 import { formatUsd } from "@/shared/lib/format"
 
 type Props = {

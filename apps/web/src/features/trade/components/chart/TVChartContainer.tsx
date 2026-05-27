@@ -1,21 +1,22 @@
 import {
-  createChart,
-  ColorType,
+  
   CandlestickSeries,
-  type IChartApi,
-  type ISeriesApi,
-  type IPriceLine,
-  type CandlestickData,
-  type UTCTimestamp,
-  LineStyle,
+  ColorType,
   CrosshairMode,
+  
+  
+  
+  LineStyle,
+  
+  createChart
 } from "lightweight-charts"
 import { useEffect, useRef } from "react"
+import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
 import { usePositions } from "../../hooks/usePositions"
+import type {CandlestickData, IChartApi, IPriceLine, ISeriesApi, UTCTimestamp} from "lightweight-charts";
 import type { OhlcBar } from "../../lib/oracle"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 
 const CHART_COLORS = {
   dark: {
@@ -194,10 +195,10 @@ export function TVChartContainer({ symbol, period }: Props) {
     if (!seriesRef.current) return
 
     // Build the desired set of lines from open positions
-    const desiredLines: ChartLine[] = positions
+    const desiredLines: Array<ChartLine> = positions
       .filter((p) => p.indexToken === symbol)
       .flatMap((p) => {
-        const lines: ChartLine[] = [
+        const lines: Array<ChartLine> = [
           {
             id: `${p.key}-entry`,
             title: `${p.isLong ? "Long" : "Short"} Entry`,

@@ -2,9 +2,10 @@ import { useState } from "react"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
-import { usePositions, type Position } from "../../hooks/usePositions"
+import {  usePositions } from "../../hooks/usePositions"
 import { createDecreaseOrder } from "../../lib/stellar"
-import { formatUsd, formatPct } from "@/shared/lib/format"
+import type {Position} from "../../hooks/usePositions";
+import { formatPct, formatUsd } from "@/shared/lib/format"
 
 type Props = {
   onSelectPosition?: (position: Position) => void

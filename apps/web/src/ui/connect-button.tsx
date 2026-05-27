@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { useWallet } from "@/app/providers"
 

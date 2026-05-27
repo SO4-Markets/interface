@@ -10,7 +10,7 @@ export type TradeFees = {
   priceImpactUsd: number
   executionFeeUsd: number
   totalFeesUsd: number
-  feesBreakdown: { label: string; valueUsd: number }[]
+  feesBreakdown: Array<{ label: string; valueUsd: number }>
 }
 
 const CHAIN_ID = "stellar-mainnet"

@@ -78,9 +78,9 @@ export function useAffiliateStats(period: TimePeriod = "total") {
 }
 
 export function useAffiliateReferrals() {
-  return useQuery<AffiliateReferral[]>({
+  return useQuery<Array<AffiliateReferral>>({
     queryKey: ["referrals", "affiliate-referrals"],
-    queryFn: async (): Promise<AffiliateReferral[]> => {
+    queryFn: async (): Promise<Array<AffiliateReferral>> => {
       // TODO: Query Stellar subgraph / event log:
       //   - Filter ReferralCodeUpdated events where affiliate === account
       //   - Join with per-address trading stats for volume + commission
@@ -91,9 +91,9 @@ export function useAffiliateReferrals() {
 }
 
 export function useDistributions() {
-  return useQuery<DistributionEntry[]>({
+  return useQuery<Array<DistributionEntry>>({
     queryKey: ["referrals", "distributions"],
-    queryFn: async (): Promise<DistributionEntry[]> => {
+    queryFn: async (): Promise<Array<DistributionEntry>> => {
       // TODO: Query RewardDistributor events on Stellar:
       //   - Filter DistributionClaimed where affiliate === account
       //   - Group by epoch (weekly), include txHash for explorer link

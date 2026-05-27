@@ -1,9 +1,9 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "sonner"
+import appCss from "@workspace/ui/globals.css?url"
 import { ThemeProvider } from "../ui/theme-provider"
 import { WalletProvider } from "../app/providers"
-import appCss from "@workspace/ui/globals.css?url"
 
 const queryClient = new QueryClient({
   defaultOptions: {

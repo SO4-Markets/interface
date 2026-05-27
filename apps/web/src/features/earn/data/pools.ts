@@ -14,7 +14,7 @@ export type GlvVault = {
   id: string
   name: string
   displayPair: string
-  underlyingPools: string[]
+  underlyingPools: Array<string>
   apy: number
   tvlUsd: number
 }
@@ -22,7 +22,7 @@ export type GlvVault = {
 // TODO: Replace static APY + TVL with live data from:
 //   - PerformanceTracker.getAnnualizedReturn(poolAddress, "30d") on Soroban
 //   - SyntheticsReader.getMarketTokenPrice × totalSupply for TVL
-export const GM_POOLS: GmPool[] = [
+export const GM_POOLS: Array<GmPool> = [
   {
     id: "gm-btc-usdc",
     name: "BTC/USD",
@@ -56,7 +56,7 @@ export const GM_POOLS: GmPool[] = [
 ]
 
 // TODO: GLV vault APY aggregates underlying GM pool performance weighted by allocation
-export const GLV_VAULTS: GlvVault[] = [
+export const GLV_VAULTS: Array<GlvVault> = [
   {
     id: "glv-btc-usdc",
     name: "GLV",

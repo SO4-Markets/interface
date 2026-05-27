@@ -2,7 +2,7 @@ import { useState } from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { Button } from "@workspace/ui/components/button"
 import { GLV_VAULTS, GM_POOLS } from "../../data/pools"
-import { depositGM, depositGLV, buySO4 } from "../../lib/earn"
+import { buySO4, depositGLV, depositGM } from "../../lib/earn"
 import { formatPct } from "@/shared/lib/format"
 
 const TOKEN_COLORS: Record<string, string> = {
@@ -116,7 +116,7 @@ function SO4Card() {
 }
 
 function GlvCard() {
-  const vault = GLV_VAULTS[0]!
+  const vault = GLV_VAULTS[0]
   const [pending, setPending] = useState(false)
 
   async function handleEarn() {

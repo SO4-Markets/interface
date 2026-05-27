@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
-import { fetchTokenPrices, type TokenPrice } from "../lib/oracle"
+import {  fetchTokenPrices } from "../lib/oracle"
 import { queryKeys } from "../lib/query-keys"
+import type {TokenPrice} from "../lib/oracle";
 
 // TODO: Replace "stellar-mainnet" with real chainId from wallet context
 const CHAIN_ID = "stellar-mainnet"

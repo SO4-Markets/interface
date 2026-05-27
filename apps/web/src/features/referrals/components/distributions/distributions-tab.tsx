@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 
-import { useDistributions, useAffiliateStats } from "../../hooks/use-referrals-data"
+import { useAffiliateStats, useDistributions } from "../../hooks/use-referrals-data"
 import { claimDistribution } from "../../lib/referrals"
-import { formatUsd, formatToken } from "@/shared/lib/format"
+import { formatToken, formatUsd } from "@/shared/lib/format"
 
 
 

@@ -1,9 +1,10 @@
 import { cn } from "@workspace/ui/lib/utils"
-import { CodeDisplay } from "./shared/code-display"
-import { FaqAccordion, type FaqItem } from "./shared/faq-accordion"
 import { getTierByLevel } from "../data/tiers"
+import { CodeDisplay } from "./shared/code-display"
+import { FaqAccordion  } from "./shared/faq-accordion"
+import type {FaqItem} from "./shared/faq-accordion";
 
-const TRADER_FAQS: FaqItem[] = [
+const TRADER_FAQS: Array<FaqItem> = [
   {
     q: "How is my fee discount applied?",
     a: "Your discount is applied automatically to every open and close fee when you have an active referral code. No additional action is required after setting the code.",
@@ -22,7 +23,7 @@ const TRADER_FAQS: FaqItem[] = [
   },
 ]
 
-const AFFILIATE_FAQS: FaqItem[] = [
+const AFFILIATE_FAQS: Array<FaqItem> = [
   {
     q: "When do I receive commissions?",
     a: "Commissions from your referrals' trading fees are distributed weekly, every Thursday. They are paid in USDC directly to your wallet.",

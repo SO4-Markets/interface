@@ -49,7 +49,7 @@ function AccordionItem({ item }: { item: FaqItem }) {
 }
 
 type Props = {
-  items: FaqItem[]
+  items: Array<FaqItem>
   title?: string
 }
 

@@ -10,7 +10,7 @@ export type Token = {
   logoUrl?: string
 }
 
-export const TOKENS: Token[] = [
+export const TOKENS: Array<Token> = [
   {
     address: "XLM",
     symbol: "XLM",

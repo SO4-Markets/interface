@@ -1,8 +1,8 @@
 import { useTradeState } from "../hooks/useTradeState"
+import { Navbar } from "../../../ui/Navbar"
 import { TVChart } from "./chart/TVChart"
 import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
-import { Navbar } from "../../../ui/Navbar"
 
 export function TradePage() {
   const trade = useTradeState()

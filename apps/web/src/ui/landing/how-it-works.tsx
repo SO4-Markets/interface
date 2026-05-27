@@ -41,7 +41,7 @@ type TermLine = {
   ok?: string
 }
 
-function Terminal({ lines }: { lines: TermLine[] }) {
+function Terminal({ lines }: { lines: Array<TermLine> }) {
   return (
     <div className="font-mono-num mt-6 h-[90px] overflow-hidden border border-border bg-muted/20 p-3.5 text-[11px] text-muted-foreground">
       {lines.map((line, i) => (

@@ -1,5 +1,5 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { Navbar } from "../../../ui/Navbar"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
 import { PortfolioTab } from "./portfolio/portfolio-tab"
 import { DiscoverTab } from "./discover/discover-tab"
 import { AdditionalOpportunitiesTab } from "./additional/additional-opportunities-tab"

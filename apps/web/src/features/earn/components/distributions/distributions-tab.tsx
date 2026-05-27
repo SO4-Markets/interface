@@ -13,7 +13,7 @@ type DistributionRow = {
 //   - Query RewardsDistributor.Distribute events for connected account
 //   - Paginate by epoch (weekly snapshots stored in DataStore)
 //   - Fields: epochId, timestamp, tokenAmount, tokenAddress, txHash
-const MOCK_DISTRIBUTIONS: DistributionRow[] = []
+const MOCK_DISTRIBUTIONS: Array<DistributionRow> = []
 
 const STATUS_STYLES: Record<DistributionRow["status"], string> = {
   distributed: "bg-green-500/10 text-green-400 border-green-500/20",

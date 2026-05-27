@@ -9,7 +9,7 @@ export type Tier = {
   ringClass: string
 }
 
-export const TIERS: Tier[] = [
+export const TIERS: Array<Tier> = [
   {
     level: 1,
     label: "Bronze",
@@ -40,11 +40,11 @@ export const TIERS: Tier[] = [
 ]
 
 export function getTierByLevel(level: 1 | 2 | 3): Tier {
-  return TIERS[level - 1]!
+  return TIERS[level - 1]
 }
 
 export function getTierFromVolume(volumeUsd: number): Tier {
-  return [...TIERS].reverse().find((t) => volumeUsd >= t.minVolumeUsd) ?? TIERS[0]!
+  return [...TIERS].reverse().find((t) => volumeUsd >= t.minVolumeUsd) ?? TIERS[0]
 }
 
 export function getNextTier(current: 1 | 2 | 3): Tier | null {

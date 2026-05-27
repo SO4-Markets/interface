@@ -50,7 +50,7 @@ export type TradeState = {
   // Trigger price (Limit / Stop-Loss orders)
   triggerPrice: string
   // Sidecar TP/SL orders attached to the parent order
-  sidecarOrders: SidecarOrder[]
+  sidecarOrders: Array<SidecarOrder>
   // Advanced display toggles
   advanced: AdvancedOptions
 }
@@ -120,7 +120,7 @@ export function useTradeState() {
   )
 
   // Available trade modes per type (Swap can't do Trigger)
-  const availableTradeModes: TradeMode[] = useMemo(
+  const availableTradeModes: Array<TradeMode> = useMemo(
     () =>
       state.tradeType === "Swap"
         ? ["Market", "Limit"]
@@ -137,7 +137,7 @@ export function useTradeState() {
   // When trade type changes, reset mode if unavailable
   const setTradeType = useCallback(
     (tradeType: TradeType) => {
-      const modes: TradeMode[] =
+      const modes: Array<TradeMode> =
         tradeType === "Swap" ? ["Market", "Limit"] : ["Market", "Limit", "Trigger"]
       const mode = modes.includes(state.tradeMode) ? state.tradeMode : modes[0]
       update({ tradeType, tradeMode: mode })
@@ -149,8 +149,8 @@ export function useTradeState() {
   const collateralAddress = useMemo(() => {
     const marketCollaterals = state.collaterals[state.marketAddress]
     return tradeFlags.isLong
-      ? (marketCollaterals?.long ?? "USDC")
-      : (marketCollaterals?.short ?? "USDC")
+      ? (marketCollaterals.long ?? "USDC")
+      : (marketCollaterals.short ?? "USDC")
   }, [state.collaterals, state.marketAddress, tradeFlags.isLong])
 
   // When index token changes, pick first available market and set default collaterals
@@ -161,11 +161,9 @@ export function useTradeState() {
       const market = markets[0]
 
       const collaterals = { ...state.collaterals }
-      if (market) {
-        collaterals[market.address] = {
-          long: market.longTokenAddress,
-          short: market.shortTokenAddress,
-        }
+      collaterals[market.address] = {
+        long: market.longTokenAddress,
+        short: market.shortTokenAddress,
       }
 
       update({ toTokenAddress: address, marketAddress, collaterals })

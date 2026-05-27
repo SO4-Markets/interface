@@ -15,8 +15,9 @@
  *   TxTimeoutError  — transaction still NOT_FOUND after timeoutMs.
  */
 
-import { TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk"
+import { TransactionBuilder, rpc } from "@stellar/stellar-sdk"
 import { NETWORK } from "../app/config/network"
+import type { xdr } from "@stellar/stellar-sdk";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Error types
@@ -32,7 +33,7 @@ export class TxFailedError extends Error {
     /** Transaction hash. May be empty string when the error occurs before broadcast. */
     public readonly hash: string,
     /** Soroban diagnostic events (xdr.DiagnosticEvent[]) or raw fallback. */
-    public readonly diagnosticEvents: unknown[],
+    public readonly diagnosticEvents: Array<unknown>,
   ) {
     super(`Transaction ${hash} failed on-chain`)
     this.name = "TxFailedError"
@@ -169,7 +170,7 @@ function sleep(ms: number): Promise<void> {
  */
 function extractDiagnosticEvents(
   meta: xdr.TransactionMeta | undefined,
-): unknown[] {
+): Array<unknown> {
   if (!meta) return []
   try {
     return meta.v3().sorobanMeta()?.diagnosticEvents() ?? []

@@ -1,7 +1,7 @@
-import { createContext, useContext, useCallback, useEffect, useRef } from "react"
+import { createContext, useCallback, useContext, useEffect, useRef } from "react"
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit/sdk"
 import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils"
-import { Networks, KitEventType } from "@creit.tech/stellar-wallets-kit/types"
+import { KitEventType, Networks } from "@creit.tech/stellar-wallets-kit/types"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { NETWORK } from "@/app/config/network"
 

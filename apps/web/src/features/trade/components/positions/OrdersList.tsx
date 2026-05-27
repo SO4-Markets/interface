@@ -1,10 +1,10 @@
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
+import { useState } from "react"
 import { useOrders } from "../../hooks/useOrders"
 import { cancelOrder } from "../../lib/stellar"
 import { formatUsd } from "../../lib/trade-math"
-import { useState } from "react"
 
 export function OrdersList() {
   const { data: orders = [], isLoading } = useOrders()

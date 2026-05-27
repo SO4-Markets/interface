@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
-import { MARKETS, type Market } from "../data/markets"
+import { MARKETS  } from "../data/markets"
 import { queryKeys } from "../lib/query-keys"
+import type {Market} from "../data/markets";
 
 // TODO: Replace with actual Soroban RPC batch-read once contracts are deployed.
 // Equivalent to GMX's useMarketsInfo: batch-reads from SyntheticsReader + DataStore via multicall.
@@ -27,7 +28,7 @@ export type MarketInfo = Market & {
 
 const CHAIN_ID = "stellar-mainnet"
 
-async function fetchMarketsInfo(): Promise<MarketInfo[]> {
+async function fetchMarketsInfo(): Promise<Array<MarketInfo>> {
   // TODO: Replace with Soroban multicall:
   //   const reader = new SyntheticsReaderContract(READER_CONTRACT_ADDRESS)
   //   return Promise.all(MARKETS.map(m => reader.getMarketInfo(m.address)))
@@ -46,7 +47,7 @@ async function fetchMarketsInfo(): Promise<MarketInfo[]> {
 }
 
 export function useMarketsInfo() {
-  const { data, isLoading, error } = useQuery<MarketInfo[]>({
+  const { data, isLoading, error } = useQuery<Array<MarketInfo>>({
     queryKey: queryKeys.marketsInfo(CHAIN_ID),
     queryFn: fetchMarketsInfo,
     staleTime: 60_000,

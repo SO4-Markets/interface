@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
+import { useMemo, useState } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { Input } from "@workspace/ui/components/input"
 import { Button } from "@workspace/ui/components/button"
 import { Slider } from "@workspace/ui/components/slider"
@@ -8,13 +8,13 @@ import { Badge } from "@workspace/ui/components/badge"
 import { useTradeState } from "../../hooks/useTradeState"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useTradeFees } from "../../hooks/useTradeFees"
-import { TradeInfoRows } from "./TradeInfoRows"
-import { ConfirmationDialog } from "./ConfirmationDialog"
 import {
-  sizeFromCollateralAndLeverage,
   estimateLiquidationPrice,
   formatUsd,
+  sizeFromCollateralAndLeverage,
 } from "../../lib/trade-math"
+import { TradeInfoRows } from "./TradeInfoRows"
+import { ConfirmationDialog } from "./ConfirmationDialog"
 import type { TradeMode, TradeType } from "../../hooks/useTradeState"
 
 export function TradePanel() {
@@ -71,7 +71,7 @@ export function TradePanel() {
           {availableTradeModes.map((mode) => (
             <button
               key={mode}
-              onClick={() => setTradeMode(mode as TradeMode)}
+              onClick={() => setTradeMode(mode)}
               className={`rounded px-2 py-0.5 text-xs transition-colors ${
                 tradeMode === mode
                   ? "bg-muted font-medium text-foreground"

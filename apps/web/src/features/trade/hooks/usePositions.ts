@@ -25,7 +25,7 @@ export type Position = {
 // TODO: Replace with real Soroban RPC call:
 //   const reader = new SyntheticsReaderContract(READER_ADDRESS)
 //   return reader.getPositions(account, markets)
-async function fetchPositions(account: string): Promise<Position[]> {
+async function fetchPositions(account: string): Promise<Array<Position>> {
   // Dummy: returns a couple of fake open positions so the UI has something to render
   if (!account) return []
 
@@ -73,7 +73,7 @@ async function fetchPositions(account: string): Promise<Position[]> {
 const DUMMY_ACCOUNT = "GDUMMY...STELLAR"
 
 export function usePositions(account = DUMMY_ACCOUNT) {
-  return useQuery<Position[]>({
+  return useQuery<Array<Position>>({
     queryKey: queryKeys.positions("stellar-mainnet", account),
     queryFn: () => fetchPositions(account),
     enabled: !!account,

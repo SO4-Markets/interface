@@ -1,8 +1,8 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
-import { PositionsList } from "./PositionsList"
-import { OrdersList } from "./OrdersList"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { usePositions } from "../../hooks/usePositions"
 import { useOrders } from "../../hooks/useOrders"
+import { PositionsList } from "./PositionsList"
+import { OrdersList } from "./OrdersList"
 import type { Position } from "../../hooks/usePositions"
 
 // TODO: Add Trades and Claims tabs once tradeHistory + claimFundingFees are wired up

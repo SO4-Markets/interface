@@ -10,7 +10,7 @@ export type Market = {
   // TODO: add on-chain fields: openInterestLong, openInterestShort, poolAmount, etc.
 }
 
-export const MARKETS: Market[] = [
+export const MARKETS: Array<Market> = [
   {
     address: "BTC-BTC-USDC",
     name: "BTC/USD",
@@ -38,6 +38,6 @@ export function getMarket(address: string): Market | undefined {
   return MARKETS.find((m) => m.address === address)
 }
 
-export function getMarketsForIndexToken(indexTokenAddress: string): Market[] {
+export function getMarketsForIndexToken(indexTokenAddress: string): Array<Market> {
   return MARKETS.filter((m) => m.indexTokenAddress === indexTokenAddress)
 }

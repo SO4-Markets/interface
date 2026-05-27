@@ -3,7 +3,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useEarnStats } from "../../hooks/use-earn-data"
 import { claimRewards } from "../../lib/earn"
-import { formatUsd, formatPct } from "@/shared/lib/format"
+import { formatPct, formatUsd } from "@/shared/lib/format"
 
 
 

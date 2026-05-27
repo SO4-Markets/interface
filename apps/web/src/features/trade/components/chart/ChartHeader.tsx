@@ -1,7 +1,7 @@
 import { usePriceDelta24h } from "../../hooks/usePriceDelta24h"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
-import { formatUsd } from "@/shared/lib/format"
 import { MarketSelector } from "./MarketSelector"
+import { formatUsd } from "@/shared/lib/format"
 
 type Props = {
   symbol: string | undefined
