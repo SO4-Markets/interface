@@ -112,7 +112,7 @@ export function ConnectButton({ compactMobile = false }: { compactMobile?: boole
         <Button
           id="wallet-account-trigger"
           variant="outline"
-          className="h-9.5 px-3 text-[13.5px]"
+          className="h-9.5 max-w-[8.5rem] whitespace-nowrap px-3 text-[13.5px] sm:max-w-none"
           onClick={() => setOpen((v) => !v)}
           aria-label={`Wallet connected as ${shortenAddress(address)}`}
           aria-haspopup="menu"
@@ -208,7 +208,7 @@ export function ConnectButton({ compactMobile = false }: { compactMobile?: boole
       <Button
         ref={connectTriggerRef}
         variant="outline"
-        className="h-9.5 px-4 text-[13.5px]"
+        className="h-9.5 whitespace-nowrap px-3 text-[13.5px] sm:px-4"
         onClick={() => setWalletModalOpen(true)}
         aria-label="Connect wallet"
         aria-haspopup="dialog"
