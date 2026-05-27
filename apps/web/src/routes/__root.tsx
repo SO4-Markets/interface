@@ -1,30 +1,11 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Toaster } from "sonner"
+import { AppProviders } from "@/app/providers"
 import appCss from "@workspace/ui/globals.css?url"
 import { ThemeProvider } from "../ui/theme-provider"
 import { NetworkMismatchBanner } from "../features/wallet/components/NetworkMismatchBanner"
 import { WalletProvider } from "../app/providers"
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // ─────────────────────────────────────────────────────────────────────────────
-      // Default staleTime (30s) — individual hooks override per the table below.
-      //
-      // Data type            staleTime   refetchInterval
-      // ─────────────────────────────────────────────────
-      // Prices (mark)        3 s         5 s
-      // Positions / Orders   10 s        15 s
-      // Staking / Rewards    20 s        30 s
-      // Market config        60 s        none
-      // Fee rates            120 s       none
-      // ─────────────────────────────────────────────────
-      staleTime: 1000 * 30,
-      refetchOnWindowFocus: true,
-    },
-  },
-})
 
 // Update this to your production domain before going live.
 const SITE_URL = "https://so4.market"
@@ -178,15 +159,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <WalletProvider>
-              <NetworkMismatchBanner />
-              {children}
-            </WalletProvider>
-            <Toaster richColors position="bottom-right" />
-          </ThemeProvider>
-        </QueryClientProvider>
+        <AppProviders>
+          {children}
+          <Toaster richColors position="bottom-right" />
+        </AppProviders>
         <Scripts />
       </body>
     </html>
