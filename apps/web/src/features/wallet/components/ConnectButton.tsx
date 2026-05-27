@@ -106,9 +106,12 @@ function WalletModal({
   onOpenChange: (open: boolean) => void
 }) {
   const [installWallet, setInstallWallet] = useState<WalletOption | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [availableWalletIds, setAvailableWalletIds] = useState<Set<string>>(
     () => new Set(),
   )
+  const setConnected = useWalletStore((state) => state.setConnected)
+  const setStatus = useWalletStore((state) => state.setStatus)
 
   useEffect(() => {
     if (!open) return
@@ -141,8 +144,29 @@ function WalletModal({
   useEffect(() => {
     if (!open) {
       setInstallWallet(null)
+      setError(null)
     }
   }, [open])
+
+  async function connectWallet(wallet: WalletOption) {
+    if (!availableWalletIds.has(wallet.id)) {
+      setInstallWallet(wallet)
+      return
+    }
+
+    setError(null)
+    setStatus("connecting")
+
+    try {
+      StellarWalletsKit.setWallet(wallet.id)
+      const { address } = await StellarWalletsKit.fetchAddress()
+      setConnected(address, wallet.id)
+      onOpenChange(false)
+    } catch {
+      setStatus("error")
+      setError(`Could not connect ${wallet.name}. Please try again.`)
+    }
+  }
 
   const sortedWalletOptions = useMemo(
     () =>
@@ -177,9 +201,7 @@ function WalletModal({
                 variant={isAvailable ? "default" : "outline"}
                 className="w-full justify-between"
                 onClick={() => {
-                  if (!isAvailable) {
-                    setInstallWallet(wallet)
-                  }
+                  void connectWallet(wallet)
                 }}
               >
                 <span>{wallet.name}</span>
@@ -208,6 +230,12 @@ function WalletModal({
               Install {installWallet.name}
             </Button>
           </div>
+        )}
+
+        {error && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </p>
         )}
       </DialogContent>
     </Dialog>
