@@ -1,44 +1,32 @@
-import { toast } from "sonner"
+import { submitTx } from "@/shared/hooks/useTxSubmit"
 
 function fakeTxDelay(ms = 1500): Promise<void> {
   return new Promise((res) => setTimeout(res, ms))
 }
 
-export async function setTraderReferralCode(_account: string, code: string): Promise<string> {
-  // TODO: Call ReferralsRouter.setTraderReferralCodeByUser(bytes32(code)) on Soroban
-  //   1. Verify code exists via ReferralsReader.getCodeOwner(code) — must not be zero address
-  //   2. Build and sign transaction
-  //   3. Submit and poll for SUCCESS
-  const toastId = toast.loading(`Joining with code "${code}"…`)
-  await fakeTxDelay()
-  toast.success(`Referral code "${code}" applied`, {
-    id: toastId,
-    description: "5% fee discount is now active on your trades",
+async function runMockWrite(loadingMessage: string, successMessage: string, description: string, delay = 1500): Promise<string> {
+  return submitTx(async () => "", {
+    loadingMessage,
+    successMessage,
+    successDescription: () => description,
+    execute: async () => {
+      await fakeTxDelay(delay)
+      return "DUMMY_TX_HASH"
+    },
+    onError: (error) => (error instanceof Error ? error.message : "Transaction failed"),
   })
-  return "DUMMY_TX_HASH"
+}
+
+export async function setTraderReferralCode(_account: string, code: string): Promise<string> {
+  return runMockWrite(`Joining with code "${code}"...`, `Referral code "${code}" applied`, "5% fee discount is now active on your trades")
 }
 
 export async function createAffiliateCode(_account: string, code: string): Promise<string> {
-  // TODO: Call ReferralsRouter.registerCode(bytes32(code)) on Soroban
-  //   1. Check code availability: ReferralsReader.getCodeOwner(code) === zero address
-  //   2. Build registerCode instruction, sign, submit
-  //   3. Poll until SUCCESS — code becomes active immediately
-  const toastId = toast.loading(`Registering code "${code}"…`)
-  await fakeTxDelay()
-  toast.success(`Code "${code}" registered!`, {
-    id: toastId,
-    description: "Share your code to start earning commissions",
-  })
-  return "DUMMY_TX_HASH"
+  return runMockWrite(`Registering code "${code}"...`, `Code "${code}" registered!`, "Share your code to start earning commissions")
 }
 
 export async function claimDistribution(_account: string, _epochId: string): Promise<string> {
-  // TODO: Call RewardDistributor.claimForEpoch(epochId) on Soroban
-  //   Transfers USDC + esSO4 affiliate rewards to the connected wallet
-  const toastId = toast.loading("Claiming distribution…")
-  await fakeTxDelay(1000)
-  toast.success("Distribution claimed", { id: toastId, description: "Tx: DUMMY (not real)" })
-  return "DUMMY_TX_HASH"
+  return runMockWrite("Claiming distribution...", "Distribution claimed", "Tx: DUMMY_TX_HASH", 1000)
 }
 
 export function validateReferralCode(code: string): string | null {
