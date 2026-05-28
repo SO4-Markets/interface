@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { usePositions } from "../../hooks/usePositions"
-import { useOrders } from "../../hooks/useOrders"
+import { hasFrozenOrders, useOrders } from "../../hooks/useOrders"
+import { OrderExecutionFrozenBanner } from "./OrderExecutionFrozenBanner"
 import { PositionsList } from "./PositionsList"
 import { OrdersList } from "./OrdersList"
 import type { Position } from "../../hooks/usePositions"
@@ -17,6 +18,7 @@ export function BottomTabs({ onSelectPosition }: Props) {
 
   return (
     <Tabs defaultValue="positions">
+      <OrderExecutionFrozenBanner visible={hasFrozenOrders(orders)} />
       <TabsList className="border-b border-border bg-transparent px-4">
         <TabsTrigger value="positions">
           Positions {positions.length > 0 && `(${positions.length})`}
