@@ -9,6 +9,7 @@ export type TradeFees = {
   positionFeeUsd: number
   priceImpactUsd: number
   executionFeeUsd: number
+  executionFeeXlm: number
   totalFeesUsd: number
   feesBreakdown: Array<{ label: string; valueUsd: number }>
 }
@@ -38,6 +39,7 @@ export function useTradeFees(params: {
       positionFeeUsd: 0,
       priceImpactUsd: 0,
       executionFeeUsd: 0,
+      executionFeeXlm: 0,
       totalFeesUsd: 0,
       feesBreakdown: [],
     }
@@ -60,6 +62,7 @@ export function useTradeFees(params: {
     positionFeeUsd,
     priceImpactUsd,
     executionFeeUsd,
+    executionFeeXlm,
     totalFeesUsd,
     feesBreakdown: [
       { label: tradeType === "Swap" ? "Swap fee" : "Position fee", valueUsd: positionFeeUsd },

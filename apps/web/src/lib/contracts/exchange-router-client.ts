@@ -1,4 +1,4 @@
-import { Contract, TransactionBuilder, rpc } from "@stellar/stellar-sdk"
+import { Contract, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk"
 import { CONTRACTS } from "@/app/config/contracts"
 import { NETWORK } from "@/app/config/network"
 import { sorobanRpc } from "@/lib/soroban/client"
@@ -93,6 +93,35 @@ export async function buildSwapOrderTransaction(
  * Build a multi-operation Soroban transaction from a batch of createOrder / cancelOrder ops.
  * All operations succeed or all fail atomically.
  */
+export async function buildClaimFundingFeesTransaction(
+  account: string,
+  marketAddresses: string[],
+): Promise<Transaction> {
+  const sourceAccount = await sorobanRpc.getAccount(account)
+  const contract = new Contract(CONTRACTS.exchangeRouter)
+
+  let tx = new TransactionBuilder(sourceAccount, {
+    fee: "100",
+    networkPassphrase: NETWORK.networkPassphrase,
+  })
+    .addOperation(
+      contract.call(
+        "claimFundingFees",
+        xdr.ScVal.scvString(account),
+        xdr.ScVal.scvVec(marketAddresses.map((m) => xdr.ScVal.scvString(m))),
+      ),
+    )
+    .setTimeout(180)
+    .build()
+
+  const simulation = await sorobanRpc.simulateTransaction(tx)
+  if (rpc.Api.isSimulationError(simulation)) {
+    throw new Error(`Claim funding fees simulation failed: ${simulation.error}`)
+  }
+
+  return rpc.assembleTransaction(tx, simulation).build()
+}
+
 export async function buildBatchOrderTransaction(
   account: string,
   operations: Array<BatchOperation>,

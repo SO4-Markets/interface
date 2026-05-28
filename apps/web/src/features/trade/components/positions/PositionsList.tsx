@@ -5,7 +5,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
 import { usePositions } from "../../hooks/usePositions"
 import { useFundingRate } from "../../hooks/useFundingRate"
-import { createDecreaseOrder } from "../../lib/stellar"
+import { createDecreaseOrder, claimFundingFees } from "../../lib/stellar"
 import type { Position } from "../../hooks/usePositions"
 import { formatPct, formatUsd } from "@/shared/lib/format"
 import { queryKeys } from "../../lib/query-keys"
@@ -52,6 +52,7 @@ export function PositionsList({ onSelectPosition }: Props) {
   const account = useWalletStore((state) => state.address)
   const queryClient = useQueryClient()
   const [closing, setClosing] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState<string | null>(null)
 
   async function handleClose(position: Position) {
     setClosing(position.key)
@@ -77,6 +78,20 @@ export function PositionsList({ onSelectPosition }: Props) {
       }
     } finally {
       setClosing(null)
+    }
+  }
+
+  async function handleClaim(position: Position) {
+    setClaiming(position.key)
+    try {
+      await claimFundingFees(position.account, [position.marketAddress])
+      if (account) {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.positions("stellar-mainnet", account),
+        })
+      }
+    } finally {
+      setClaiming(null)
     }
   }
 
@@ -109,6 +124,7 @@ export function PositionsList({ onSelectPosition }: Props) {
             <th className="px-4 py-2">Mark</th>
             <th className="px-4 py-2">Liq.</th>
             <th className="px-4 py-2">PnL</th>
+            <th className="px-4 py-2">Funding Fee</th>
             <th className="px-4 py-2">Next Funding</th>
             <th className="px-4 py-2" />
           </tr>
@@ -144,21 +160,43 @@ export function PositionsList({ onSelectPosition }: Props) {
                   {formatUsd(p.pnl)} ({formatPct(p.pnlPercent)})
                 </span>
               </td>
+              <td className="px-4 py-2 font-mono tabular-nums">
+                {p.fundingFeeDebt > 0 ? (
+                  <span className="text-green-500">{formatUsd(p.fundingFeeDebt)}</span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </td>
               <td className="px-4 py-2 font-mono tabular-nums text-muted-foreground">
                 {countdown}
               </td>
               <td className="px-4 py-2">
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={closing === p.key}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void handleClose(p)
-                  }}
-                >
-                  {closing === p.key ? "…" : "Close"}
-                </Button>
+                <div className="flex items-center gap-1">
+                  {p.fundingFeeDebt > 0 && (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      disabled={claiming === p.key}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void handleClaim(p)
+                      }}
+                    >
+                      {claiming === p.key ? "…" : "Claim"}
+                    </Button>
+                  )}
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={closing === p.key}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void handleClose(p)
+                    }}
+                  >
+                    {closing === p.key ? "…" : "Close"}
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}

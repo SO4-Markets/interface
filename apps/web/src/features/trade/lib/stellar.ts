@@ -7,6 +7,7 @@ import {
   buildCancelOrderTransaction,
   buildSwapOrderTransaction,
   buildBatchOrderTransaction,
+  buildClaimFundingFeesTransaction,
 } from "@/lib/contracts/exchange-router-client"
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { parseSorobanError } from "@/lib/soroban/errors"
@@ -159,9 +160,27 @@ export async function cancelOrder(account: string, orderKey: OrderKey): Promise<
   )
 }
 
-export async function claimFundingFees(_account: string, marketAddresses: Array<string>): Promise<string> {
-  await fakeTxDelay(1000)
-  return `Funding fees claimed for ${marketAddresses.length} market(s)`
+export async function claimFundingFees(account: string, marketAddresses: Array<string>): Promise<string> {
+  if (!isValidAccount(account)) {
+    throw new Error("Connect your wallet before claiming funding fees.")
+  }
+
+  return submitTx(
+    async () => {
+      const tx = await buildClaimFundingFeesTransaction(account, marketAddresses)
+      return prepareAndSign(tx, walletKit, NETWORK.networkPassphrase)
+    },
+    {
+      loadingMessage: `Claiming funding fees for ${marketAddresses.length} market(s)...`,
+      successMessage: "Funding fees claimed",
+      successDescription: (hash) => `${marketAddresses.length} market(s) | Tx: ${hash.slice(0, 8)}...`,
+      onSuccess: (hash) => {
+        void invalidateTradeQueries(account)
+        window.open(explorerTxUrl(hash), "_blank", "noopener,noreferrer")
+      },
+      onError: parseSorobanError,
+    },
+  )
 }
 
 export type BatchOrderParams = {
