@@ -18,6 +18,7 @@ import { TradeInfoRows } from "./TradeInfoRows"
 import { ConfirmationDialog } from "./ConfirmationDialog"
 import { ApplyReferralCodePrompt } from "./ApplyReferralCodePrompt"
 import type { TradeType } from "../../hooks/useTradeState"
+import { useDebounce } from "@/shared/hooks/useDebounce"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 export function TradePanel() {
@@ -38,8 +39,9 @@ export function TradePanel() {
     advanced,
   } = trade
 
+  const debouncedFromAmount = useDebounce(fromAmount, 300)
   const entryPrice = getMidPrice(toTokenAddress)
-  const collateralUsd = parseFloat(fromAmount || "0") * getMidPrice(collateralAddress)
+  const collateralUsd = parseFloat(debouncedFromAmount || "0") * getMidPrice(collateralAddress)
   const sizeUsd = tradeFlags.isSwap ? collateralUsd : sizeFromCollateralAndLeverage(collateralUsd, leverage)
 
   const fees = useTradeFees({ sizeUsd, marketAddress, isIncrease: true, tradeType })

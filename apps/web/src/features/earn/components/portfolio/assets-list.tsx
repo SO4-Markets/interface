@@ -37,10 +37,13 @@ function EmptyState() {
         <WalletEmptyIcon />
       </div>
       <div>
-        <p className="text-sm font-medium text-foreground/80">No assets yet</p>
+        <p className="text-sm font-medium text-foreground/80">You have no deposits</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          See recommended section above to start
+          Start earning by depositing into a pool
         </p>
+        <a href="#browse-pools" className="text-xs text-primary hover:text-primary/80 font-medium mt-2 inline-block">
+          Browse pools →
+        </a>
       </div>
     </div>
   )

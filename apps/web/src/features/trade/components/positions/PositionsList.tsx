@@ -118,8 +118,12 @@ export function PositionsList({ onSelectPosition }: Props) {
 
   if (positions.length === 0) {
     return (
-      <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">
-        No open positions
+      <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+        <p className="text-sm font-medium text-foreground/80">No open positions</p>
+        <p className="text-xs text-muted-foreground">Start trading to open your first position</p>
+        <a href="/trade" className="text-xs text-primary hover:text-primary/80 font-medium mt-2">
+          Start trading →
+        </a>
       </div>
     )
   }

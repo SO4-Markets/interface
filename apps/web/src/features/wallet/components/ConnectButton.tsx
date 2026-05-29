@@ -8,6 +8,11 @@ import { QRCodeSVG } from "qrcode.react"
 
 import { Button } from "@workspace/ui/components/button"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,6 +24,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { createSep7ConnectUri, createSep7TransactionUri } from "../lib/sep7"
 import { useWalletStore } from "../store/wallet-store"
 import { useBalance } from "../hooks/useBalance"
+import { useKeyboardShortcut } from "@/shared/hooks/useKeyboardShortcut"
 import { useWallet } from "@/app/providers"
 import { NETWORK } from "@/app/config/network"
 import type { ComponentProps } from "react"
@@ -63,20 +69,33 @@ export function ConnectButton({ className, ...props }: ConnectButtonProps) {
     return <AccountBadge address={address} className={className as string | undefined} {...props} />
   }
 
+  useKeyboardShortcut({
+    key: "k",
+    onKeyPress: () => setIsWalletModalOpen(true),
+    enabled: !isConnecting,
+  })
+
   return (
     <>
-      <Button
-        {...props}
-        type="button"
-        aria-label={isConnecting ? "Connecting wallet" : "Connect wallet"}
-        aria-busy={isConnecting}
-        className={cn("w-full sm:w-auto", className)}
-        disabled={isConnecting || props.disabled}
-        onClick={() => setIsWalletModalOpen(true)}
-      >
-        {isConnecting && <Spinner />}
-        Connect Wallet
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            {...props}
+            type="button"
+            aria-label={isConnecting ? "Connecting wallet" : "Connect wallet"}
+            aria-busy={isConnecting}
+            className={cn("w-full sm:w-auto", className)}
+            disabled={isConnecting || props.disabled}
+            onClick={() => setIsWalletModalOpen(true)}
+          >
+            {isConnecting && <Spinner />}
+            Connect Wallet
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <span>Press <kbd className="font-semibold">K</kbd> to open wallet</span>
+        </TooltipContent>
+      </Tooltip>
 
       <WalletModal open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen} />
     </>
@@ -352,7 +371,7 @@ function WalletModal({
             </a>
           </div>
 
-          <div className="flex justify-center rounded-md bg-white p-4">
+          <div className="flex justify-center rounded-md bg-popover p-4">
             <QRCodeSVG value={sep7Uri} size={168} level="M" />
           </div>
         </div>
