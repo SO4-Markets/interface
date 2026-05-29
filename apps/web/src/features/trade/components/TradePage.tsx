@@ -6,6 +6,7 @@ import { Navbar } from "../../../ui/Navbar"
 import { TVChart } from "./chart/TVChart"
 import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
+import { CircuitBreakerBanner } from "./CircuitBreakerBanner"
 
 const tradeRoute = getRouteApi("/trade")
 
@@ -29,6 +30,7 @@ export function TradePage() {
   return (
     <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
       <Navbar variant="app" />
+      <CircuitBreakerBanner symbol={trade.toTokenAddress} />
       <div className="flex min-h-0 flex-1 lg:px-6">
         {/* ── Left: Chart + Bottom Tabs ──────────────────────────────── */}
         <div className="flex min-w-0 flex-1 flex-col">

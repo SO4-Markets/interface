@@ -26,6 +26,9 @@ export const queryKeys = {
   feeConfig: (chainId: string, marketAddress: string) =>
     ["feeConfig", chainId, marketAddress] as const,
 
+  // Oracle circuit breaker flag from DataStore
+  circuitBreaker: (symbol: string) => ["circuitBreaker", symbol] as const,
+
   // Trade history
   tradeHistory: (chainId: string, account: string, page: number) =>
     ["tradeHistory", chainId, account, page] as const,
