@@ -33,9 +33,20 @@ export function scValToReferralCode(value: unknown): string | null {
 
 export const AFFILIATE_CODE_STORAGE_KEY = "so4-affiliate-code"
 export const REFERRAL_PROMPT_STORAGE_KEY = "so4-referral-prompt-done"
+export const REFERRAL_CODE_STORAGE_KEY = "so4-referral-code"
 
 export function affiliateCodeStorageKey(account: string): string {
   return `${AFFILIATE_CODE_STORAGE_KEY}:${account}`
+}
+
+export function saveReferralCode(code: string): void {
+  if (typeof window === "undefined") return
+  localStorage.setItem(REFERRAL_CODE_STORAGE_KEY, code.toUpperCase().trim())
+}
+
+export function readStoredReferralCode(): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem(REFERRAL_CODE_STORAGE_KEY)
 }
 
 export function referralPromptStorageKey(account: string): string {

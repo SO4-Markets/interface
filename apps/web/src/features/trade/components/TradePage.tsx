@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react"
 import { getRouteApi } from "@tanstack/react-router"
 import { useTradeState } from "../hooks/useTradeState"
 import { useOrderEventPolling } from "../hooks/useOrderEventPolling"
+import { saveReferralCode } from "@/lib/soroban/referral-code"
 import { Navbar } from "../../../ui/Navbar"
 import { TVChart } from "./chart/TVChart"
 import { TradePanel } from "./trade-panel/TradePanel"
@@ -27,11 +28,18 @@ export function TradePage() {
     if (search.type) setTradeType(search.type === "long" ? "Long" : "Short")
   }, [search.market, search.type, setToTokenAddress, setTradeType])
 
+  useEffect(() => {
+    if (!search.ref) return
+    const normalized = search.ref.toUpperCase().trim()
+    if (!normalized) return
+    saveReferralCode(normalized)
+  }, [search.ref])
+
   return (
     <div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
       <Navbar variant="app" />
       <CircuitBreakerBanner symbol={trade.toTokenAddress} />
-      <div className="flex min-h-0 flex-1 lg:px-6">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:px-6">
         {/* ── Left: Chart + Bottom Tabs ──────────────────────────────── */}
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Chart takes the majority of height */}
@@ -40,7 +48,7 @@ export function TradePage() {
           </div>
 
           {/* Bottom tabs: Positions / Orders / Trades / Claims */}
-          <div className="h-64 shrink-0 overflow-auto border-t border-border">
+          <div className="h-64 shrink-0 overflow-auto border-t border-border lg:border-t-0">
             <BottomTabs
               onSelectPosition={(pos) =>
                 trade.setActivePosition({
@@ -55,7 +63,7 @@ export function TradePage() {
         </div>
 
         {/* ── Right: Trade Panel ─────────────────────────────────────── */}
-        <div className="w-80 shrink-0 overflow-y-auto border-l border-border">
+        <div className="w-full shrink-0 overflow-y-auto border-t border-border lg:border-t-0 lg:border-l lg:w-80">
           <TradePanel />
         </div>
       </div>

@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
-import { Input } from "@workspace/ui/components/input"
 import { Button } from "@workspace/ui/components/button"
 import { Slider } from "@workspace/ui/components/slider"
 import { Separator } from "@workspace/ui/components/separator"
 import { Badge } from "@workspace/ui/components/badge"
 import { useTradeState } from "../../hooks/useTradeState"
+import { NumberInput } from "@/shared/components/NumberInput"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useTradeFees } from "../../hooks/useTradeFees"
 import { useTokenBalances } from "../../../wallet/hooks/useTokenBalances"
@@ -275,21 +275,17 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
             </span>
           )}
         </div>
-        <div className="relative">
-          <Input
-            type="number"
-            placeholder="0.00"
-            value={fromAmount}
-            onChange={(e) => setFromAmount(e.target.value)}
-            className="pr-16 font-mono text-sm"
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-            {fromTokenAddress}
-          </span>
-        </div>
-        {fromUsd > 0 && (
-          <p className="text-right text-xs text-muted-foreground">{formatUsd(fromUsd)}</p>
-        )}
+        <NumberInput
+          value={fromAmount}
+          onValueChange={setFromAmount}
+          placeholder="0.00"
+          className="pr-16 font-mono text-sm"
+          onMax={walletBalance !== undefined ? () => setFromAmount(walletBalance.toString()) : undefined}
+          usdValue={fromUsd > 0 ? fromUsd : undefined}
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+          {fromTokenAddress}
+        </span>
         {validationError && (
           <p className="text-xs text-red-500">{validationError}</p>
         )}

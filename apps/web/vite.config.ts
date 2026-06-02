@@ -15,6 +15,29 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  ssr: {
+    noExternal: ["react", "react-dom"],
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    deps: {
+      inline: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "@testing-library/react",
+        "@testing-library/user-event",
+        "@testing-library/jest-dom",
+      ],
+    },
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+    },
+  },
 })
 
 export default config

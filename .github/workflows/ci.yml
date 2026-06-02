@@ -42,5 +42,8 @@ jobs:
       - name: Typecheck
         run: bun typecheck
 
+      - name: Test
+        run: cd apps/web && bun run test
+
       - name: Build
         run: bun run build

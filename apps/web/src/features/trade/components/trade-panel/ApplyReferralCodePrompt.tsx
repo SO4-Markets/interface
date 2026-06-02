@@ -8,6 +8,7 @@ import {
   validateReferralCode,
 } from "@/features/referrals/lib/referrals"
 import { getTraderReferralCode } from "@/lib/soroban/referral-storage"
+import { readStoredReferralCode } from "@/lib/soroban/referral-code"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/shared/lib/query-keys"
 
@@ -17,7 +18,7 @@ type Props = {
 
 export function ApplyReferralCodePrompt({ account }: Props) {
   const queryClient = useQueryClient()
-  const [code, setCode] = useState("")
+  const [code, setCode] = useState(() => readStoredReferralCode() ?? "")
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [dismissed, setDismissed] = useState(false)

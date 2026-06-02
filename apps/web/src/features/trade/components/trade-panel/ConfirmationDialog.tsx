@@ -8,6 +8,9 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { createSwapOrder, sendBatchOrderTxn, type DecreaseOrderParams, type IncreaseOrderParams } from "../../lib/stellar"
+import { applyReferralCode } from "@/features/referrals/lib/referrals"
+import { readStoredReferralCode } from "@/lib/soroban/referral-code"
+import { getTraderReferralCode } from "@/lib/soroban/referral-storage"
 import { formatUsd } from "../../lib/trade-math"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
@@ -21,7 +24,7 @@ import { checkAllowance, buildApproveTransaction } from "@/lib/contracts/sac-tok
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 import { walletKit } from "@/features/wallet/lib/wallet-kit"
-import { NETWORK, explorerTxUrl } from "@/app/config/network"
+import { NETWORK } from "@/app/config/network"
 import { CONTRACTS } from "@/app/config/contracts"
 import { fetchFeeConfig } from "../../lib/data-store"
 import { useQuery } from "@tanstack/react-query"
@@ -45,7 +48,7 @@ export function ConfirmationDialog({ open, onClose, tradeState, sizeUsd, entryPr
   const [estimatingFee, setEstimatingFee] = useState(false)
   const [allowanceState, setAllowanceState] = useState<"checking" | "sufficient" | "insufficient" | "approving" | "approved">("checking")
   const [approveError, setApproveError] = useState<string | null>(null)
-  const account = useWalletStore((state) => state.address)
+  const account = useWalletStore((state: { address: string | null }) => state.address)
 
   const { tradeFlags, toTokenAddress, collateralAddress, leverage, fromAmount, triggerPrice, sidecarOrders, clearSidecarOrders } =
     tradeState
@@ -190,6 +193,18 @@ export function ConfirmationDialog({ open, onClose, tradeState, sizeUsd, entryPr
           throw new Error("Connect your wallet before placing an order.")
         }
 
+        const storedReferralCode = readStoredReferralCode()
+        if (storedReferralCode) {
+          const existingCode = await getTraderReferralCode(account)
+          if (!existingCode) {
+            try {
+              await applyReferralCode(account, storedReferralCode)
+            } catch (error) {
+              console.warn("Referral code could not be auto-applied:", error)
+            }
+          }
+        }
+
         if (allowanceState === "insufficient") {
           await handleApprove()
         }
@@ -222,7 +237,7 @@ export function ConfirmationDialog({ open, onClose, tradeState, sizeUsd, entryPr
   const typeLabel = tradeFlags.isSwap ? "Swap" : tradeFlags.isLong ? "Long" : "Short"
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>
