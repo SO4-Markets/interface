@@ -1,104 +1,198 @@
 import { Buffer } from "buffer"
-import { Contract, rpc, xdr } from "@stellar/stellar-sdk"
+import { Address, Contract, rpc, xdr } from "@stellar/stellar-sdk"
 
 if (typeof window !== "undefined") {
   window.Buffer = window.Buffer || Buffer
 }
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Return types ─────────────────────────────────────────────────────────────
+// These mirror the Rust #[contracttype] structs returned by the Reader contract.
 
-export interface MarketInfo {
-  openInterestLong: bigint
-  openInterestShort: bigint
-  poolAmountLong: bigint
-  poolAmountShort: bigint
-  borrowingFactorLong: bigint
-  borrowingFactorShort: bigint
-  fundingFactor: bigint
-  positionFeeFactor: bigint
-  maxLeverage: number
-  isDisabled: boolean
+/** Mirrors gmx_types::MarketProps */
+export interface MarketProps {
+  marketToken: string
+  indexToken: string
+  longToken: string
+  shortToken: string
 }
 
-export interface PositionInfo {
-  collateralAmount: bigint
-  collateralUsd: bigint
-  sizeUsd: bigint
-  entryPrice: bigint
-  markPrice: bigint
-  liquidationPrice: bigint
-  leverage: number
-  pnl: bigint
-  pnlPercent: bigint
-  fundingFeeDebt: bigint
-  isLong: boolean
-}
-
-export interface OrderInfo {
-  orderType: string
-  account: string
-  marketAddress: string
-  collateralToken: string
-  sizeUsd: bigint
-  triggerPrice: bigint
-  acceptablePrice: bigint
-  isLong: boolean
-  createdAt: bigint
-}
-
-export interface PoolAmounts {
+/** Mirrors gmx_types::PoolValueInfo */
+export interface PoolValueInfo {
+  poolValue: bigint
   longTokenAmount: bigint
   shortTokenAmount: bigint
-  poolValueUsd: bigint
+  longTokenUsd: bigint
+  shortTokenUsd: bigint
+  longPnl: bigint
+  shortPnl: bigint
+  netPnl: bigint
+  totalBorrowingFees: bigint
+  impactPoolAmount: bigint
 }
 
-// ── Network configs ──────────────────────────────────────────────────────────
-
-export const networks = {
-  testnet: {
-    contractId: "",
-    networkPassphrase: "Test SDF Network ; September 2015",
-  },
-  mainnet: {
-    contractId: "",
-    networkPassphrase: "Public Global Stellar Network ; September 2015",
-  },
+/** Mirrors gmx_types::FundingInfo */
+export interface FundingInfo {
+  fundingFactorPerSecond: bigint
+  longFundingAmountPerSize: bigint
+  shortFundingAmountPerSize: bigint
 }
 
-// ── ScVal helpers ────────────────────────────────────────────────────────────
-
-function i128(v: bigint): xdr.ScVal {
-  return xdr.ScVal.scvI128(
-    new xdr.Int128Parts({
-      lo: xdr.Uint64.fromString((v & BigInt("0xFFFFFFFFFFFFFFFF")).toString()),
-      hi: xdr.Int64.fromString((v >> BigInt(64)).toString()),
-    }),
-  )
+/** Mirrors gmx_types::PositionProps (inner struct inside PositionInfo) */
+export interface PositionProps {
+  account: string
+  market: string
+  collateralToken: string
+  sizeInUsd: bigint
+  sizeInTokens: bigint
+  collateralAmount: bigint
+  isLong: boolean
 }
 
-function u64(v: bigint): xdr.ScVal {
-  return xdr.ScVal.scvU64(xdr.Uint64.fromString(v.toString()))
+/** Mirrors gmx_types::PositionInfo (enriched view returned by Reader) */
+export interface PositionInfo {
+  position: PositionProps
+  pnlUsd: bigint
+  uncappedPnlUsd: bigint
+  borrowingFeeUsd: bigint
+  fundingFeeUsd: bigint
+  positionFeeUsd: bigint
+  liquidationPrice: bigint
 }
 
-function u32(v: number): xdr.ScVal {
-  return xdr.ScVal.scvU32(v)
+/** Mirrors gmx_types::OrderProps */
+export interface OrderProps {
+  account: string
+  receiver: string
+  market: string
+  initialCollateralToken: string
+  sizeDeltaUsd: bigint
+  collateralDeltaAmount: bigint
+  triggerPrice: bigint
+  acceptablePrice: bigint
+  executionFee: bigint
+  orderType: string
+  isLong: boolean
+  updatedAtTime: bigint
 }
 
-function address(a: string): xdr.ScVal {
-  return xdr.ScVal.scvString(a)
+// ── ScVal decode helpers ─────────────────────────────────────────────────────
+
+function decodeAddress(v: xdr.ScVal | undefined): string {
+  if (!v) return ""
+  try {
+    return Address.fromScVal(v).toString()
+  } catch {
+    // fall back for scvString-encoded addresses
+    return v.str?.toString() ?? ""
+  }
 }
 
-function symbol(s: string): xdr.ScVal {
-  return xdr.ScVal.scvSymbol(s)
+function decodeI128(v: xdr.ScVal | undefined): bigint {
+  if (!v) return 0n
+  try {
+    const p = v.i128()
+    if (!p) return 0n
+    const lo = BigInt(p.lo().toString())
+    const hi = BigInt(p.hi().toString())
+    return (hi << 64n) | lo
+  } catch {
+    return 0n
+  }
 }
 
-// ── Client ───────────────────────────────────────────────────────────────────
+function fieldVal(m: xdr.ScMapEntry[], name: string): xdr.ScVal | undefined {
+  return m.find((e) => {
+    try { return e.key().sym() === name } catch { return false }
+  })?.val()
+}
+
+function decodeMap(v: xdr.ScVal | undefined): xdr.ScMapEntry[] {
+  if (!v) return []
+  return v.map() ?? []
+}
+
+function decodeVec(v: xdr.ScVal | undefined): xdr.ScVal[] {
+  if (!v) return []
+  return v.vec() ?? []
+}
+
+function decodeBool(v: xdr.ScVal | undefined): boolean {
+  if (!v) return false
+  try { return v.b() } catch { return false }
+}
+
+function decodeSymbol(v: xdr.ScVal | undefined): string {
+  if (!v) return ""
+  try { return v.sym() } catch { return "" }
+}
+
+function decodeEnumVariant(v: xdr.ScVal | undefined): string {
+  // Soroban #[contracttype] unit-enum → single-entry Map {Symbol(name): Void}
+  const m = decodeMap(v)
+  if (m.length === 0) return ""
+  try { return m[0].key().sym() } catch { return "" }
+}
+
+function decodePositionProps(v: xdr.ScVal): PositionProps {
+  const m = decodeMap(v)
+  return {
+    account:         decodeAddress(fieldVal(m, "account")),
+    market:          decodeAddress(fieldVal(m, "market")),
+    collateralToken: decodeAddress(fieldVal(m, "collateral_token")),
+    sizeInUsd:       decodeI128(fieldVal(m, "size_in_usd")),
+    sizeInTokens:    decodeI128(fieldVal(m, "size_in_tokens")),
+    collateralAmount:decodeI128(fieldVal(m, "collateral_amount")),
+    isLong:          decodeBool(fieldVal(m, "is_long")),
+  }
+}
+
+function decodePositionInfo(v: xdr.ScVal): PositionInfo {
+  const m = decodeMap(v)
+  return {
+    position:        decodePositionProps(fieldVal(m, "position") ?? xdr.ScVal.scvVoid()),
+    pnlUsd:          decodeI128(fieldVal(m, "pnl_usd")),
+    uncappedPnlUsd:  decodeI128(fieldVal(m, "uncapped_pnl_usd")),
+    borrowingFeeUsd: decodeI128(fieldVal(m, "borrowing_fee_usd")),
+    fundingFeeUsd:   decodeI128(fieldVal(m, "funding_fee_usd")),
+    positionFeeUsd:  decodeI128(fieldVal(m, "position_fee_usd")),
+    liquidationPrice:decodeI128(fieldVal(m, "liquidation_price")),
+  }
+}
+
+function decodeOrderProps(v: xdr.ScVal): OrderProps {
+  const m = decodeMap(v)
+  return {
+    account:               decodeAddress(fieldVal(m, "account")),
+    receiver:              decodeAddress(fieldVal(m, "receiver")),
+    market:                decodeAddress(fieldVal(m, "market")),
+    initialCollateralToken:decodeAddress(fieldVal(m, "initial_collateral_token")),
+    sizeDeltaUsd:          decodeI128(fieldVal(m, "size_delta_usd")),
+    collateralDeltaAmount: decodeI128(fieldVal(m, "collateral_delta_amount")),
+    triggerPrice:          decodeI128(fieldVal(m, "trigger_price")),
+    acceptablePrice:       decodeI128(fieldVal(m, "acceptable_price")),
+    executionFee:          decodeI128(fieldVal(m, "execution_fee")),
+    orderType:             decodeEnumVariant(fieldVal(m, "order_type")),
+    isLong:                decodeBool(fieldVal(m, "is_long")),
+    updatedAtTime:         BigInt(fieldVal(m, "updated_at_time")?.u64()?.toString() ?? "0"),
+  }
+}
+
+// ── Client options ────────────────────────────────────────────────────────────
 
 export interface ClientOptions {
   contractId: string
   networkPassphrase: string
   rpcUrl: string
 }
+
+// ── Client ───────────────────────────────────────────────────────────────────
+//
+// All methods are read-only — they use simulateTransaction to call the Reader
+// contract and decode the returned ScVal.
+//
+// The Reader contract requires several infrastructure addresses as explicit
+// arguments (data_store, oracle, order_handler) because it reads from them
+// cross-contract at query time.
 
 export class Client {
   private contract: Contract
@@ -111,92 +205,170 @@ export class Client {
     this.networkPassphrase = opts.networkPassphrase
   }
 
-  private async simulateTx(method: string, ...args: xdr.ScVal[]): Promise<xdr.ScVal> {
+  private async sim(method: string, ...args: xdr.ScVal[]): Promise<xdr.ScVal> {
     const server = new rpc.Server(this.rpcUrl)
     const call = this.contract.call(method, ...args)
-    const sim = await server.simulateTransaction(call, "" as any, {
-      networkPassphrase: this.networkPassphrase,
-    })
-    if ((sim as any).error) throw new Error(`Simulation error: ${(sim as any).error}`)
-    return (sim as any).results?.[0]?.retval as xdr.ScVal
-  }
-
-  private fieldVal(m: xdr.ScMapEntry[], name: string): xdr.ScVal | undefined {
-    return m.find((e) => e.key().sym() === name)?.val()
-  }
-
-  private i128Val(v: xdr.ScVal | undefined): bigint {
-    if (!v) return 0n
-    const parts = v.i128()
-    return parts ? BigInt(parts.lo().toString()) : 0n
-  }
-
-  async getMarketInfo(marketAddress: string): Promise<MarketInfo> {
-    const ret = await this.simulateTx("getMarketInfo", address(marketAddress))
-    const m = ret.map() ?? []
-    return {
-      openInterestLong: this.i128Val(this.fieldVal(m, "open_interest_long")),
-      openInterestShort: this.i128Val(this.fieldVal(m, "open_interest_short")),
-      poolAmountLong: this.i128Val(this.fieldVal(m, "pool_amount_long")),
-      poolAmountShort: this.i128Val(this.fieldVal(m, "pool_amount_short")),
-      borrowingFactorLong: this.i128Val(this.fieldVal(m, "borrowing_factor_long")),
-      borrowingFactorShort: this.i128Val(this.fieldVal(m, "borrowing_factor_short")),
-      fundingFactor: this.i128Val(this.fieldVal(m, "funding_factor")),
-      positionFeeFactor: this.i128Val(this.fieldVal(m, "position_fee_factor")),
-      maxLeverage: this.fieldVal(m, "max_leverage")?.u32() ?? 0,
-      isDisabled: this.fieldVal(m, "is_disabled")?.b() ?? false,
+    const result = await server.simulateTransaction(call as any)
+    if (rpc.Api.isSimulationError(result)) {
+      throw new Error(`Reader simulation error (${method}): ${result.error}`)
     }
+    const retval = (result as rpc.Api.SimulateTransactionSuccessResponse).result?.retval
+    if (!retval) throw new Error(`Reader returned no value for ${method}`)
+    return retval
   }
 
-  async getPositionInfo(account: string, marketAddress: string, isLong: boolean): Promise<PositionInfo> {
-    const ret = await this.simulateTx(
-      "getPositionInfo",
-      address(account),
-      address(marketAddress),
-      xdr.ScVal.scvBool(isLong),
+  private static addr(a: string): xdr.ScVal {
+    return new Address(a).toScVal()
+  }
+
+  // ── Market reads ────────────────────────────────────────────────────────────
+
+  /**
+   * get_market(data_store, market_token) → MarketProps
+   */
+  async getMarket(dataStore: string, marketToken: string): Promise<MarketProps> {
+    const ret = await this.sim(
+      "get_market",
+      Client.addr(dataStore),
+      Client.addr(marketToken),
     )
-    const m = ret.map() ?? []
+    const m = decodeMap(ret)
     return {
-      collateralAmount: this.i128Val(this.fieldVal(m, "collateral_amount")),
-      collateralUsd: this.i128Val(this.fieldVal(m, "collateral_usd")),
-      sizeUsd: this.i128Val(this.fieldVal(m, "size_usd")),
-      entryPrice: this.i128Val(this.fieldVal(m, "entry_price")),
-      markPrice: this.i128Val(this.fieldVal(m, "mark_price")),
-      liquidationPrice: this.i128Val(this.fieldVal(m, "liquidation_price")),
-      leverage: this.fieldVal(m, "leverage")?.u32() ?? 0,
-      pnl: this.i128Val(this.fieldVal(m, "pnl")),
-      pnlPercent: this.i128Val(this.fieldVal(m, "pnl_percent")),
-      fundingFeeDebt: this.i128Val(this.fieldVal(m, "funding_fee_debt")),
-      isLong: this.fieldVal(m, "is_long")?.b() ?? false,
+      marketToken: decodeAddress(fieldVal(m, "market_token")),
+      indexToken:  decodeAddress(fieldVal(m, "index_token")),
+      longToken:   decodeAddress(fieldVal(m, "long_token")),
+      shortToken:  decodeAddress(fieldVal(m, "short_token")),
     }
   }
 
-  async getOrderInfo(account: string): Promise<OrderInfo[]> {
-    const ret = await this.simulateTx("getOrderInfo", address(account))
-    const entries = ret.vec() ?? []
-    return entries.map((entry) => {
-      const m = entry.map() ?? []
-      return {
-        orderType: this.fieldVal(m, "order_type")?.sym() ?? "",
-        account: this.fieldVal(m, "account")?.str() ?? "",
-        marketAddress: this.fieldVal(m, "market_address")?.str() ?? "",
-        collateralToken: this.fieldVal(m, "collateral_token")?.str() ?? "",
-        sizeUsd: this.i128Val(this.fieldVal(m, "size_usd")),
-        triggerPrice: this.i128Val(this.fieldVal(m, "trigger_price")),
-        acceptablePrice: this.i128Val(this.fieldVal(m, "acceptable_price")),
-        isLong: this.fieldVal(m, "is_long")?.b() ?? false,
-        createdAt: BigInt(this.fieldVal(m, "created_at")?.u64()?.toString() ?? "0"),
-      }
-    })
-  }
-
-  async getMarketPoolAmounts(marketAddress: string): Promise<PoolAmounts> {
-    const ret = await this.simulateTx("getMarketPoolAmounts", address(marketAddress))
-    const m = ret.map() ?? []
+  /**
+   * get_market_pool_value_info(data_store, oracle, market_token, maximize) → PoolValueInfo
+   */
+  async getMarketPoolValueInfo(
+    dataStore: string,
+    oracle: string,
+    marketToken: string,
+    maximize: boolean,
+  ): Promise<PoolValueInfo> {
+    const ret = await this.sim(
+      "get_market_pool_value_info",
+      Client.addr(dataStore),
+      Client.addr(oracle),
+      Client.addr(marketToken),
+      xdr.ScVal.scvBool(maximize),
+    )
+    const m = decodeMap(ret)
     return {
-      longTokenAmount: this.i128Val(this.fieldVal(m, "long_token_amount")),
-      shortTokenAmount: this.i128Val(this.fieldVal(m, "short_token_amount")),
-      poolValueUsd: this.i128Val(this.fieldVal(m, "pool_value_usd")),
+      poolValue:          decodeI128(fieldVal(m, "pool_value")),
+      longTokenAmount:    decodeI128(fieldVal(m, "long_token_amount")),
+      shortTokenAmount:   decodeI128(fieldVal(m, "short_token_amount")),
+      longTokenUsd:       decodeI128(fieldVal(m, "long_token_usd")),
+      shortTokenUsd:      decodeI128(fieldVal(m, "short_token_usd")),
+      longPnl:            decodeI128(fieldVal(m, "long_pnl")),
+      shortPnl:           decodeI128(fieldVal(m, "short_pnl")),
+      netPnl:             decodeI128(fieldVal(m, "net_pnl")),
+      totalBorrowingFees: decodeI128(fieldVal(m, "total_borrowing_fees")),
+      impactPoolAmount:   decodeI128(fieldVal(m, "impact_pool_amount")),
     }
   }
+
+  /**
+   * get_open_interest(data_store, market_token) → (i128, i128)  [long, short]
+   * The contract returns a tuple encoded as a two-element Vec.
+   */
+  async getOpenInterest(
+    dataStore: string,
+    marketToken: string,
+  ): Promise<{ long: bigint; short: bigint }> {
+    const ret = await this.sim(
+      "get_open_interest",
+      Client.addr(dataStore),
+      Client.addr(marketToken),
+    )
+    const vec = decodeVec(ret)
+    return {
+      long:  decodeI128(vec[0]),
+      short: decodeI128(vec[1]),
+    }
+  }
+
+  /**
+   * get_funding_info(data_store, market_token) → FundingInfo
+   */
+  async getFundingInfo(dataStore: string, marketToken: string): Promise<FundingInfo> {
+    const ret = await this.sim(
+      "get_funding_info",
+      Client.addr(dataStore),
+      Client.addr(marketToken),
+    )
+    const m = decodeMap(ret)
+    return {
+      fundingFactorPerSecond:      decodeI128(fieldVal(m, "funding_factor_per_second")),
+      longFundingAmountPerSize:    decodeI128(fieldVal(m, "long_funding_amount_per_size")),
+      shortFundingAmountPerSize:   decodeI128(fieldVal(m, "short_funding_amount_per_size")),
+    }
+  }
+
+  // ── Position reads ──────────────────────────────────────────────────────────
+
+  /**
+   * get_account_positions(data_store, oracle, order_handler, account, page, page_size)
+   * → Vec<PositionInfo>
+   */
+  async getAccountPositions(
+    dataStore: string,
+    oracle: string,
+    orderHandler: string,
+    account: string,
+    page = 1,
+    pageSize = 20,
+  ): Promise<Array<PositionInfo>> {
+    const ret = await this.sim(
+      "get_account_positions",
+      Client.addr(dataStore),
+      Client.addr(oracle),
+      Client.addr(orderHandler),
+      Client.addr(account),
+      xdr.ScVal.scvU32(page),
+      xdr.ScVal.scvU32(pageSize),
+    )
+    return decodeVec(ret).map(decodePositionInfo)
+  }
+
+  // ── Order reads ─────────────────────────────────────────────────────────────
+
+  /**
+   * get_account_orders(data_store, order_handler, account, page, page_size)
+   * → Vec<OrderProps>
+   */
+  async getAccountOrders(
+    dataStore: string,
+    orderHandler: string,
+    account: string,
+    page = 1,
+    pageSize = 50,
+  ): Promise<Array<OrderProps>> {
+    const ret = await this.sim(
+      "get_account_orders",
+      Client.addr(dataStore),
+      Client.addr(orderHandler),
+      Client.addr(account),
+      xdr.ScVal.scvU32(page),
+      xdr.ScVal.scvU32(pageSize),
+    )
+    return decodeVec(ret).map(decodeOrderProps)
+  }
+}
+
+// ── Network config ────────────────────────────────────────────────────────────
+
+export const networks = {
+  testnet: {
+    contractId: "",
+    networkPassphrase: "Test SDF Network ; September 2015",
+  },
+  mainnet: {
+    contractId: "",
+    networkPassphrase: "Public Global Stellar Network ; September 2015",
+  },
 }

@@ -1,13 +1,25 @@
 import { CONTRACTS } from "@/app/config/contracts"
 import { NETWORK } from "@/app/config/network"
-import { Client, type MarketInfo, type OrderInfo, type PositionInfo, type PoolAmounts } from "./generated/synthetics-reader/src"
+import {
+  Client,
+  type MarketProps,
+  type PoolValueInfo,
+  type FundingInfo,
+  type PositionInfo,
+  type OrderProps,
+} from "./generated/synthetics-reader/src"
 
-export type { MarketInfo, OrderInfo, PositionInfo, PoolAmounts }
+export type { MarketProps, PoolValueInfo, FundingInfo, PositionInfo, OrderProps }
 
 /**
  * Thin wrapper around the generated SyntheticsReader Soroban client.
- * Consumes CONTRACTS.syntheticsReader + NETWORK config so callers
- * don't need to pass constructor options directly.
+ *
+ * The Reader contract requires three infra addresses as explicit arguments:
+ *   data_store    — key-value config + position/order storage
+ *   oracle        — on-chain price feed
+ *   order_handler — owns position/order account sets
+ *
+ * This wrapper resolves them from CONTRACTS so callers never touch addresses.
  */
 export class SyntheticsReaderClient {
   private client: Client
@@ -20,20 +32,51 @@ export class SyntheticsReaderClient {
     })
   }
 
-  getMarketInfo(marketAddress: string): Promise<MarketInfo> {
-    return this.client.getMarketInfo(marketAddress)
+  // ── Market ────────────────────────────────────────────────────────────────
+
+  getMarket(marketToken: string): Promise<MarketProps> {
+    return this.client.getMarket(CONTRACTS.dataStore, marketToken)
   }
 
-  getOrderInfo(account: string): Promise<OrderInfo[]> {
-    return this.client.getOrderInfo(account)
+  getMarketPoolValueInfo(marketToken: string, maximize = false): Promise<PoolValueInfo> {
+    return this.client.getMarketPoolValueInfo(
+      CONTRACTS.dataStore,
+      CONTRACTS.oracle,
+      marketToken,
+      maximize,
+    )
   }
 
-  getPositionInfo(account: string, marketAddress: string, isLong: boolean): Promise<PositionInfo> {
-    return this.client.getPositionInfo(account, marketAddress, isLong)
+  getOpenInterest(marketToken: string): Promise<{ long: bigint; short: bigint }> {
+    return this.client.getOpenInterest(CONTRACTS.dataStore, marketToken)
   }
 
-  getMarketPoolAmounts(marketAddress: string): Promise<PoolAmounts> {
-    return this.client.getMarketPoolAmounts(marketAddress)
+  getFundingInfo(marketToken: string): Promise<FundingInfo> {
+    return this.client.getFundingInfo(CONTRACTS.dataStore, marketToken)
+  }
+
+  // ── Positions ─────────────────────────────────────────────────────────────
+
+  getAccountPositions(account: string, page = 1, pageSize = 20): Promise<Array<PositionInfo>> {
+    return this.client.getAccountPositions(
+      CONTRACTS.dataStore,
+      CONTRACTS.oracle,
+      CONTRACTS.orderHandler,
+      account,
+      page,
+      pageSize,
+    )
+  }
+
+  // ── Orders ────────────────────────────────────────────────────────────────
+
+  getAccountOrders(account: string, page = 1, pageSize = 50): Promise<Array<OrderProps>> {
+    return this.client.getAccountOrders(
+      CONTRACTS.dataStore,
+      CONTRACTS.orderHandler,
+      account,
+      page,
+      pageSize,
+    )
   }
 }
-
