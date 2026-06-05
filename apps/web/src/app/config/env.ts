@@ -8,23 +8,20 @@
  *
  * Usage:
  *   import { ENV } from "@/app/config/env"
- *   console.log(ENV.NETWORK)          // "testnet" | "mainnet"
- *   console.log(ENV.RPC_URL)          // Soroban RPC endpoint
- *   console.log(ENV.CONTRACTS.DATA_STORE) // contract address
+ *   console.log(ENV.NETWORK)                   // "testnet" | "mainnet"
+ *   console.log(ENV.CONTRACTS.DATA_STORE)      // contract address
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Assert a required env var is set, throw with a clear message if not. */
 function requireEnv(value: string | undefined, name: string): string {
   if (!value) throw new Error(`Missing env var: ${name}`)
   return value
 }
 
-/** Return an optional env var or a hard-coded fallback. */
-function optionalEnv(value: string | undefined, fallback: string): string {
+function optionalEnv(value: string | undefined, fallback = ""): string {
   return value ?? fallback
 }
 
@@ -35,38 +32,33 @@ function optionalEnv(value: string | undefined, fallback: string): string {
 export type Network = "testnet" | "mainnet"
 
 export type EnvContracts = {
+  // ── Core trading contracts ─────────────────────────────────────────────────
   EXCHANGE_ROUTER: string
   SYNTHETICS_READER: string
   DATA_STORE: string
   ORDER_VAULT: string
-  STAKING_ROUTER: string
-  GLV_ROUTER: string
-  VESTING_ROUTER: string
   REFERRAL_STORAGE: string
+  // ── Infrastructure required by Reader views ───────────────────────────────
+  ORACLE: string
+  ORDER_HANDLER: string
+  // ── Optional — not deployed on all networks yet ───────────────────────────
+  STAKING_ROUTER: string   // "" when not deployed
+  GLV_ROUTER: string       // "" when not deployed
+  VESTING_ROUTER: string   // "" when not deployed
 }
 
 export type Env = {
-  /** Active Stellar network. */
   NETWORK: Network
-  /** Soroban JSON-RPC endpoint (see https://developers.stellar.org/docs/data/apis/rpc/providers). */
   RPC_URL: string
-  /** Horizon REST API endpoint. */
   HORIZON_URL: string
-  /** Oracle / price-feed base URL. Falls back to GMX infra if unset. */
   ORACLE_URL: string
-  /** Pyth Hermes endpoint for on-chain price attestations. */
   PYTH_HERMES_URL: string
-  /** Soroban contract addresses, keyed by role. */
   CONTRACTS: EnvContracts
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ENV — evaluated once at startup
 // ─────────────────────────────────────────────────────────────────────────────
-//
-// Each `import.meta.env.VITE_*` reference is inlined by Vite at build time.
-// Do NOT use `import.meta.env[variable]` (dynamic key) — Vite cannot statically
-// analyse it and the values would be undefined at runtime.
 
 export const ENV: Env = {
   NETWORK: requireEnv(import.meta.env.VITE_NETWORK, "VITE_NETWORK") as Network,
@@ -102,21 +94,21 @@ export const ENV: Env = {
       import.meta.env.VITE_CONTRACT_ORDER_VAULT,
       "VITE_CONTRACT_ORDER_VAULT",
     ),
-    STAKING_ROUTER: requireEnv(
-      import.meta.env.VITE_CONTRACT_STAKING_ROUTER,
-      "VITE_CONTRACT_STAKING_ROUTER",
-    ),
-    GLV_ROUTER: requireEnv(
-      import.meta.env.VITE_CONTRACT_GLV_ROUTER,
-      "VITE_CONTRACT_GLV_ROUTER",
-    ),
-    VESTING_ROUTER: requireEnv(
-      import.meta.env.VITE_CONTRACT_VESTING_ROUTER,
-      "VITE_CONTRACT_VESTING_ROUTER",
-    ),
     REFERRAL_STORAGE: requireEnv(
       import.meta.env.VITE_CONTRACT_REFERRAL_STORAGE,
       "VITE_CONTRACT_REFERRAL_STORAGE",
     ),
+    ORACLE: requireEnv(
+      import.meta.env.VITE_CONTRACT_ORACLE,
+      "VITE_CONTRACT_ORACLE",
+    ),
+    ORDER_HANDLER: requireEnv(
+      import.meta.env.VITE_CONTRACT_ORDER_HANDLER,
+      "VITE_CONTRACT_ORDER_HANDLER",
+    ),
+    // Optional — empty string signals "not deployed yet"
+    STAKING_ROUTER: optionalEnv(import.meta.env.VITE_CONTRACT_STAKING_ROUTER),
+    GLV_ROUTER:     optionalEnv(import.meta.env.VITE_CONTRACT_GLV_ROUTER),
+    VESTING_ROUTER: optionalEnv(import.meta.env.VITE_CONTRACT_VESTING_ROUTER),
   },
 }

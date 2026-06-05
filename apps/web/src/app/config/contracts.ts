@@ -5,50 +5,40 @@
  * Values are read from ENV (which in turn reads VITE_ env vars).
  *
  * Rule: feature code MUST import addresses from CONTRACTS, never
- * directly from ENV or import.meta.env.  This keeps the magic-string
- * surface area to exactly one file.
+ * directly from ENV or import.meta.env.
  *
- * Usage:
- *   import { CONTRACTS } from "@/app/config/contracts"
- *   contract.call("createOrder", CONTRACTS.exchangeRouter, ...)
+ * Optional contracts (stakingRouter, glvRouter, vestingRouter) will be
+ * an empty string when not yet deployed.  Code that uses them must guard:
+ *   if (!CONTRACTS.stakingRouter) throw new Error("Staking not deployed")
  */
 
 import { ENV } from "./env"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type ContractAddresses = {
-  /** ExchangeRouter — createOrder / cancelOrder / multicall */
+  // ── Core trading contracts ─────────────────────────────────────────────────
   exchangeRouter: string
-  /** SyntheticsReader — batched market / position / order queries */
   syntheticsReader: string
-  /** DataStore — on-chain key-value configuration store */
   dataStore: string
-  /** OrderVault — holds collateral between order creation and execution */
   orderVault: string
-
-  stakingRouter: string
-  /** GlvRouter — GLV vault deposits and withdrawals */
-  glvRouter: string
-  /** VestingRouter — lock esSO4 for 12-month linear vesting */
-  vestingRouter: string
-  /** ReferralStorage — register / query referral codes */
   referralStorage: string
+  // ── Infrastructure contracts used by Reader view functions ────────────────
+  oracle: string
+  orderHandler: string
+  // ── Optional — empty string when not deployed ─────────────────────────────
+  stakingRouter: string
+  glvRouter: string
+  vestingRouter: string
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CONTRACTS — single source of truth, evaluated at startup
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const CONTRACTS: ContractAddresses = {
   exchangeRouter:   ENV.CONTRACTS.EXCHANGE_ROUTER,
   syntheticsReader: ENV.CONTRACTS.SYNTHETICS_READER,
   dataStore:        ENV.CONTRACTS.DATA_STORE,
   orderVault:       ENV.CONTRACTS.ORDER_VAULT,
+  referralStorage:  ENV.CONTRACTS.REFERRAL_STORAGE,
+  oracle:           ENV.CONTRACTS.ORACLE,
+  orderHandler:     ENV.CONTRACTS.ORDER_HANDLER,
   stakingRouter:    ENV.CONTRACTS.STAKING_ROUTER,
   glvRouter:        ENV.CONTRACTS.GLV_ROUTER,
   vestingRouter:    ENV.CONTRACTS.VESTING_ROUTER,
-  referralStorage:  ENV.CONTRACTS.REFERRAL_STORAGE,
 }
