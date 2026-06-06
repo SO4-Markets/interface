@@ -2,12 +2,12 @@ import { useEffect, useRef } from "react"
 import { getRouteApi } from "@tanstack/react-router"
 import { useTradeState } from "../hooks/useTradeState"
 import { useOrderEventPolling } from "../hooks/useOrderEventPolling"
-import { saveReferralCode } from "@/lib/contracts"
 import { Navbar } from "../../../ui/Navbar"
 import { TVChart } from "./chart/TVChart"
 import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
 import { CircuitBreakerBanner } from "./CircuitBreakerBanner"
+import { saveReferralCode } from "@/lib/contracts"
 
 const tradeRoute = getRouteApi("/trade")
 
@@ -63,7 +63,7 @@ export function TradePage() {
         </div>
 
         {/* ── Right: Trade Panel ─────────────────────────────────────── */}
-        <div className="w-full shrink-0 overflow-y-auto border-t border-border lg:border-t-0 lg:border-l lg:w-80">
+        <div className="w-full shrink-0 overflow-x-hidden overflow-y-auto border-t border-border lg:border-t-0 lg:border-l lg:w-80">
           <TradePanel />
         </div>
       </div>

@@ -1,9 +1,4 @@
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import { TokenIcon } from "@/shared/components/TokenIcon"
-import { formatPct, formatToken, formatUsd } from "@/shared/lib/format"
-import { formatSorobanAmount } from "@/shared/lib/bignum"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
-import type { PoolMarketConfig } from "../data/markets"
 import { usePoolRowData } from "../hooks/use-pool-row-data"
 import {
   getComposition,
@@ -13,6 +8,11 @@ import {
 } from "../lib/pool-math"
 import { PoolActions } from "./pool-actions"
 import { PoolCompositionBar } from "./pool-composition-bar"
+import type { PoolMarketConfig } from "../data/markets"
+import { TokenIcon } from "@/shared/components/TokenIcon"
+import { formatPct, formatToken, formatUsd } from "@/shared/lib/format"
+import { formatSorobanAmount } from "@/shared/lib/bignum"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 type GmPoolRowProps = {
   market: PoolMarketConfig

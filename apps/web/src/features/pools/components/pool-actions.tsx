@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
+import { PoolTransactionDialog } from "./pool-transaction-dialog"
+import type { PoolMarketConfig } from "../data/markets"
 import { formatSorobanAmount } from "@/shared/lib/bignum"
 import { formatTxHash } from "@/shared/lib/format"
-import type { PoolMarketConfig } from "../data/markets"
-import { PoolTransactionDialog } from "./pool-transaction-dialog"
 
 type PoolActionsProps = {
   hasWallet: boolean
@@ -84,7 +84,7 @@ export function PoolActions({
 
       {account && dialogMode ? (
         <PoolTransactionDialog
-          open={dialogMode != null}
+          open
           mode={dialogMode}
           market={market}
           account={account}

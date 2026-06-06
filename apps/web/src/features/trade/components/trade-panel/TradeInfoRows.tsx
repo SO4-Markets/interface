@@ -1,9 +1,9 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip"
 import { useTradeFees } from "../../hooks/useTradeFees"
 import { useFundingRate } from "../../hooks/useFundingRate"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { estimateLiquidationPrice, formatUsd } from "../../lib/trade-math"
 import { getEstimatedEntryPrice, getPriceImpactPct } from "../../lib/pricing"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip"
 import type { TradeState } from "../../hooks/useTradeState"
 import { formatPct } from "@/shared/lib/format"
 
@@ -47,7 +47,7 @@ export function TradeInfoRows({
 
   if (tradeType === "Swap") {
     return (
-      <div className="space-y-1 text-xs">
+      <div className="min-w-0 space-y-1 overflow-x-hidden text-xs">
         <Row label="Min. receive" value="-" />
         <Row label="Swap fee" value={formatUsd(fees.positionFeeUsd)} />
         <Row label="Price impact" value={formatUsd(fees.priceImpactUsd)} highlight={fees.priceImpactUsd < 0} />
@@ -57,7 +57,7 @@ export function TradeInfoRows({
   }
 
   return (
-    <div className="space-y-1 text-xs">
+    <div className="min-w-0 space-y-1 overflow-x-hidden text-xs">
       <Row label="Entry price" value={estimatedEntryPrice > 0 ? formatUsd(estimatedEntryPrice) : "-"} />
       {tradeMode === "Limit" && <Row label="Limit price" value="-" />}
       <Row label="Liq. price" value={liquidationPrice > 0 ? formatUsd(liquidationPrice) : "-"} highlight />
@@ -81,8 +81,8 @@ export function TradeInfoRows({
 
 function ExecutionFeeRow({ value }: { value: string }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">
+    <div className="flex min-w-0 items-center justify-between gap-2">
+      <span className="shrink-0 text-muted-foreground">
         <Tooltip>
           <TooltipTrigger className="underline decoration-dotted underline-offset-2 cursor-help">Execution fee</TooltipTrigger>
           <TooltipContent side="top" className="max-w-48 text-xs">
@@ -90,7 +90,7 @@ function ExecutionFeeRow({ value }: { value: string }) {
           </TooltipContent>
         </Tooltip>
       </span>
-      <span>{value}</span>
+      <span className="min-w-0 truncate text-right">{value}</span>
     </div>
   )
 }
@@ -107,9 +107,11 @@ function Row({
   bold?: boolean
 }) {
   return (
-    <div className={`flex justify-between ${bold ? "font-medium" : ""}`}>
-      <span className="text-muted-foreground">{label}</span>
-      <span className={highlight ? "text-amber-500" : ""}>{value}</span>
+    <div className={`flex min-w-0 items-center justify-between gap-2 ${bold ? "font-medium" : ""}`}>
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className={`min-w-0 truncate text-right ${highlight ? "text-amber-500" : ""}`}>
+        {value}
+      </span>
     </div>
   )
 }

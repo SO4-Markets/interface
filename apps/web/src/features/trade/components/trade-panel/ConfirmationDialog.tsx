@@ -7,38 +7,38 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
-import { createSwapOrder, sendBatchOrderTxn, type DecreaseOrderParams, type IncreaseOrderParams } from "../../lib/stellar"
-import { applyReferralCode } from "@/features/referrals/lib/referrals"
-import { readStoredReferralCode } from "@/lib/contracts"
-import { getTraderReferralCode } from "@/lib/contracts"
+import { useQuery } from "@tanstack/react-query"
+import { createSwapOrder, sendBatchOrderTxn } from "../../lib/stellar"
 import { formatUsd } from "../../lib/trade-math"
-import type { useTradeState } from "../../hooks/useTradeState"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useTradeFees } from "../../hooks/useTradeFees"
 import { getEstimatedEntryPrice, getPriceImpactPct } from "../../lib/pricing"
-import { estimateFee } from "@/lib/soroban/simulate"
 import {
-  buildBatchOrderTransaction,
-  buildCreateOrderTransaction,
-} from "@/lib/contracts"
-import {
+  encodeTokenAmount,
   toCreateOrderParams,
   toDecreaseOrderParams,
-  encodeTokenAmount,
 } from "../../lib/order-encoding"
+import { fetchFeeConfig } from "../../lib/data-store"
+import { queryKeys } from "../../lib/query-keys"
+import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
+import type { useTradeState } from "../../hooks/useTradeState"
+import { applyReferralCode } from "@/features/referrals/lib/referrals"
 import {
-  checkAllowance,
   buildApproveTransaction,
+  buildBatchOrderTransaction,
+  buildCreateOrderTransaction,
+  checkAllowance,
+  getTraderReferralCode,
+  parseSorobanError,
+  readStoredReferralCode,
 } from "@/lib/contracts"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import { estimateFee } from "@/lib/soroban/simulate"
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 import { walletKit } from "@/features/wallet/lib/wallet-kit"
 import { NETWORK } from "@/app/config/network"
 import { CONTRACTS } from "@/app/config/contracts"
-import { fetchFeeConfig } from "../../lib/data-store"
-import { useQuery } from "@tanstack/react-query"
-import { queryKeys } from "../../lib/query-keys"
-import { parseSorobanError } from "@/lib/contracts"
+import { formatAddress } from "@/shared/lib/format"
 
 type Props = {
   open: boolean
@@ -204,9 +204,7 @@ export function ConfirmationDialog({
         const fee = await estimateFee(tx)
         setNetworkFee(fee.total)
       } catch (error) {
-        setEstimateError(
-          error instanceof Error ? error.message : "Failed to estimate fee"
-        )
+        setEstimateError(parseSorobanError(error))
       } finally {
         setEstimatingFee(false)
       }
@@ -332,19 +330,19 @@ export function ConfirmationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] overflow-y-auto overflow-x-hidden sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            Confirm {typeLabel} {!tradeFlags.isSwap && toTokenAddress}
+          <DialogTitle className="max-w-full pr-8 [overflow-wrap:anywhere]">
+            Confirm {typeLabel} {!tradeFlags.isSwap && formatAddress(toTokenAddress)}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-2 text-sm">
+        <div className="min-w-0 space-y-1.5 text-sm">
           {!tradeFlags.isSwap && (
             <>
               <Row label="Size" value={formatUsd(sizeUsd)} />
               {maxPositionError && (
-                <p className="text-xs text-red-500">{maxPositionError}</p>
+                <p className="break-words text-xs text-red-500">{maxPositionError}</p>
               )}
               <Row label="Leverage" value={`${leverage}x`} />
               <Row
@@ -374,26 +372,25 @@ export function ConfirmationDialog({
               />
               <Row label="Execution fee" value="~0.01 XLM" />
               {estimateError && (
-                <p className="text-xs text-amber-500">
+                <p className="max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
                   Fee estimation warning: {estimateError}
                 </p>
               )}
               {allowanceState !== "sufficient" &&
-                allowanceState !== "checking" &&
-                !tradeFlags.isSwap && (
-                  <div className="rounded border border-amber-500/30 p-2">
+                allowanceState !== "checking" && (
+                  <div className="min-w-0 rounded border border-amber-500/30 p-2">
                     <p className="mb-1 text-xs font-medium text-amber-500">
                       Step 1/2: Approve collateral
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="max-w-full text-xs text-muted-foreground [overflow-wrap:anywhere]">
                       {allowanceState === "approving"
                         ? "Approving..."
                         : allowanceState === "approved"
                           ? "Approved! Proceeding with order..."
-                          : `${collateralAddress} needs to be approved for trading.`}
+                          : `${formatAddress(collateralAddress)} needs to be approved for trading.`}
                     </p>
                     {approveError && (
-                      <p className="mt-1 text-xs text-red-500">
+                      <p className="mt-1 max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-red-500/20 bg-red-500/5 p-2 text-xs text-red-500 [overflow-wrap:anywhere]">
                         {approveError}
                       </p>
                     )}
@@ -407,14 +404,14 @@ export function ConfirmationDialog({
                 </div>
               )}
               {sidecarOrders.length > 0 && (
-                <div className="rounded border border-border p-2">
+                <div className="min-w-0 rounded border border-border p-2">
                   <p className="mb-1 text-xs font-medium">
                     TP/SL sidecar orders
                   </p>
                   {sidecarOrders.map((order, i) => (
                     <p
                       key={`${order.type}-${i}`}
-                      className="text-xs text-muted-foreground"
+                      className="break-words text-xs text-muted-foreground"
                     >
                       {order.type === "takeProfit" ? "TP" : "SL"} at{" "}
                       {order.triggerPrice} ({order.sizePct}%)
@@ -426,9 +423,9 @@ export function ConfirmationDialog({
           )}
           <Row
             label="Collateral"
-            value={`${fromAmount || "0"} ${collateralAddress}`}
+            value={`${fromAmount || "0"} ${formatAddress(collateralAddress)}`}
           />
-          <div className="border-t border-border pt-2">
+          <div className="border-t border-border pt-1.5">
             <Row label="Total fees" value={formatUsd(fees.totalFeesUsd)} bold />
           </div>
         </div>
@@ -478,9 +475,11 @@ function Row({
   highlight?: boolean
 }) {
   return (
-    <div className={`flex justify-between ${bold ? "font-medium" : ""}`}>
-      <span className="text-muted-foreground">{label}</span>
-      <span className={highlight ? "text-red-500" : ""}>{value}</span>
+    <div className={`flex min-w-0 items-center justify-between gap-2 ${bold ? "font-medium" : ""}`}>
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className={`min-w-0 truncate text-right ${highlight ? "text-red-500" : ""}`} title={value}>
+        {value}
+      </span>
     </div>
   )
 }

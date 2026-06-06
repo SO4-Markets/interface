@@ -1,12 +1,14 @@
-import { Contract, TransactionBuilder, rpc, scValToNative, xdr } from "@stellar/stellar-sdk"
+import { Address, Contract, TransactionBuilder, rpc, scValToNative, xdr } from "@stellar/stellar-sdk"
 import type { Transaction } from "@stellar/stellar-sdk"
 import type { NetworkConfig } from "../types"
 import { i128ToScVal } from "../scval"
 
 type Config = NetworkConfig
 
+const DEFAULT_ALLOWANCE_LEDGERS = 120_960
+
 function address(value: string): xdr.ScVal {
-  return xdr.ScVal.scvString(value)
+  return new Address(value).toScVal()
 }
 
 export class SacTokenClient {
@@ -46,10 +48,12 @@ export class SacTokenClient {
     owner: string,
     spender: string,
     amount: bigint,
-    expirationLedger = 4_294_967_295,
+    expirationLedger?: number,
   ): Promise<Transaction> {
     const contract = new Contract(tokenAddress)
     const source = await this.server.getAccount(owner)
+    const latestLedger = await this.server.getLatestLedger()
+    const liveUntilLedger = expirationLedger ?? latestLedger.sequence + DEFAULT_ALLOWANCE_LEDGERS
     const tx = new TransactionBuilder(source, {
       fee: "100",
       networkPassphrase: this.config.networkPassphrase,
@@ -60,7 +64,7 @@ export class SacTokenClient {
           address(owner),
           address(spender),
           i128ToScVal(amount),
-          xdr.ScVal.scvU32(expirationLedger),
+          xdr.ScVal.scvU32(liveUntilLedger),
         ),
       )
       .setTimeout(180)

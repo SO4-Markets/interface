@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -9,13 +10,14 @@ import {
   DialogTitle,
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
+import { submitPoolDeposit, submitPoolWithdrawal } from "../lib/pool-transactions"
+import type { PoolMarketConfig } from "../data/markets"
+import type { PoolTxStepStatus, PoolTxStepUpdate } from "../lib/pool-transactions"
 import { NumberInput } from "@/shared/components/NumberInput"
 import { TokenIcon } from "@/shared/components/TokenIcon"
 import { formatSorobanAmount, toSorobanAmount } from "@/shared/lib/bignum"
-import { formatToken } from "@/shared/lib/format"
+import { formatToken, formatTxHash } from "@/shared/lib/format"
 import { getTokenClient } from "@/lib/contracts"
-import type { PoolMarketConfig } from "../data/markets"
-import { submitPoolDeposit, submitPoolWithdrawal } from "../lib/pool-transactions"
 
 type PoolTransactionMode = "deposit" | "withdraw"
 
@@ -34,6 +36,14 @@ type TokenBalances = {
   short: bigint
 }
 
+type TransactionStep = {
+  id: string
+  label: string
+  description: string
+  status: PoolTxStepStatus
+  txHash?: string
+}
+
 const DECIMALS = 7
 
 export function PoolTransactionDialog({
@@ -45,11 +55,14 @@ export function PoolTransactionDialog({
   onClose,
   onQueued,
 }: PoolTransactionDialogProps) {
+  const toastIdRef = useRef<string | number | null>(null)
   const [longAmount, setLongAmount] = useState("")
   const [shortAmount, setShortAmount] = useState("")
   const [gmAmount, setGmAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [steps, setSteps] = useState<Array<TransactionStep>>([])
 
   const { data: tokenBalances } = useQuery<TokenBalances>({
     queryKey: ["pools", "depositBalances", market.marketToken, account],
@@ -92,11 +105,32 @@ export function PoolTransactionDialog({
     (mode === "deposit" ? hasDepositAmount : hasWithdrawAmount) &&
     !isSubmitting
 
+  useEffect(() => {
+    if (!open) {
+      setIsSubmitting(false)
+      setIsComplete(false)
+      setError(null)
+      setSteps([])
+    }
+  }, [open])
+
   async function handleSubmit() {
     if (!canSubmit) return
 
+    const initialSteps = getInitialSteps({
+      mode,
+      market,
+      longTokenAmount: longRaw ?? 0n,
+      shortTokenAmount: shortRaw ?? 0n,
+    })
+
+    setSteps(initialSteps)
     setIsSubmitting(true)
+    setIsComplete(false)
     setError(null)
+    toastIdRef.current = toast.loading(
+      mode === "deposit" ? "Starting pool deposit..." : "Starting pool withdrawal...",
+    )
 
     try {
       const result =
@@ -107,6 +141,7 @@ export function PoolTransactionDialog({
               longTokenAmount: longRaw ?? 0n,
               shortTokenAmount: shortRaw ?? 0n,
               minMarketTokens: 0n,
+              onProgress: updateStep,
             })
           : await submitPoolWithdrawal({
               account,
@@ -114,25 +149,76 @@ export function PoolTransactionDialog({
               marketTokenAmount: gmRaw ?? 0n,
               minLongTokenAmount: 0n,
               minShortTokenAmount: 0n,
+              onProgress: updateStep,
             })
 
       onQueued({ mode, ...result })
+      setIsComplete(true)
+      toast.success(mode === "deposit" ? "Deposit queued" : "Withdrawal queued", {
+        id: toastIdRef.current,
+        description: `Final tx: ${formatTxHash(result.hash)}. Keeper execution usually completes within about 60 seconds.`,
+      })
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Transaction failed."
+      setError(message)
+      toast.error(message, { id: toastIdRef.current })
+    } finally {
+      setIsSubmitting(false)
+      toastIdRef.current = null
+    }
+  }
+
+  function updateStep(update: PoolTxStepUpdate) {
+    const toastId = toastIdRef.current ?? undefined
+    if (update.status === "active") {
+      toast.loading(update.message ?? "Waiting for transaction confirmation...", { id: toastId })
+    } else if (update.status === "confirmed") {
+      toast.success(update.message ?? "Transaction confirmed", {
+        id: toastId,
+        description: update.txHash ? `Tx: ${formatTxHash(update.txHash)}` : undefined,
+      })
+    } else if (update.status === "skipped") {
+      toast.info(update.message ?? "Step skipped", { id: toastId })
+    } else if (update.status === "failed") {
+      toast.error(update.message ?? "Transaction failed", { id: toastId })
+    }
+
+    setSteps((current) => {
+      const targetId =
+        update.id === "current"
+          ? current.find((step) => step.status === "active")?.id
+          : update.id
+
+      if (!targetId) return current
+
+      return current.map((step) =>
+        step.id === targetId
+          ? {
+              ...step,
+              status: update.status,
+              txHash: update.txHash ?? step.txHash,
+              description: update.message ?? step.description,
+            }
+          : step,
+      )
+    })
+  }
+
+  function handleClose() {
+    if (isSubmitting) return
+    if (isComplete) {
       setLongAmount("")
       setShortAmount("")
       setGmAmount("")
-      onClose()
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Transaction failed.")
-    } finally {
-      setIsSubmitting(false)
     }
+    onClose()
   }
 
   const title = mode === "deposit" ? `Deposit ${market.label}` : `Withdraw ${market.label}`
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
+      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -142,14 +228,14 @@ export function PoolTransactionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="rounded-md border border-border bg-muted/30 p-3">
-            <div className="flex items-center gap-3">
+        <div className="min-w-0 space-y-4">
+          <div className="min-w-0 rounded-md border border-border bg-muted/30 p-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="flex -space-x-2">
                 <TokenIcon symbol={market.longSymbol.replace(/^T/, "")} size={28} />
                 <TokenIcon symbol={market.shortSymbol.replace(/^T/, "")} size={28} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">{market.label}</p>
                 <p className="text-xs text-muted-foreground">{market.displayName}</p>
               </div>
@@ -187,16 +273,24 @@ export function PoolTransactionDialog({
             After approval and queue creation, keeper execution usually completes within about 60 seconds.
           </div>
 
-          {validationError ? <p className="text-xs text-red-500">{validationError}</p> : null}
-          {error ? <p className="text-xs text-red-500">{error}</p> : null}
+          {steps.length > 0 ? <TransactionSteps steps={steps} /> : null}
+
+          {validationError ? <p className="break-words text-xs text-red-500">{validationError}</p> : null}
+          {error ? (
+            <p className="max-h-32 overflow-y-auto break-words rounded-md border border-red-500/20 bg-red-500/5 p-2 text-xs text-red-500">
+              {error}
+            </p>
+          ) : null}
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            {isComplete ? "Close" : "Cancel"}
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {isSubmitting
+          <Button onClick={handleSubmit} disabled={!canSubmit || isComplete}>
+            {isComplete
+              ? "Queued"
+              : isSubmitting
               ? "Submitting..."
               : mode === "deposit"
                 ? "Queue Deposit"
@@ -205,6 +299,63 @@ export function PoolTransactionDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function TransactionSteps({ steps }: { steps: Array<TransactionStep> }) {
+  return (
+    <div className="rounded-md border border-border bg-muted/20 p-3">
+      <p className="mb-3 text-xs font-medium text-foreground">Transaction progress</p>
+      <ol className="space-y-3">
+        {steps.map((step, index) => (
+          <li key={step.id} className="flex gap-3">
+            <span
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-medium ${
+                step.status === "confirmed"
+                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-500"
+                  : step.status === "active"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : step.status === "failed"
+                      ? "border-red-500 bg-red-500/10 text-red-500"
+                      : step.status === "skipped"
+                        ? "border-muted-foreground/40 text-muted-foreground"
+                        : "border-border text-muted-foreground"
+              }`}
+            >
+              {step.status === "confirmed"
+                ? "OK"
+                : step.status === "active"
+                  ? "..."
+                  : index + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-foreground">{step.label}</p>
+                <span className="shrink-0 text-[11px] text-muted-foreground">
+                  {step.status === "confirmed"
+                    ? "Confirmed"
+                    : step.status === "active"
+                      ? "In progress"
+                      : step.status === "skipped"
+                        ? "Skipped"
+                        : step.status === "failed"
+                          ? "Failed"
+                          : "Waiting"}
+                </span>
+              </div>
+              <p className="mt-0.5 break-words text-[11px] leading-relaxed text-muted-foreground">
+                {step.description}
+              </p>
+              {step.txHash ? (
+                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  Tx {formatTxHash(step.txHash)}
+                </p>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
   )
 }
 
@@ -249,4 +400,62 @@ function parseAmount(value: string): bigint | null {
   } catch {
     return null
   }
+}
+
+function getInitialSteps({
+  mode,
+  market,
+  longTokenAmount,
+  shortTokenAmount,
+}: {
+  mode: PoolTransactionMode
+  market: PoolMarketConfig
+  longTokenAmount: bigint
+  shortTokenAmount: bigint
+}): Array<TransactionStep> {
+  if (mode === "withdraw") {
+    return [
+      {
+        id: "approve-gm",
+        label: "Approve GM",
+        description: "Allow the withdrawal handler to spend your GM tokens.",
+        status: "waiting",
+      },
+      {
+        id: "create-withdrawal",
+        label: "Create withdrawal",
+        description: "Submit the withdrawal request and wait for confirmation.",
+        status: "waiting",
+      },
+    ]
+  }
+
+  const steps: Array<TransactionStep> = []
+
+  if (longTokenAmount > 0n) {
+    steps.push({
+      id: "approve-long",
+      label: `Approve ${market.longSymbol}`,
+      description: `Allow the deposit handler to spend ${market.longSymbol}.`,
+      status: "waiting",
+    })
+  }
+
+  if (shortTokenAmount > 0n) {
+    steps.push({
+      id: "approve-short",
+      label: `Approve ${market.shortSymbol}`,
+      description: `Allow the deposit handler to spend ${market.shortSymbol}.`,
+      status: "waiting",
+    })
+  }
+
+  steps.push({
+    id: "create-deposit",
+    label: "Create deposit",
+    description: "Submit the deposit request and wait for confirmation.",
+    status: "waiting",
+  })
+
+  return steps
 }
