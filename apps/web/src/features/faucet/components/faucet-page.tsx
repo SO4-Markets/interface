@@ -5,6 +5,7 @@ import { FAUCET_CONTRACT_ID } from "../lib/clients"
 import { useFaucetData } from "../hooks/useFaucetData"
 import { useClaim } from "../hooks/useClaim"
 import type { FaucetTokenConfig } from "../data/tokens"
+import type { TokenClaimState } from "../hooks/useClaim"
 import { Navbar } from "@/ui/Navbar"
 import { TokenIcon } from "@/shared/components/TokenIcon"
 import { formatToken } from "@/shared/lib/format"
@@ -24,6 +25,7 @@ type TokenCardProps = {
   cooldownLedgers: number | undefined
   isLoading: boolean
   isPending: boolean
+  claimState: TokenClaimState
   isDisabled: boolean
   onClaim: (token: FaucetTokenConfig) => void
 }
@@ -36,6 +38,7 @@ function TokenCard({
   cooldownLedgers,
   isLoading,
   isPending,
+  claimState,
   isDisabled,
   onClaim,
 }: TokenCardProps) {
@@ -43,6 +46,10 @@ function TokenCard({
     lastClaimLedger && cooldownLedgers
       ? `Last claim ledger ${lastClaimLedger.toLocaleString()}`
       : "No claim recorded"
+  const claimFeedback =
+    claimState.status === "success" || claimState.status === "error"
+      ? claimState.message
+      : null
 
   return (
     <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-card p-5">
@@ -105,6 +112,18 @@ function TokenCard({
           )}
         </Button>
       </div>
+
+      {claimFeedback ? (
+        <p
+          className={`text-[12px] break-words ${
+            claimState.status === "error"
+              ? "text-destructive"
+              : "text-green-500"
+          }`}
+        >
+          {claimFeedback}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -116,11 +135,19 @@ export function FaucetPage() {
   const isConnected = useWalletStore((state) => state.status === "connected")
   const { mismatch } = useNetwork()
   const { data, isLoading } = useFaucetData(address)
-  const { claim, isBulkPending, isTokenPending } = useClaim()
+  const {
+    claim,
+    isBulkPending,
+    isTokenPending,
+    hasPendingTokens,
+    getTokenClaimState,
+  } = useClaim()
 
   const isTestnet = NETWORK.name === "testnet"
   const globalClaimDisabled = !isConnected || mismatch
-  const bulkClaimDisabled = globalClaimDisabled || isBulkPending
+  // Bulk claims include every faucet token, so disable bulk while any token claim is in flight.
+  const bulkClaimDisabled =
+    globalClaimDisabled || isBulkPending || hasPendingTokens
 
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
@@ -164,6 +191,7 @@ export function FaucetPage() {
                   cooldownLedgers={data?.cooldownLedgers}
                   isLoading={isLoading}
                   isPending={isTokenPending(token.contractId)}
+                  claimState={getTokenClaimState(token.contractId)}
                   isDisabled={globalClaimDisabled}
                   onClaim={(selectedToken) => claim([selectedToken.contractId])}
                 />

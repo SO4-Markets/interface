@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { FAUCET_TOKENS } from "../data/tokens"
@@ -20,6 +20,15 @@ function isClaimTooSoonError(error: unknown): boolean {
   )
 }
 
+type ClaimStatus = "idle" | "pending" | "success" | "error"
+
+export type TokenClaimState = {
+  status: ClaimStatus
+  message?: string
+}
+
+const IDLE_CLAIM_STATE: TokenClaimState = { status: "idle" }
+
 export function useClaim() {
   const address = useWalletStore((state) => state.address)
   const isConnected = useWalletStore((state) => state.status === "connected")
@@ -30,6 +39,9 @@ export function useClaim() {
   const pendingTokenIdsRef = useRef<Set<string>>(new Set())
   const isBulkPendingRef = useRef(false)
   const [isBulkPending, setIsBulkPending] = useState(false)
+  const [tokenClaimStates, setTokenClaimStates] = useState<
+    Record<string, TokenClaimState>
+  >({})
 
   const setBulkPending = useCallback((value: boolean) => {
     isBulkPendingRef.current = value
@@ -37,22 +49,43 @@ export function useClaim() {
   }, [])
 
   const markTokensPending = useCallback((tokenIds: Array<string>) => {
-    setPendingTokenIds((current) => {
-      const next = new Set(current)
-      tokenIds.forEach((tokenId) => next.add(tokenId))
-      pendingTokenIdsRef.current = next
-      return next
-    })
+    const next = new Set(pendingTokenIdsRef.current)
+    tokenIds.forEach((tokenId) => next.add(tokenId))
+    pendingTokenIdsRef.current = next
+    setPendingTokenIds(next)
   }, [])
 
   const clearTokensPending = useCallback((tokenIds: Array<string>) => {
-    setPendingTokenIds((current) => {
-      const next = new Set(current)
-      tokenIds.forEach((tokenId) => next.delete(tokenId))
-      pendingTokenIdsRef.current = next
-      return next
-    })
+    const next = new Set(pendingTokenIdsRef.current)
+    tokenIds.forEach((tokenId) => next.delete(tokenId))
+    pendingTokenIdsRef.current = next
+    setPendingTokenIds(next)
   }, [])
+
+  const setTokensClaimState = useCallback(
+    (tokenIds: Array<string>, state: TokenClaimState) => {
+      setTokenClaimStates((current) => {
+        const next = { ...current }
+        tokenIds.forEach((tokenId) => {
+          next[tokenId] = state
+        })
+        return next
+      })
+    },
+    []
+  )
+
+  const getTokenClaimState = useCallback(
+    (tokenId: string) => tokenClaimStates[tokenId] ?? IDLE_CLAIM_STATE,
+    [tokenClaimStates]
+  )
+
+  const isTokenPending = useCallback(
+    (tokenId: string) => pendingTokenIds.has(tokenId),
+    [pendingTokenIds]
+  )
+
+  const hasPendingTokens = pendingTokenIds.size > 0
 
   const claim = useCallback(
     async (tokenIds = FAUCET_TOKENS.map((token) => token.contractId)) => {
@@ -62,12 +95,18 @@ export function useClaim() {
       const hasPendingToken = tokenIds.some((tokenId) =>
         pendingTokenIdsRef.current.has(tokenId)
       )
-      if (isBulkClaim ? isBulkPendingRef.current : hasPendingToken) return
+      if (
+        isBulkClaim
+          ? isBulkPendingRef.current || hasPendingToken
+          : hasPendingToken
+      )
+        return
 
       if (isBulkClaim) {
         setBulkPending(true)
       }
       markTokensPending(tokenIds)
+      setTokensClaimState(tokenIds, { status: "pending" })
       const toastId = toast.loading(
         tokenIds.length === 1 ? "Claiming test token…" : "Claiming test tokens…"
       )
@@ -89,6 +128,11 @@ export function useClaim() {
           queryKey: queryKeys.faucet.data(address),
         })
 
+        setTokensClaimState(tokenIds, {
+          status: "success",
+          message: "Claim submitted. Balance refreshes shortly.",
+        })
+
         toast.success("Test tokens claimed!", {
           id: toastId,
           description: (
@@ -106,6 +150,8 @@ export function useClaim() {
         const message = isClaimTooSoonError(error)
           ? "Cooldown active — please wait before claiming again."
           : parseSorobanError(error)
+
+        setTokensClaimState(tokenIds, { status: "error", message })
         toast.error(message, { id: toastId })
       } finally {
         if (isBulkClaim) {
@@ -121,24 +167,15 @@ export function useClaim() {
       markTokensPending,
       queryClient,
       setBulkPending,
+      setTokensClaimState,
     ]
-  )
-
-  const isPending = isBulkPending || pendingTokenIds.size > 0
-  const isTokenPending = useCallback(
-    (tokenId: string) => pendingTokenIds.has(tokenId),
-    [pendingTokenIds]
-  )
-  const pendingTokenIdList = useMemo(
-    () => Array.from(pendingTokenIds),
-    [pendingTokenIds]
   )
 
   return {
     claim,
-    isPending,
     isBulkPending,
     isTokenPending,
-    pendingTokenIds: pendingTokenIdList,
+    hasPendingTokens,
+    getTokenClaimState,
   }
 }
