@@ -1,82 +1,451 @@
-# To improve query performance, we strongly suggest adding indexes to any field that you plan to filter or sort by
-# Add the `@index` or `@index(unique: true)` annotation after any non-key field
-# https://academy.subquery.network/build/graphql.html#indexing-by-non-primary-key-field
+# SO4 protocol schema
+#
+# Protocol-scale values, token amounts, prices, USD 1e30 values, shares, and
+# signed deltas are stored as strings unless they are native ledger/count values.
+# Mappings should keep these values as decoded decimal/base-unit strings and
+# must not downcast them to JavaScript numbers.
 
-type Account @entity {
-  """
-  id field is always required and must look like this
-  """
+"""
+Tracked SO4 protocol, token, faucet, market, and referral contracts.
+Fed by deployment manifests and first-seen contract events such as mkt_new,
+token transfer/mint/burn, faucet activity, and referral administration events.
+"""
+type ProtocolContract @entity {
   id: ID!
-  """
-  The first block on which we see a transfer involving this account
-  """
-  firstSeenLedger: Int
-  """
-  The most recent block on which we see a transfer involving this account
-  """
-  lastSeenLedger: Int
-  sentTransfers: [Transfer] @derivedFrom(field: "from") # These are virtual properties to help us navigate to the correct foreign key of Transfer
-  receivedTransfers: [Transfer] @derivedFrom(field: "to") # These are virtual properties to help us navigate to the correct foreign key of Transfer
-  sentPayments: [Payment] @derivedFrom(field: "from") # These are virtual properties to help us navigate to the correct foreign key of Payment
-  receivedPayments: [Payment] @derivedFrom(field: "to") # These are virtual properties to help us navigate to the correct foreign key of Payment
+  key: String! @index(unique: true)
+  address: String! @index(unique: true)
+  contractType: String! @index
+  name: String
+  network: String @index
+  firstSeenLedger: Int @index
+  firstSeenTimestamp: Date @index
+  transactionHash: String @index
+  markets: [Market] @derivedFrom(field: "contract")
 }
 
-type Transfer @entity {
-  """
-  id field is always required and must look like this
-  """
+"""
+Token metadata for collateral, index, market, faucet, and protocol tokens.
+Fed by token contract metadata plus token/faucet mint, burn, and transfer events.
+"""
+type Token @entity {
   id: ID!
-  """
-  The ledger of the transfer
-  """
-  ledger: Int!
-  """
-  The date of the transfer
-  """
-  date: Date!
-  """
-  The contract that was transferred
-  """
-  contract: String!
-  """
-  The account that transfers are made from
-  """
-  from: Account!
-  """
-  The account that transfers are made to
-  """
-  to: Account!
-  """
-  Value that is transferred
-  """
-  value: BigInt!
+  contract: ProtocolContract
+  address: String! @index(unique: true)
+  symbol: String @index
+  name: String
+  decimals: Int
+  tokenType: String @index
+  firstSeenLedger: Int @index
+  firstSeenTimestamp: Date @index
+  transactionHash: String @index
+  transfers: [MarketTokenTransfer] @derivedFrom(field: "token")
 }
 
-type Payment @entity {
+"""
+SO4 market definition.
+Fed by mkt_new and later market status/configuration events.
+"""
+type Market @entity {
   id: ID!
-  txHash: String!
-  """
-  The account that payments are made from
-  """
-  from: Account!
-  """
-  The account that payments are made to
-  """
-  to: Account!
-  """
-  Amount that is transferred
-  """
+  key: String! @index(unique: true)
+  contract: ProtocolContract
+  marketToken: Token
+  indexToken: Token
+  longToken: Token
+  shortToken: Token
+  name: String
+  status: String! @index
+  createdBy: String @index
+  createdLedger: Int! @index
+  createdTimestamp: Date! @index
+  createdTransactionHash: String! @index
+  latestConfigSnapshot: MarketConfigSnapshot
+  configSnapshots: [MarketConfigSnapshot] @derivedFrom(field: "market")
+  deposits: [Deposit] @derivedFrom(field: "market")
+  withdrawals: [Withdrawal] @derivedFrom(field: "market")
+  orders: [Order] @derivedFrom(field: "market")
+  positions: [Position] @derivedFrom(field: "market")
+  positionChanges: [PositionChange] @derivedFrom(field: "market")
+  liquidations: [Liquidation] @derivedFrom(field: "market")
+  adlEvents: [AdlEvent] @derivedFrom(field: "market")
+  feeClaims: [FeeClaim] @derivedFrom(field: "market")
+  uiFeeAccruals: [UiFeeAccrual] @derivedFrom(field: "market")
+  fundingFeeClaims: [FundingFeeClaim] @derivedFrom(field: "market")
+}
+
+"""
+Point-in-time market configuration.
+Fed by mkt_new and market configuration update events.
+"""
+type MarketConfigSnapshot @entity {
+  id: ID!
+  market: Market! @index
+  key: String! @index
+  version: Int @index
+  oracle: String
+  maxLeverage: String
+  minCollateralUsd: String
+  borrowingFactor: String
+  fundingFactor: String
+  depositFeeFactor: String
+  withdrawalFeeFactor: String
+  liquidationFeeUsd: String
+  rawConfig: String
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Liquidity deposit lifecycle.
+Fed by dep_create, dep_execute, and dep_cancel events.
+"""
+type Deposit @entity {
+  id: ID!
+  key: String! @index(unique: true)
+  market: Market! @index
+  account: String! @index
+  receiver: String @index
+  status: String! @index
+  longTokenAmount: String
+  shortTokenAmount: String
+  minMarketTokens: String
+  marketTokenAmount: String
+  executionFee: String
+  createdLedger: Int @index
+  createdTimestamp: Date @index
+  createdTransactionHash: String @index
+  executedLedger: Int @index
+  executedTimestamp: Date @index
+  executedTransactionHash: String @index
+  cancelledLedger: Int @index
+  cancelledTimestamp: Date @index
+  cancelledTransactionHash: String @index
+  cancellationReason: String
+}
+
+"""
+Liquidity withdrawal lifecycle.
+Fed by wth_create, wth_execute, and wth_cancel events.
+"""
+type Withdrawal @entity {
+  id: ID!
+  key: String! @index(unique: true)
+  market: Market! @index
+  account: String! @index
+  receiver: String @index
+  status: String! @index
+  marketTokenAmount: String
+  minLongTokenAmount: String
+  minShortTokenAmount: String
+  longTokenAmount: String
+  shortTokenAmount: String
+  executionFee: String
+  createdLedger: Int @index
+  createdTimestamp: Date @index
+  createdTransactionHash: String @index
+  executedLedger: Int @index
+  executedTimestamp: Date @index
+  executedTransactionHash: String @index
+  cancelledLedger: Int @index
+  cancelledTimestamp: Date @index
+  cancelledTransactionHash: String @index
+  cancellationReason: String
+}
+
+"""
+Pool balance snapshot for market-side liquidity and accounting.
+Fed by dep_execute, wth_execute, fee settlement, funding, liquidation, and ADL events.
+"""
+type PoolBalanceSnapshot @entity {
+  id: ID!
+  market: Market! @index
+  token: Token @index
+  side: String! @index
+  poolAmount: String!
+  reservedAmount: String
+  openInterest: String
+  pnlPoolUsd: String
+  feePoolAmount: String
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Market and protocol-token transfer observability.
+Fed by token/faucet transfer, mint, burn, and market-token transfer events.
+"""
+type MarketTokenTransfer @entity {
+  id: ID!
+  token: Token @index
+  contractAddress: String! @index
+  from: String @index
+  to: String @index
+  account: String @index
+  transferType: String! @index
   amount: String!
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
 }
 
-type Credit @entity {
+"""
+Trading order lifecycle.
+Fed by ord_create, ord_update, ord_freeze, ord_execute, and ord_cancel events.
+"""
+type Order @entity {
   id: ID!
-  account: Account!
-  amount: String!
+  key: String! @index(unique: true)
+  market: Market! @index
+  account: String! @index
+  receiver: String @index
+  positionKey: String @index
+  orderType: String! @index
+  status: String! @index
+  isLong: Boolean @index
+  collateralToken: Token @index
+  swapPath: String
+  sizeDeltaUsd: String
+  collateralDeltaAmount: String
+  triggerPrice: String
+  acceptablePrice: String
+  executionFee: String
+  referralCode: String @index
+  createdLedger: Int @index
+  createdTimestamp: Date @index
+  createdTransactionHash: String @index
+  updatedLedger: Int @index
+  updatedTimestamp: Date @index
+  updatedTransactionHash: String @index
+  frozenLedger: Int @index
+  frozenTimestamp: Date @index
+  frozenTransactionHash: String @index
+  executedLedger: Int @index
+  executedTimestamp: Date @index
+  executedTransactionHash: String @index
+  cancelledLedger: Int @index
+  cancelledTimestamp: Date @index
+  cancelledTransactionHash: String @index
+  cancellationReason: String
 }
 
-type Debit @entity {
+"""
+Current position state keyed by account, market, collateral token, and side.
+Fed by pos_inc, pos_dec, pos_close, liq_execute, and adl_reduce events.
+"""
+type Position @entity {
   id: ID!
-  account: Account!
+  key: String! @index(unique: true)
+  market: Market! @index
+  account: String! @index
+  collateralToken: Token @index
+  isLong: Boolean! @index
+  status: String! @index
+  sizeUsd: String
+  collateralAmount: String
+  averagePrice: String
+  entryFundingRate: String
+  reserveAmount: String
+  realizedPnlUsd: String
+  realizedPnlAmount: String
+  latestOrderKey: String @index
+  openedLedger: Int @index
+  openedTimestamp: Date @index
+  openedTransactionHash: String @index
+  updatedLedger: Int @index
+  updatedTimestamp: Date @index
+  updatedTransactionHash: String @index
+  closedLedger: Int @index
+  closedTimestamp: Date @index
+  closedTransactionHash: String @index
+  changes: [PositionChange] @derivedFrom(field: "position")
+  liquidations: [Liquidation] @derivedFrom(field: "position")
+  adlEvents: [AdlEvent] @derivedFrom(field: "position")
+}
+
+"""
+Immutable position mutation record.
+Fed by pos_inc, pos_dec, pos_close, liq_execute, and adl_reduce events.
+"""
+type PositionChange @entity {
+  id: ID!
+  key: String! @index
+  market: Market! @index
+  position: Position @index
+  account: String! @index
+  order: Order @index
+  changeType: String! @index
+  status: String! @index
+  isLong: Boolean @index
+  sizeDeltaUsd: String
+  nextSizeUsd: String
+  collateralDeltaAmount: String
+  nextCollateralAmount: String
+  executionPrice: String
+  indexTokenPrice: String
+  pnlUsd: String
+  priceImpactUsd: String
+  borrowingFeeUsd: String
+  fundingFeeAmount: String
+  positionFeeAmount: String
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Position liquidation execution record.
+Fed by liq_execute and related liq_* lifecycle events.
+"""
+type Liquidation @entity {
+  id: ID!
+  key: String! @index(unique: true)
+  market: Market! @index
+  position: Position @index
+  account: String! @index
+  liquidator: String @index
+  collateralToken: Token @index
+  status: String! @index
+  isLong: Boolean @index
+  sizeDeltaUsd: String
+  collateralLiquidatedAmount: String
+  remainingCollateralAmount: String
+  liquidationPrice: String
+  pnlUsd: String
+  priceImpactUsd: String
+  liquidationFeeUsd: String
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Automatic deleveraging reduction record.
+Fed by adl_reduce and related adl_* events.
+"""
+type AdlEvent @entity {
+  id: ID!
+  key: String! @index(unique: true)
+  market: Market! @index
+  position: Position @index
+  account: String! @index
+  collateralToken: Token @index
+  status: String! @index
+  isLong: Boolean @index
+  sizeReductionUsd: String
+  collateralReductionAmount: String
+  executionPrice: String
+  pnlUsd: String
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Protocol and affiliate fee claim.
+Fed by fee_claim and market fee withdrawal events.
+"""
+type FeeClaim @entity {
+  id: ID!
+  key: String! @index
+  market: Market @index
+  token: Token @index
+  account: String! @index
+  receiver: String @index
+  feeType: String! @index
   amount: String!
+  amountUsd: String
+  status: String! @index
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+UI fee accrual attributed to an order, position change, or market action.
+Fed by ui_fee_accrual and order execution fee events.
+"""
+type UiFeeAccrual @entity {
+  id: ID!
+  key: String! @index
+  market: Market @index
+  order: Order @index
+  account: String! @index
+  uiFeeReceiver: String! @index
+  token: Token @index
+  amount: String!
+  amountUsd: String
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Funding fee claim by trader or protocol recipient.
+Fed by funding_fee_claim events.
+"""
+type FundingFeeClaim @entity {
+  id: ID!
+  key: String! @index
+  market: Market @index
+  position: Position @index
+  account: String! @index
+  receiver: String @index
+  token: Token @index
+  amount: String!
+  amountUsd: String
+  status: String! @index
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
+}
+
+"""
+Referral code registration and ownership state.
+Fed by referral_code_register and referral_code_transfer events.
+"""
+type ReferralCode @entity {
+  id: ID!
+  code: String! @index(unique: true)
+  owner: String! @index
+  status: String! @index
+  createdLedger: Int! @index
+  createdTimestamp: Date! @index
+  createdTransactionHash: String! @index
+  transfers: [ReferralOwnershipTransfer] @derivedFrom(field: "referralCode")
+  traderLinks: [TraderReferral] @derivedFrom(field: "referralCode")
+}
+
+"""
+Trader to referral-code assignment.
+Fed by trader_referral_set and referral registration flows.
+"""
+type TraderReferral @entity {
+  id: ID!
+  trader: String! @index
+  referralCode: ReferralCode! @index
+  referrer: String! @index
+  status: String! @index
+  createdLedger: Int! @index
+  createdTimestamp: Date! @index
+  createdTransactionHash: String! @index
+  updatedLedger: Int @index
+  updatedTimestamp: Date @index
+  updatedTransactionHash: String @index
+}
+
+"""
+Referral code ownership transfer history.
+Fed by referral_code_transfer events.
+"""
+type ReferralOwnershipTransfer @entity {
+  id: ID!
+  referralCode: ReferralCode! @index
+  code: String! @index
+  previousOwner: String! @index
+  newOwner: String! @index
+  ledger: Int! @index
+  timestamp: Date! @index
+  transactionHash: String! @index
 }
