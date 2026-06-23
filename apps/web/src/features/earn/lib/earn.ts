@@ -1,4 +1,5 @@
 import { toast } from "sonner"
+import { GLV_VAULTS, GM_POOLS } from "../data/pools"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 import { NETWORK } from "@/app/config/network"
 import { queryClient } from "@/app/providers/QueryProvider"
@@ -20,7 +21,6 @@ import {
   createDeposit as createGlvDeposit,
   createWithdrawal as createGlvWithdrawal,
 } from "@/lib/glv-router-client"
-import { GLV_VAULTS, GM_POOLS } from "../data/pools"
 
 const SO4_DECIMALS = 7
 const GM_TOKEN_DECIMALS = 7

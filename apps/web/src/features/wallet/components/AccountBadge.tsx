@@ -3,12 +3,12 @@ import { Button } from "@workspace/ui/components/button"
 import { toast } from "sonner"
 
 import { cn } from "@workspace/ui/lib/utils"
-import { explorerAccountUrl } from "@/app/config/network"
-import { formatAddress } from "@/shared/lib/format"
 import { useBalance } from "../hooks/useBalance"
 import { useNetwork } from "../hooks/useNetwork"
 import { useWallet } from "../hooks/useWallet"
 import type { ComponentProps } from "react"
+import { explorerAccountUrl } from "@/app/config/network"
+import { formatAddress } from "@/shared/lib/format"
 
 type AccountBadgeProps = {
   address: string

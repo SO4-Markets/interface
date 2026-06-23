@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { referralStorageClient } from "@/lib/contracts"
 import type { TierLevel } from "@/lib/contracts"
+import { referralStorageClient } from "@/lib/contracts"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { queryKeys } from "@/shared/lib/query-keys"
 
