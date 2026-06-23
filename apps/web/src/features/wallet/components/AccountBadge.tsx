@@ -19,7 +19,9 @@ export function AccountBadge({ address, className, ...props }: AccountBadgeProps
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { disconnect } = useWallet()
-  const { balance, isLoading } = useBalance()
+  const balanceData = useBalance()
+  const balance = balanceData?.xlm
+  const isLoading = balanceData?.isLoading ?? false
   const { isMainnet } = useNetwork()
 
   useEffect(() => {

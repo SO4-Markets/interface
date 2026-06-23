@@ -122,7 +122,7 @@ export function DiscoverTab() {
       .sort((a, b) => (sort === "apy" ? b.apy - a.apy : b.tvlUsd - a.tvlUsd))
   }, [gmPools, glvVaults, filter, sort])
 
-  function handleEarn(id: string, kind: "gm" | "glv", name: string) {
+  async function handleEarn(id: string, kind: "gm" | "glv", name: string) {
     setDepositTarget({ id, kind, name })
     setDepositAmount("")
   }

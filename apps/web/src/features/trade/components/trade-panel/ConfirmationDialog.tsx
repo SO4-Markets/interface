@@ -105,14 +105,14 @@ export function ConfirmationDialog({
       account,
       positionKey: `sidecar-${index}`,
       marketAddress: tradeState.marketAddress,
-      collateralToken: collateralAddress,
+      collateralToken: collateralAddress!,
       collateralDeltaAmount: Number(fromAmount || "0") * (order.sizePct / 100),
       sizeDeltaUsd: sizeUsd * (order.sizePct / 100),
       isLong: tradeFlags.isLong,
       acceptablePrice: estimatedEntryPrice,
       triggerPrice: Number(order.triggerPrice),
       orderType: order.type === "takeProfit" ? "LimitDecrease" : "StopLoss",
-      receiveToken: collateralAddress,
+      receiveToken: collateralAddress!,
     }))
   }, [
     account,
@@ -135,7 +135,7 @@ export function ConfirmationDialog({
         const parentOrder: IncreaseOrderParams = {
           account,
           marketAddress: tradeState.marketAddress,
-          collateralToken: collateralAddress,
+          collateralToken: collateralAddress!,
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
@@ -222,7 +222,7 @@ export function ConfirmationDialog({
         const parentOrder: IncreaseOrderParams = {
           account,
           marketAddress: tradeState.marketAddress,
-          collateralToken: collateralAddress,
+          collateralToken: collateralAddress!,
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
@@ -320,7 +320,7 @@ export function ConfirmationDialog({
           )}
           <Row
             label="Collateral"
-            value={`${fromAmount || "0"} ${formatAddress(collateralAddress)}`}
+            value={`${fromAmount || "0"} ${formatAddress(collateralAddress!)}`}
           />
           <div className="border-t border-border pt-1.5">
             <Row label="Total fees" value={formatUsd(fees.totalFeesUsd)} bold />

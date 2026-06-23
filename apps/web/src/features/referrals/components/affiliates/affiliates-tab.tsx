@@ -252,7 +252,7 @@ export function AffiliatesTab() {
 
   function handleCodeCreated() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.referrals.code(null) })
-    void queryClient.invalidateQueries({ queryKey: queryKeys.referrals.stats(code, period) })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.referrals.stats(code ?? null, period) })
   }
 
   if (!hasCode && !codeLoading) {

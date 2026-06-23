@@ -62,7 +62,6 @@ async function fetchMarketsInfo(markets: Array<Market>): Promise<Array<MarketInf
         fundingRatePerHour = Number(perHourFactor) / Number(FACTOR_PRECISION)
       }
 
-      const totalOI = longOI + shortOI
       const availLong  = poolUsd - longOI  > 0 ? poolUsd - longOI  : 0
       const availShort = poolUsd - shortOI > 0 ? poolUsd - shortOI : 0
 

@@ -49,9 +49,9 @@ export function TradePanel({ trade }: TradePanelProps) {
 
   const debouncedFromAmount = useDebounce(fromAmount, 300)
   const entryPrice = getMidPrice(toTokenAddress)
-  const collateralUsd = parseFloat(debouncedFromAmount || "0") * getMidPrice(collateralAddress)
+  const collateralUsd = parseFloat(debouncedFromAmount || "0") * getMidPrice(collateralAddress!)
   const sizeUsd = tradeFlags.isSwap ? collateralUsd : sizeFromCollateralAndLeverage(collateralUsd, leverage)
-  const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress
+  const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress!
 
   const fees = useTradeFees({ sizeUsd, marketAddress, isIncrease: true, tradeType })
   const walletBalance = balances?.[activeInputTokenAddress]
@@ -264,7 +264,7 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
   const { getMidPrice } = useTokenPrices()
   const { data: balances } = useTokenBalances()
 
-  const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress
+  const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress!
   const fromPrice = getMidPrice(activeInputTokenAddress)
   const fromUsd = parseFloat(fromAmount || "0") * fromPrice
   const walletBalance = balances?.[activeInputTokenAddress]
