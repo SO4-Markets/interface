@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw"
+import { HttpResponse, http } from "msw"
 
 const rpcResult = {
   jsonrpc: "2.0",

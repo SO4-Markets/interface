@@ -1,4 +1,4 @@
-import { mergeConfig, defineConfig } from "vitest/config"
+import { defineConfig, mergeConfig } from "vitest/config"
 import viteTsConfigPaths from "vite-tsconfig-paths"
 import { reactConfig } from "@repo/vitest-config/react"
 

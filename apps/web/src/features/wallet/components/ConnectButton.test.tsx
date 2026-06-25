@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { cleanup, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { ConnectButton } from "./ConnectButton"
 import { useWalletStore } from "../store/wallet-store"
+import { ConnectButton } from "./ConnectButton"
 import { useKeyboardShortcut } from "@/shared/hooks/useKeyboardShortcut"
 import { fakeWalletAddress } from "@/test/fakes/wallet"
 
 // Mock the keyboard shortcut hook
-vi.mock("@/shared/hooks/useKeyboardShortcut")
+vi.mock("@/shared/hooks/useKeyboardShortcut", () => ({
+  useKeyboardShortcut: vi.fn(),
+}))
 
 // Mock the wallet provider hook
 vi.mock("@/app/providers", () => ({
@@ -22,7 +24,7 @@ vi.mock("../hooks/useBalance", () => ({
 }))
 
 // Mock the StellarWalletsKit import to prevent real wallet connections
-vi.mock("@creit.tech/stellar-wallets-kit/sdk", () => ({}), { virtual: true })
+vi.mock("@creit.tech/stellar-wallets-kit/sdk", () => ({}))
 
 describe("ConnectButton - Disconnected State", () => {
   beforeEach(() => {
@@ -40,8 +42,8 @@ describe("ConnectButton - Disconnected State", () => {
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
-    // Reset store after each test to prevent leakage
+    cleanup()
+    vi.restoreAllMocks()
     useWalletStore.setState({
       address: null,
       walletId: null,
@@ -263,7 +265,7 @@ describe("ConnectButton - Disconnected State", () => {
 
   describe("Keyboard Shortcuts", () => {
     it("should register keyboard shortcut when disconnected", () => {
-      ;(useKeyboardShortcut as any).mockImplementation((config) => {
+      ;(useKeyboardShortcut as any).mockImplementation((config: any) => {
         expect(config.key).toBe("k")
         expect(typeof config.onKeyPress).toBe("function")
         expect(config.enabled).toBe(true)
@@ -282,7 +284,7 @@ describe("ConnectButton - Disconnected State", () => {
     it("should disable keyboard shortcut when connecting", () => {
       useWalletStore.setState({ status: "connecting" })
 
-      ;(useKeyboardShortcut as any).mockImplementation((config) => {
+      ;(useKeyboardShortcut as any).mockImplementation((config: any) => {
         expect(config.enabled).toBe(false)
       })
 
@@ -301,7 +303,7 @@ describe("ConnectButton - Disconnected State", () => {
         address: fakeWalletAddress,
       })
 
-      ;(useKeyboardShortcut as any).mockImplementation((config) => {
+      ;(useKeyboardShortcut as any).mockImplementation((config: any) => {
         expect(config.enabled).toBe(false)
       })
 

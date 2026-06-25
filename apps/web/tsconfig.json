@@ -24,6 +24,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
+      "@/test/*": ["./test/*"],
       "@workspace/contracts": ["../../packages/contracts/src/index.ts"],
       "@workspace/ui/*": ["../../packages/ui/src/*"]
     }

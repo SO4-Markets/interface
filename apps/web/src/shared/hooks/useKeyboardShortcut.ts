@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 type KeyboardShortcutOptions = {
   key: string
@@ -11,11 +11,17 @@ export function useKeyboardShortcut({
   onKeyPress,
   enabled = true,
 }: KeyboardShortcutOptions) {
-  useEffect(() => {
-    if (!enabled) return
+  const keyRef = useRef(key)
+  const onKeyPressRef = useRef(onKeyPress)
+  const enabledRef = useRef(enabled)
+  keyRef.current = key
+  onKeyPressRef.current = onKeyPress
+  enabledRef.current = enabled
 
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key.toLowerCase() !== key.toLowerCase()) return
+      if (!enabledRef.current) return
+      if (e.key.toLowerCase() !== keyRef.current.toLowerCase()) return
 
       const target = e.target as HTMLElement
       const isInputFocused =
@@ -26,10 +32,10 @@ export function useKeyboardShortcut({
       if (isInputFocused) return
 
       e.preventDefault()
-      onKeyPress()
+      onKeyPressRef.current()
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [key, onKeyPress, enabled])
+  }, []) // stable mount/unmount only
 }

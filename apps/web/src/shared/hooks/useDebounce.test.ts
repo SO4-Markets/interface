@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from "@testing-library/react"
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { act, renderHook } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useDebounce } from "./useDebounce"
 
 describe("useDebounce", () => {
@@ -35,13 +35,13 @@ describe("useDebounce", () => {
     expect(result.current).toBe("initial")
 
     // Fast-forward time by 499ms
-    vi.advanceTimersByTime(499)
+    act(() => { vi.advanceTimersByTime(499) })
 
     // Value should still not be updated
     expect(result.current).toBe("initial")
 
     // Fast-forward remaining 1ms to reach 500ms total
-    vi.advanceTimersByTime(1)
+    act(() => { vi.advanceTimersByTime(1) })
 
     // Now value should be updated
     expect(result.current).toBe("updated")
@@ -63,7 +63,7 @@ describe("useDebounce", () => {
     expect(result.current).toBe("initial")
 
     // Fast-forward 200ms
-    vi.advanceTimersByTime(200)
+    act(() => { vi.advanceTimersByTime(200) })
     expect(result.current).toBe("initial")
 
     // Second change (should cancel first timer)
@@ -71,11 +71,11 @@ describe("useDebounce", () => {
     expect(result.current).toBe("initial")
 
     // Fast-forward to where first timer would have fired (at 500ms total from initial)
-    vi.advanceTimersByTime(300)
+    act(() => { vi.advanceTimersByTime(300) })
     expect(result.current).toBe("initial")
 
     // Fast-forward another 200ms (500ms from second change)
-    vi.advanceTimersByTime(200)
+    act(() => { vi.advanceTimersByTime(200) })
 
     // Now second value should be applied
     expect(result.current).toBe("second")
@@ -92,19 +92,19 @@ describe("useDebounce", () => {
 
     // Rapid changes
     rerender({ value: "change1", delay: 300 })
-    vi.advanceTimersByTime(100)
+    act(() => { vi.advanceTimersByTime(100) })
 
     rerender({ value: "change2", delay: 300 })
-    vi.advanceTimersByTime(100)
+    act(() => { vi.advanceTimersByTime(100) })
 
     rerender({ value: "change3", delay: 300 })
-    vi.advanceTimersByTime(100)
+    act(() => { vi.advanceTimersByTime(100) })
 
     // All previous timers should be cancelled
     expect(result.current).toBe("initial")
 
     // After 300ms from last change
-    vi.advanceTimersByTime(300)
+    act(() => { vi.advanceTimersByTime(300) })
 
     // Only the last value should be applied
     expect(result.current).toBe("change3")
@@ -113,7 +113,7 @@ describe("useDebounce", () => {
   it("should cleanup timeout on unmount", () => {
     const clearTimeoutSpy = vi.spyOn(global, "clearTimeout")
 
-    const { result, rerender, unmount } = renderHook(
+    const { rerender, unmount } = renderHook(
       ({ value, delay }: { value: string; delay: number }) =>
         useDebounce(value, delay),
       {
@@ -145,14 +145,14 @@ describe("useDebounce", () => {
     rerender({ value: "updated", delay: 100 })
     expect(result.current).toBe("initial")
 
-    vi.advanceTimersByTime(100)
+    act(() => { vi.advanceTimersByTime(100) })
     expect(result.current).toBe("updated")
 
     // Change delay
     rerender({ value: "changed", delay: 200 })
     expect(result.current).toBe("updated")
 
-    vi.advanceTimersByTime(200)
+    act(() => { vi.advanceTimersByTime(200) })
     expect(result.current).toBe("changed")
   })
 
@@ -169,7 +169,7 @@ describe("useDebounce", () => {
     numberRerender({ value: 100, delay: 500 })
     expect(numberResult.current).toBe(42)
 
-    vi.advanceTimersByTime(500)
+    act(() => { vi.advanceTimersByTime(500) })
     expect(numberResult.current).toBe(100)
 
     // Object type
@@ -184,7 +184,7 @@ describe("useDebounce", () => {
     objectRerender({ value: { id: 2, name: "Bob" }, delay: 500 })
     expect(objectResult.current).toEqual({ id: 1, name: "Alice" })
 
-    vi.advanceTimersByTime(500)
+    act(() => { vi.advanceTimersByTime(500) })
     expect(objectResult.current).toEqual({ id: 2, name: "Bob" })
   })
 
@@ -201,7 +201,7 @@ describe("useDebounce", () => {
     expect(result.current).toBe("initial")
 
     // Run all timers
-    vi.runAllTimers()
+    act(() => { vi.runAllTimers() })
 
     expect(result.current).toBe("updated")
   })

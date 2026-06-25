@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { cleanup, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useKeyboardShortcut } from "./useKeyboardShortcut"
 
@@ -25,7 +25,8 @@ describe("useKeyboardShortcut", () => {
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    cleanup()
+    vi.restoreAllMocks()
   })
 
   it("should call callback on simple key press", async () => {
@@ -229,16 +230,16 @@ describe("useKeyboardShortcut", () => {
     await user.click(component)
 
     // Track if preventDefault is called by checking behavior
-    const events: KeyboardEvent[] = []
+    const events: Array<KeyboardEvent> = []
     const originalAddEventListener = document.addEventListener
     vi.spyOn(document, "addEventListener").mockImplementation(
       (eventName, handler) => {
         if (eventName === "keydown") {
           const wrappedHandler = (e: KeyboardEvent) => {
             events.push(e)
-            return handler(e)
+            return typeof handler === "function" && handler(e)
           }
-          return originalAddEventListener.call(document, eventName, wrappedHandler)
+          return originalAddEventListener.call(document, eventName, wrappedHandler as any)
         }
         return originalAddEventListener.call(document, eventName, handler)
       },
