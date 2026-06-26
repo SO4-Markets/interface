@@ -158,6 +158,18 @@ vi.mock("@/features/earn/components/distributions/distributions-tab", () => ({
 }))
 
 // ── Referrals-page mocks ────────────────────────────────────
+vi.mock("@/features/referrals/components/traders/traders-tab", () => ({
+  TradersTab: () => null,
+}))
+vi.mock("@/features/referrals/components/affiliates/affiliates-tab", () => ({
+  AffiliatesTab: () => null,
+}))
+vi.mock("@/features/referrals/components/distributions/distributions-tab", () => ({
+  DistributionsTab: () => null,
+}))
+vi.mock("@/features/referrals/components/referrals-sidebar", () => ({
+  ReferralsSidebar: () => null,
+}))
 vi.mock("@/features/referrals/hooks/use-referrals-data", () => ({
   useTraderStats: () => ({ data: undefined }),
   useAffiliateStats: () => ({ data: undefined }),
@@ -177,18 +189,7 @@ vi.mock("@/features/referrals/queries/useReferralStats", () => ({
   useReferralStats: () => ({ data: undefined }),
 }))
 
-vi.mock("@/features/referrals/components/traders/traders-tab", () => ({
-  TradersTab: () => null,
-}))
-vi.mock("@/features/referrals/components/affiliates/affiliates-tab", () => ({
-  AffiliatesTab: () => null,
-}))
-vi.mock("@/features/referrals/components/distributions/distributions-tab", () => ({
-  DistributionsTab: () => null,
-}))
-vi.mock("@/features/referrals/components/referrals-sidebar", () => ({
-  ReferralsSidebar: () => null,
-}))
+
 
 // ── Helpers ─────────────────────────────────────────────────
 

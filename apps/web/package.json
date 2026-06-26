@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite dev --port 3000",
-    "test": "bun test --preload ./setup-tests.ts src/shared src/features/wallet/store src/features/pools src/features/trade src/routes",
+    "test": "bun test --preload ./setup-tests.ts src/shared src/features/wallet/store src/features/pools src/features/trade src/routes; bun test --preload ./setup-tests.ts src/features/referrals",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint",
