@@ -11,7 +11,6 @@
         "turbo": "^2.8.17",
         "typescript": "5.9.3",
       },
-        "tslib": "^2.8.1",
     },
     "apps/s03-indexer": {
       "name": "s03-indexer",
@@ -23,6 +22,7 @@
         "@subql/types-core": "^2.2.0",
         "@subql/types-stellar": "latest",
         "text-encoding": "^0.7.0",
+        "tslib": "^2.8.1",
       },
       "devDependencies": {
         "@subql/cli": "latest",
