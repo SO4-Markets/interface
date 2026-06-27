@@ -61,6 +61,52 @@ beforeEach(() => {
 });
 
 describe("SO4 event dispatch", () => {
+  test("decodes symbol topics", () => {
+    expect(decodeTopicName(xdr.ScVal.scvSymbol("pos_dec"))).toBe("pos_dec");
+    expect(decodeTopicName(xdr.ScVal.scvSymbol("mkt_new"))).toBe("mkt_new");
+    expect(decodeTopicName(xdr.ScVal.scvSymbol("dep_crt"))).toBe("dep_crt");
+  });
+
+  test("decodes string topics", () => {
+    expect(decodeTopicName(xdr.ScVal.scvString("event_name"))).toBe("event_name");
+  });
+
+  test("decodes Soroban addresses", () => {
+    expect(decodeAddress(Address.fromString(account).toScVal())).toBe(account);
+    expect(decodeAddress(Address.fromString(marketToken).toScVal())).toBe(marketToken);
+    expect(decodeAddress(Address.fromString(indexToken).toScVal())).toBe(indexToken);
+  });
+
+  test("decodes BytesN<32>", () => {
+    const keyHex = "11".repeat(32);
+    const decodedKey = decodeBytesN32(xdr.ScVal.scvBytes(Buffer.from(keyHex, "hex")));
+    expect(decodedKey).toBe(keyHex);
+  });
+
+  test("decodes BytesN<32> with different hex patterns", () => {
+    const key1 = "aa".repeat(32);
+    const key2 = "ff".repeat(32);
+    expect(decodeBytesN32(xdr.ScVal.scvBytes(Buffer.from(key1, "hex")))).toBe(key1);
+    expect(decodeBytesN32(xdr.ScVal.scvBytes(Buffer.from(key2, "hex")))).toBe(key2);
+  });
+
+  test("decodes booleans", () => {
+    expect(decodeBoolean(xdr.ScVal.scvBool(true))).toBe(true);
+    expect(decodeBoolean(xdr.ScVal.scvBool(false))).toBe(false);
+  });
+
+  test("decodes signed integers", () => {
+    expect(decodeInteger(nativeToScVal(-7n, { type: "i128" }))).toBe("-7");
+    expect(decodeInteger(nativeToScVal(-1n, { type: "i128" }))).toBe("-1");
+    expect(decodeInteger(nativeToScVal(0n, { type: "i128" }))).toBe("0");
+  });
+
+  test("decodes unsigned integers", () => {
+    expect(decodeInteger(nativeToScVal(42n, { type: "u128" }))).toBe("42");
+    expect(decodeInteger(nativeToScVal(0n, { type: "u128" }))).toBe("0");
+    expect(decodeInteger(nativeToScVal(1000000n, { type: "u128" }))).toBe("1000000");
+  });
+
   test("decodes primitive ScVal fixtures", () => {
     const keyHex = "11".repeat(32);
 
@@ -71,6 +117,39 @@ describe("SO4 event dispatch", () => {
     expect(decodeBoolean(xdr.ScVal.scvBool(true))).toBe(true);
     expect(decodeInteger(nativeToScVal(-7n, { type: "i128" }))).toBe("-7");
     expect(decodeInteger(nativeToScVal(42n, { type: "u128" }))).toBe("42");
+  });
+
+  test("handles malformed topic names", () => {
+    expect(decodeTopicName(undefined)).toBeUndefined();
+    expect(decodeTopicName(xdr.ScVal.scvU32(42))).toBeUndefined();
+    expect(decodeTopicName(xdr.ScVal.scvBool(true))).toBeUndefined();
+  });
+
+  test("handles malformed addresses", () => {
+    expect(decodeAddress(undefined)).toBeUndefined();
+    expect(decodeAddress(xdr.ScVal.scvSymbol("not_an_address"))).toBeUndefined();
+    expect(decodeAddress(xdr.ScVal.scvU64(12345n))).toBeUndefined();
+  });
+
+  test("handles malformed BytesN<32>", () => {
+    expect(decodeBytesN32(undefined)).toBeUndefined();
+    expect(decodeBytesN32(xdr.ScVal.scvSymbol("not_bytes"))).toBeUndefined();
+    const shortBytes = Buffer.alloc(16);
+    expect(decodeBytesN32(xdr.ScVal.scvBytes(shortBytes))).toBeUndefined();
+    const longBytes = Buffer.alloc(64);
+    expect(decodeBytesN32(xdr.ScVal.scvBytes(longBytes))).toBeUndefined();
+  });
+
+  test("handles malformed booleans", () => {
+    expect(decodeBoolean(undefined)).toBeUndefined();
+    expect(decodeBoolean(xdr.ScVal.scvSymbol("true"))).toBeUndefined();
+    expect(decodeBoolean(xdr.ScVal.scvU32(1))).toBeUndefined();
+  });
+
+  test("handles malformed integers", () => {
+    expect(decodeInteger(undefined)).toBeUndefined();
+    expect(decodeInteger(xdr.ScVal.scvSymbol("42"))).toBeUndefined();
+    expect(decodeInteger(xdr.ScVal.scvBool(true))).toBeUndefined();
   });
 
   test("decodes ScMap payloads as named fields and Vec payloads as positional only", () => {
@@ -142,6 +221,58 @@ describe("SO4 event dispatch", () => {
     expect(change.pnlUsd).toBe("-25");
   });
 
+  test("indexes a market creation event with all required fields", async () => {
+    const event = so4Event("mkt_new", {
+      market_token: marketToken,
+      indexToken: indexToken,
+      longToken: "CLONG",
+      shortToken: shortToken,
+      market: marketToken,
+      creator: account,
+      name: "TETH/TUSDC",
+    });
+
+    await dispatchEvent(event);
+
+    const [market] = records("Market");
+    expect(market).toBeDefined();
+    expect(market.id).toBe(`market:${marketToken}`);
+    expect(market.marketTokenId).toBe(marketToken);
+    expect(market.status).toBe("ACTIVE");
+    expect(market.createdBy).toBeDefined();
+  });
+
+  test("indexes market creation with deterministic entity IDs", async () => {
+    const event = so4Event("mkt_new", {
+      market_token: marketToken,
+      market: marketToken,
+      creator: account,
+      name: "TETH/TUSDC",
+    });
+
+    await dispatchEvent(event);
+
+    const [market] = records("Market");
+    const marketId = `market:${marketToken}`;
+    expect(market.id).toBe(marketId);
+  });
+
+  test("ensures ProtocolContract and Token records on market creation", async () => {
+    const event = so4Event("mkt_new", {
+      market_token: marketToken,
+      indexToken: indexToken,
+      market: marketToken,
+      creator: account,
+    });
+
+    await dispatchEvent(event);
+
+    expect(records("Market").length).toBeGreaterThan(0);
+    const market = records("Market")[0];
+    expect(market.contractId).toBeDefined();
+    expect(market.marketTokenId).toBeDefined();
+  });
+
   test("indexes a market creation event idempotently", async () => {
     const event = so4Event("mkt_new", {
       market_token: marketToken,
@@ -156,6 +287,62 @@ describe("SO4 event dispatch", () => {
     expect(records("Market")).toHaveLength(1);
     expect(records("MarketConfigSnapshot")).toHaveLength(1);
     expect(records("Market")[0].id).toBe(`market:${marketToken}`);
+  });
+
+  test("indexes deposit create event", async () => {
+    await dispatchEvent(so4Event("dep_crt", lifecyclePayload("dep-1")));
+
+    const [deposit] = records("Deposit");
+    expect(records("Deposit")).toHaveLength(1);
+    expect(deposit.id).toBe("deposit:dep-1");
+    expect(deposit.status).toBe("CREATED");
+    expect(deposit.createdLedger).toBe(100);
+  });
+
+  test("indexes deposit lifecycle create to execute transition", async () => {
+    await dispatchEvent(so4Event("dep_crt", lifecyclePayload("dep-1")));
+    await dispatchEvent(so4Event("dep_exe", lifecyclePayload("dep-1")));
+
+    const [deposit] = records("Deposit");
+    expect(records("Deposit")).toHaveLength(1);
+    expect(deposit.id).toBe("deposit:dep-1");
+    expect(deposit.status).toBe("EXECUTED");
+    expect(deposit.createdLedger).toBe(100);
+    expect(deposit.executedLedger).toBe(100);
+  });
+
+  test("indexes deposit cancel event", async () => {
+    await dispatchEvent(so4Event("dep_crt", lifecyclePayload("dep-1")));
+    await dispatchEvent(so4Event("dep_can", lifecyclePayload("dep-1", { reason: "user_request" })));
+
+    const [deposit] = records("Deposit");
+    expect(records("Deposit")).toHaveLength(1);
+    expect(deposit.id).toBe("deposit:dep-1");
+    expect(deposit.status).toBe("CANCELLED");
+    expect(deposit.createdLedger).toBe(100);
+  });
+
+  test("handles deposit lifecycle with status transitions", async () => {
+    await dispatchEvent(so4Event("dep_crt", lifecyclePayload("dep-1")));
+    await dispatchEvent(so4Event("dep_exe", lifecyclePayload("dep-1")));
+
+    const [deposit] = records("Deposit");
+    expect(deposit.status).toBe("EXECUTED");
+    expect(deposit.createdLedger).toBe(100);
+  });
+
+  test("deposit lifecycle events are idempotent on rerun", async () => {
+    const event1 = so4Event("dep_crt", lifecyclePayload("dep-1"));
+    const event2 = so4Event("dep_exe", lifecyclePayload("dep-1"));
+
+    await dispatchEvent(event1);
+    await dispatchEvent(event2);
+    await dispatchEvent(event1);
+    await dispatchEvent(event2);
+
+    expect(records("Deposit")).toHaveLength(1);
+    const [deposit] = records("Deposit");
+    expect(deposit.status).toBe("EXECUTED");
   });
 
   test("indexes deposit lifecycle updates by deterministic key", async () => {
@@ -268,6 +455,24 @@ describe("SO4 event dispatch", () => {
 
     expect(records("Market")).toHaveLength(0);
     expect(logs.some((message) => message.includes("Skipping unknown SO4 event"))).toBe(true);
+  });
+
+  test("handles unknown event without crashing and without entity writes", async () => {
+    const unknownEvent = so4Event("unknown_event_xyz", { data: "test" });
+    await dispatchEvent(unknownEvent);
+
+    expect(records("Market")).toHaveLength(0);
+    expect(records("Deposit")).toHaveLength(0);
+    expect(records("Position")).toHaveLength(0);
+    expect(records("Order")).toHaveLength(0);
+  });
+
+  test("logs unknown irrelevant events with structured message", async () => {
+    await dispatchEvent(so4Event("irrelevant", { value: "123" }));
+
+    const unknownEventLog = logs.find((message) => message.includes("Skipping unknown SO4 event"));
+    expect(unknownEventLog).toBeDefined();
+    expect(unknownEventLog).toContain("irrelevant");
   });
 });
 
