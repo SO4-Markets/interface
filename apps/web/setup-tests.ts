@@ -5,6 +5,11 @@ import { server } from "./test/msw/server";
 
 GlobalRegistrator.register();
 
+afterEach(async () => {
+  const { cleanup } = await import("@testing-library/react");
+  cleanup();
+});
+
 // happy-dom defaults to about:blank which makes window.location.origin === "null"
 // This breaks new URL("/", origin) in ConnectButton's WalletModal
 window.location.href = "http://localhost:3000/";
