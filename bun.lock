@@ -30,6 +30,7 @@
         "@subql/types": "latest",
         "@types/text-encoding": "^0.0.40",
         "dotenv": "latest",
+        "tslib": "^2.8.1",
         "typescript": "latest",
       },
     },

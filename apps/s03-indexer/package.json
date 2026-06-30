@@ -14,7 +14,7 @@
     "start:docker": "bun run start",
     "dev": "bun run codegen && bun run build && bun run start",
     "prepack": "rm -rf dist && bun run build",
-    "test": "subql build && bun test tests"
+    "test": "bun run build && bun test tests"
   },
   "homepage": "https://github.com/subquery/stellar-subql-starter",
   "repository": "github:subquery/stellar-subql-starter",
@@ -38,7 +38,8 @@
     "@subql/testing": "latest",
     "@subql/types": "latest",
     "@types/text-encoding": "^0.0.40",
-    "typescript": "latest",
-    "dotenv": "latest"
+    "dotenv": "latest",
+    "tslib": "^2.8.1",
+    "typescript": "latest"
   }
 }
