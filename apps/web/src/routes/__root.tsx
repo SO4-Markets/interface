@@ -4,14 +4,7 @@ import { Toaster } from "sonner"
 import { ThemeProvider } from "../ui/theme-provider"
 import appCss from "@workspace/ui/globals.css?url"
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 30,      // 30s — prices refresh frequently
-      refetchOnWindowFocus: true,
-    },
-  },
-})
+import { queryClient } from "../app/providers/query-client"
 
 // Update this to your production domain before going live.
 const SITE_URL = "https://so4.market"
