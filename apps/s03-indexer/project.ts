@@ -46,6 +46,10 @@ const sorobanEndpoint =
   contractConfig?.network?.sorobanRpcEndpoint ??
   "https://soroban-testnet.stellar.org";
 const indexedContractIds = getIndexedContractIds(contractConfig);
+const startBlock = resolveIndexerStartLedger({
+  configuredGenesis: process.env.INDEXER_START_LEDGER,
+  checkpointPath: process.env.INDEXER_CHECKPOINT_PATH,
+});
 
 /* This is your project configuration */
 const project: StellarProject = {
@@ -93,7 +97,7 @@ const project: StellarProject = {
       /* Set this as a logical start block, it might be block 1 (genesis) or when your
          contract was deployed. Override with INDEXER_START_LEDGER for local runs, where
          a fresh standalone network must backfill from an early ledger. */
-      startBlock: Number(process.env.INDEXER_START_LEDGER ?? 228206),
+      startBlock,
       mapping: {
         file: "./dist/index.js",
         handlers: indexedContractIds.map((contractId) => ({
@@ -110,6 +114,29 @@ const project: StellarProject = {
 
 // Must set default to the project instance
 export default project;
+
+export type IndexerStartLedgerOptions = {
+  configuredGenesis?: string | number;
+  checkpointPath?: string;
+  exists?: (path: string) => boolean;
+  readFile?: (path: string) => string;
+};
+
+export function resolveIndexerStartLedger({
+  configuredGenesis,
+  checkpointPath,
+  exists = existsSync,
+  readFile = (filePath) => readFileSync(filePath, "utf8"),
+}: IndexerStartLedgerOptions = {}): number {
+  const genesisLedger = parseLedger(configuredGenesis ?? 228206, "configured genesis ledger");
+
+  if (!checkpointPath || !exists(checkpointPath)) {
+    return genesisLedger;
+  }
+
+  const checkpointLedger = readCheckpointLedger(readFile(checkpointPath));
+  return parseLedger(checkpointLedger, "stored checkpoint ledger");
+}
 
 function loadContractConfig(): IndexerContractsConfig | undefined {
   const network = process.env.INDEXER_NETWORK ?? "testnet";
@@ -145,4 +172,31 @@ function getIndexedContractIds(config: IndexerContractsConfig | undefined): stri
   }
 
   return [...ids].sort();
+}
+
+function readCheckpointLedger(contents: string): unknown {
+  const trimmed = contents.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  try {
+    const checkpoint = JSON.parse(trimmed) as Record<string, unknown>;
+    return (
+      checkpoint.lastProcessedLedger ??
+      checkpoint.lastProcessedHeight ??
+      checkpoint.ledger ??
+      checkpoint.height
+    );
+  } catch {
+    return trimmed;
+  }
+}
+
+function parseLedger(value: unknown, label: string): number {
+  const ledger = Number(value);
+  if (!Number.isInteger(ledger) || ledger < 1) {
+    throw new Error(`Invalid ${label}: ${value}`);
+  }
+  return ledger;
 }
