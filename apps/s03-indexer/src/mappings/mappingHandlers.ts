@@ -437,7 +437,7 @@ async function handleMarketCreated(event: DecodedEvent): Promise<void> {
     createdTransactionHash: event.transactionHash,
   });
 
-  const snapshotId = deterministicId("market-config", event.id);
+  const snapshotId = deterministicId("market-config", market.key, event.ledger.toString());
   const snapshot = await upsert(MarketConfigSnapshot, snapshotId, {
     id: snapshotId,
     marketId: market.id,
@@ -775,10 +775,11 @@ async function savePositionChange(
   account: string,
   changeType: string,
 ): Promise<void> {
-  const id = deterministicId("position-change", event.id);
+  const key = fieldString(event, ["position_key", "positionKey", "key"], POSITION_INCREASE_INDEX.key) ?? event.id;
+  const id = deterministicId("position-change", key, event.ledger.toString(), changeType);
   const change = await upsert(PositionChange, id, {
     id,
-    key: fieldString(event, ["position_key", "positionKey", "key"], POSITION_INCREASE_INDEX.key) ?? event.id,
+    key,
     marketId: marketIdValue,
     positionId,
     account,

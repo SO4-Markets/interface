@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "fs";
 import {
   decodeAddress,
   decodeBoolean,
@@ -20,8 +21,22 @@ const handlerContract = "CDWOFIP4YQJGMCYAOWLSRBAWN2OTJUG2I5WOFC32O2TX2SRU56RWBE5
 const marketFactoryContract = "CBGX3EJFI3JRHSN5B533O2L5P57JFPTCRS55IPWFS5BNDXLJLXDWA5Z2";
 const account = Keypair.random().publicKey();
 const receiver = Keypair.random().publicKey();
+const reorgFixture = JSON.parse(
+  readFileSync(`${import.meta.dir}/fixtures/reorged-ledger-sequence.json`, "utf8"),
+) as ReorgFixture;
 
 type StoreBucket = Map<string, Record<string, unknown>>;
+type ReorgFixtureEvent = {
+  id: string;
+  eventName: string;
+  ledger: number;
+  transactionHash: string;
+  named: Record<string, string | boolean>;
+};
+type ReorgFixture = {
+  orphaned: ReorgFixtureEvent[];
+  canonical: ReorgFixtureEvent[];
+};
 
 const buckets = new Map<string, StoreBucket>();
 const logs: string[] = [];
@@ -497,48 +512,55 @@ describe("SO4 event dispatch", () => {
     expect(records("PositionChange")[0].changeType).toBe("INCREASE");
   });
 
-  test("indexes position increase with positive funding fee amount", async () => {
-    const positionKey = "pos-funding-1";
-    await dispatchEvent(
-      so4Event("pos_inc", {
-        position_key: positionKey,
-        market: marketToken,
-        account,
-        collateral_token: marketToken,
-        is_long: true,
-        next_size_usd: "500000000000000000000000000000000",
-        next_collateral_amount: "105000000", // 100 base + 5 funding
-        funding_fee_amount: "5000000",       // Positive funding added to margin
-      }),
-    );
+  test("rewrites stale entities when a reorged ledger is replayed", async () => {
+    for (const fixtureEvent of reorgFixture.orphaned) {
+      await dispatchEvent(reorgEvent(fixtureEvent));
+    }
 
-    const position = records("Position")[0];
-    const change = records("PositionChange")[0];
-    
-    expect(position.collateralAmount).toBe("105000000");
-    expect(change.fundingFeeAmount).toBe("5000000");
-  });
+    expect(records("Position")).toHaveLength(1);
+    expect(records("PositionChange")).toHaveLength(1);
+    expect(records("Order")).toHaveLength(1);
+    expect(records("Position")[0].sizeUsd).toBe("100");
+    expect(records("PositionChange")[0].transactionHash).toBe("tx-orphan-pos");
+    expect(records("Order")[0].acceptablePrice).toBe("10");
 
-  test("indexes position decrease with negative funding fee amount", async () => {
-    const positionKey = "pos-funding-2";
-    await dispatchEvent(
-      so4Event("pos_dec", {
-        position_key: positionKey,
-        market: marketToken,
-        account,
-        collateral_token: marketToken,
-        is_long: false,
-        next_size_usd: "500000000000000000000000000000000",
-        next_collateral_amount: "95000000",  // 100 base - 5 funding
-        funding_fee_amount: "-5000000",      // Negative funding subtracted from margin
-      }),
-    );
+    for (const fixtureEvent of reorgFixture.canonical) {
+      await dispatchEvent(reorgEvent(fixtureEvent));
+    }
+    for (const fixtureEvent of reorgFixture.canonical) {
+      await dispatchEvent(reorgEvent(fixtureEvent));
+    }
 
-    const position = records("Position")[0];
-    const change = records("PositionChange")[0];
-    
-    expect(position.collateralAmount).toBe("95000000");
-    expect(change.fundingFeeAmount).toBe("-5000000");
+    const [position] = records("Position");
+    const [positionChange] = records("PositionChange");
+    const [order] = records("Order");
+
+    expect(records("Position")).toHaveLength(1);
+    expect(records("PositionChange")).toHaveLength(1);
+    expect(records("Order")).toHaveLength(1);
+    expect(position).toMatchObject({
+      id: "position:reorg-pos-1",
+      key: "reorg-pos-1",
+      sizeUsd: "250",
+      collateralAmount: "8",
+      updatedLedger: 200,
+      updatedTransactionHash: "tx-canonical-pos",
+    });
+    expect(positionChange).toMatchObject({
+      id: "position-change:reorg-pos-1:200:INCREASE",
+      key: "reorg-pos-1",
+      sizeDeltaUsd: "250",
+      executionPrice: "12",
+      transactionHash: "tx-canonical-pos",
+    });
+    expect(order).toMatchObject({
+      id: "order:reorg-order-1",
+      key: "reorg-order-1",
+      sizeDeltaUsd: "250",
+      acceptablePrice: "12",
+      createdLedger: 200,
+      createdTransactionHash: "tx-canonical-order",
+    });
   });
 
   test("indexes liquidation and ADL events", async () => {
@@ -1034,6 +1056,27 @@ function so4Event(
     timestamp: new Date("2026-06-24T12:00:00Z"),
     transactionHash: `tx-${eventName}`,
     topic: [],
+    values: {
+      list: Object.values(named),
+      named,
+    },
+  };
+}
+
+function reorgEvent(fixtureEvent: ReorgFixtureEvent): DecodedEvent {
+  const named = Object.fromEntries(
+    Object.entries(fixtureEvent.named).map(([key, value]) => [
+      key,
+      value === "MARKET_TOKEN" ? marketToken : value === "ACCOUNT" ? account : value,
+    ]),
+  ) as Record<string, string | boolean>;
+
+  return {
+    ...so4Event(fixtureEvent.eventName, named),
+    id: fixtureEvent.id,
+    ledger: fixtureEvent.ledger,
+    timestamp: new Date("2026-06-24T12:01:00Z"),
+    transactionHash: fixtureEvent.transactionHash,
     values: {
       list: Object.values(named),
       named,
