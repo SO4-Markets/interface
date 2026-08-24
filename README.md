@@ -331,3 +331,7 @@ SOFTWARE.
   Built by <a href="https://so4.market">so4 labs</a> ·
   <a href="https://twitter.com/so4market">@so4market</a>
 </p>
+
+
+## Developer Reference #575
+Resolves issue #575: DX-063: Add a print stylesheet for documentation pages.
