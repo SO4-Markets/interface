@@ -4,7 +4,5 @@
   "https://so4.market/*",
   "https://www.freighter.app/*",
   "https://github.com/jsonfeed/jsonfeed-validator",
-  "/concepts/perpetuals",
-  "/concepts/margin-and-leverage",
   "/reference/exchange-router#create_order"
 ]

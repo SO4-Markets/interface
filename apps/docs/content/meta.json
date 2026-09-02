@@ -2,7 +2,11 @@
   "sections": [
     {
       "label": "Get started",
-      "pages": ["get-started/introduction", "get-started/quickstart"]
+      "pages": [
+        "get-started/introduction",
+        "get-started/quickstart",
+        "get-started/wallets"
+      ]
     },
     {
       "label": "Developers",
@@ -20,12 +24,14 @@
     {
       "label": "Concepts",
       "pages": [
-        "concepts/order-types",
-        "concepts/risk",
-        "concepts/funding-and-fees",
+        "concepts/perpetuals",
+        "concepts/unified-liquidity",
+        "concepts/margin-and-leverage",
         "concepts/liquidation",
+        "concepts/funding-and-fees",
+        "concepts/order-types",
         "concepts/oracles",
-        "concepts/unified-liquidity"
+        "concepts/risk"
       ]
     },
     {

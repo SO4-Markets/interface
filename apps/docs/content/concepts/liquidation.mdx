@@ -1,12 +1,150 @@
 ---
 title: Liquidation
-description: How maintenance margin and changing position value determine whether a leveraged position may be liquidated.
-updated: 2026-08-25
-status: stable
+description: How to compute your own liquidation price on SO4, what the maintenance margin threshold is, what happens when it breaks, and what you keep.
+updated: 2026-09-02
+status: beta
 ---
 
-Liquidation is the protocol process that closes an under-collateralised position before its losses exceed the collateral available to support it.
+A position is liquidated when its equity falls below the <Term id="maintenance-margin">maintenance margin</Term> — a small fraction of position size that must remain after losses. The interface computes the price at which that happens as `entryPrice ∓ (collateral − maintenanceMargin) ÷ positionTokens`, using a maintenance margin of 0.5% of size. On a 10x position, that is a 9.5% adverse move. When it is reached, the position is closed against the pool, fees are taken from what is left, and in practice you should expect to keep close to nothing.
 
-The displayed <Term id="liquidation-price">liquidation price</Term> is an estimate. A position becomes eligible when it breaches <Term id="maintenance-margin">maintenance margin</Term>; fees, funding, price impact, and fast markets can move the actual result.
+Read this page before opening a leveraged position rather than during one.
 
-Read the broader [risk overview](/concepts/risk) before opening a leveraged position.
+## Maintenance margin
+
+Maintenance margin is a percentage of **position size**, not of collateral. It is the buffer the protocol keeps so that a position can be closed before its losses exceed the collateral backing it.
+
+The interface uses 50 basis points — 0.5% of size — as its default: `maintenanceMarginRateBps = 50` in `estimateLiquidationPrice`, in `apps/web/src/features/trade/lib/trade-math.ts`. Nothing in the interface overrides that default; every caller uses it.
+
+Where it is enforced is a different question from where it is displayed, and the honest answer has two halves:
+
+- **The interface only estimates.** The function above is a client-side calculation. Its own source comment reads "TODO: Replicate exact formula from Soroban contract once deployed", and it notes the contract's inputs as `maintenanceMarginRate`, `fundingFeeDebt`, and `borrowingFeeDebt` — two of which the estimate ignores.
+- **The contracts decide.** The authoritative liquidation price for an open position is returned by the contracts themselves, as the `liquidation_price` field of `PositionInfo` from `SyntheticsReader.get_account_positions` (`packages/contracts/src/generated/synthetics-reader/src/index.ts`, read in `apps/web/src/features/trade/hooks/usePositions.ts`). That is the number the positions table shows.
+
+The Soroban contract source is not part of this repository, so the 0.5% threshold could not be checked against the code that enforces it. Treat 0.5% as what the interface assumes, and the value returned for your open position as what the protocol says.
+
+There is a second copy of the same estimator in `apps/web/src/features/trade/lib/liquidation.ts`, with identical arithmetic and the same 50 bps default. The trade panel imports the `trade-math.ts` one.
+
+## Computing your liquidation price
+
+```
+maintenanceMargin = sizeUsd × 0.005
+maxLoss           = collateralUsd − maintenanceMargin
+positionTokens    = sizeUsd ÷ entryPrice
+
+liquidationPrice  = entryPrice − maxLoss ÷ positionTokens   for a long
+liquidationPrice  = entryPrice + maxLoss ÷ positionTokens   for a short
+```
+
+Divide through by `entryPrice` and the leverage falls out of it. The adverse move a position survives, as a fraction of the entry price, is:
+
+```
+adverseMove = (1 ÷ leverage) − 0.005
+```
+
+That identity is worth keeping. It says the distance to liquidation depends on leverage alone — not on the market, not on the size, not on how much collateral you posted in absolute terms.
+
+| Leverage | Adverse move to liquidation | Long liquidation at 60,000 | Short liquidation at 60,000 |
+| --- | --- | --- | --- |
+| 2x | 49.5% | 30,300 | 89,700 |
+| 5x | 19.5% | 48,300 | 71,700 |
+| 10x | 9.5% | 54,300 | 65,700 |
+| 20x | 4.5% | 57,300 | 62,700 |
+| 50x | 1.5% | 59,100 | 60,900 |
+
+At the interface's 50x maximum, a 1.5% move against you ends the position.
+
+### Worked example, both directions
+
+A trader opens a 10,000 USD position on BTC/USD at an entry price of 60,000 USD, with 1,000 USD of collateral — 10x leverage.
+
+- Maintenance margin: `10,000 × 0.005 = 50 USD`
+- Maximum loss before liquidation: `1,000 − 50 = 950 USD`
+- Position tokens: `10,000 ÷ 60,000 = 0.166667 BTC`
+- Price move that costs 950 USD: `950 ÷ 0.166667 = 5,700 USD`
+
+**Long:** `60,000 − 5,700 = 54,300 USD`. A 9.5% fall.
+
+**Short:** `60,000 + 5,700 = 65,700 USD`. A 9.5% rise.
+
+Both figures come from the same function the trade panel calls, run against these inputs.
+
+## What the estimate leaves out
+
+Four things move your real liquidation price away from the formula above. Each one moves it against you.
+
+**Funding and borrow fees.** Both accrue against the position for as long as it is open and reduce the collateral supporting it. The estimate treats collateral as a constant. A position that has paid 100 USD of funding on the 10x example above liquidates at 54,900 rather than 54,300 — 600 USD nearer, with the market having done nothing new. See [funding and fees](/concepts/funding-and-fees).
+
+**Fees charged on the way in.** Position fee and <Term id="price-impact">price impact</Term> are taken at execution, so the collateral actually backing the position is smaller than the amount you typed.
+
+**Collateral that revalues.** A long is collateralised in the index token, so when the price falls, the collateral falls with it. The estimate ignores that second exposure: it fixes `collateralUsd` at the value it had when the estimate ran.
+
+Take the long from the margin page: 0.02 TWBTC of collateral, worth 1,200 USD at 60,000, backing a 6,000 USD position at 5x. The estimate says 48,300. Solving instead for the price where equity — revalued collateral plus profit and loss — equals the 30 USD maintenance margin:
+
+```
+0.02 × P + 0.1 × (P − 60,000) = 30
+0.12 × P                       = 6,030
+P                              = 50,250
+```
+
+The position runs out of margin at 50,250, nearly 2,000 USD earlier than the displayed estimate. Short positions on SO4's markets are collateralised in TUSDC and do not carry this effect.
+
+**Execution, not detection.** The liquidation price is where a position becomes eligible. It is closed at whatever price the oracle reports when the transaction executes, which in a fast market is worse.
+
+## What happens during a liquidation
+
+The lifecycle is visible in the events the indexer handles (`apps/s03-indexer/src/mappings/mappingHandlers.ts`, `handleLiquidation`):
+
+1. **`liq_req`** — the position is flagged as liquidatable. The indexer records a `Liquidation` row with status `REQUESTED`, carrying the account, market, direction, and position key.
+2. **`liq_exe`** — the liquidation executes. The same row moves to status `EXECUTED` and is filled in with `sizeDeltaUsd`, `collateralLiquidatedAmount`, `remainingCollateralAmount`, `liquidationPrice`, `pnlUsd`, `priceImpactUsd`, `liquidationFeeUsd`, and the `liquidator` address.
+
+The order of operations inside `liq_exe` is set by the contracts, and the amounts are theirs to compute. What the event schema tells you is which quantities exist. The loss is realised at an execution price, price impact is applied, and a liquidation fee is charged. A remaining collateral amount is also recorded, so a residue is representable rather than merely assumed.
+
+Automatic deleveraging is a separate mechanism with its own events, `adl_req` and `adl_exe`, handled by `handleAdl` in the same file. It can reduce a position that is not in breach of maintenance margin. It is not liquidation, and this page does not cover it.
+
+## What you keep
+
+At the liquidation price, by construction, everything above the maintenance margin has already been lost. On the 10x example, that leaves 50 USD of a 1,000 USD deposit — and the fees come out of that 50, not out of anything else.
+
+Using the interface's current fee configuration (`apps/web/src/features/trade/lib/data-store.ts`), on a 10,000 USD position:
+
+| Item | Amount |
+| --- | --- |
+| Maintenance margin remaining at the liquidation price | 50.00 USD |
+| Position fee on the closing side, 0.10% of size | −10.00 USD |
+| Price impact, 0.05% of size | −5.00 USD |
+| Keeper execution fee, 0.3 XLM at 0.17 USD | −0.05 USD |
+| Liquidation fee (`liquidation_fee_usd`) | set by the contracts |
+| **Left before the liquidation fee** | **34.95 USD** |
+
+If the contract's liquidation fee is 0.35% of size or more, nothing is returned. Plan on the outcome of a liquidation being a total loss of the collateral behind that position, and treat any residue as a surprise rather than an entitlement. A stop-loss closed at your price is worth far more than a liquidation at the protocol's — see [order types](/concepts/order-types), including the cases where a stop does not protect you.
+
+## Is there partial liquidation
+
+No — not in anything this repository implements. The interface has no partial-liquidation path: `estimateLiquidationPrice` returns a single price, the positions table shows a single price, and no code reduces a position by a fraction on a margin breach.
+
+Two qualifications, both honest rather than reassuring. The indexer's `Liquidation` entity records a `sizeDeltaUsd`, so an event closing part of a position is representable in the schema. And the contracts that decide are not in this repository, so this page can tell you what the interface does and not what the deployed contract will do. If you are relying on a partial close to save a position, do not.
+
+## Where the interface shows the liquidation price
+
+Three places, and they do not all come from the same source:
+
+- **Trade panel, "Liq. price" row** — the client-side estimate for the position you are about to open, computed in `TradeInfoRows.tsx` from the estimated entry price. The confirmation dialog repeats it.
+- **Positions table, "Liq." column** — the contract's `liquidation_price` for the open position. It turns red when the mark price is within 10% of it (`PositionsList.tsx`).
+- **Chart** — a dashed line at the same contract-supplied price for the position (`TVChartContainer.tsx`).
+
+A gap between the panel's estimate before you trade and the table's figure afterwards is expected. The table is the one to believe.
+
+## How oracle behaviour moves it
+
+The liquidation check runs against an oracle price, so the properties of that feed are properties of your liquidation:
+
+- Prices come from a chain of sources tried in order, and the interface marks a price stale after 30 seconds without blocking trading. A stale display does not mean a stale check — the price used at execution is the one the transaction sees.
+- If every networked source fails, the client falls back to static placeholder prices. Nothing on screen says the feed is dead beyond the staleness dot.
+- The feed does not cross-check sources for deviation. A source that moves sharply away from the others is used as-is.
+- A gap through your liquidation price does not stop at it. The position closes at the next price the oracle reports, which is why a liquidation can leave less than the arithmetic above suggests.
+
+[Oracles](/concepts/oracles) documents the source order, the staleness thresholds, and the failure modes in full.
+
+## Related
+
+[Margin and leverage](/concepts/margin-and-leverage) is where the collateral and size in these formulas come from, including how adding collateral moves the liquidation price. [Funding and fees](/concepts/funding-and-fees) covers the costs that move it while you hold. [Risk](/concepts/risk) is the wider enumeration of what can go wrong.

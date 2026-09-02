@@ -1,0 +1,89 @@
+---
+title: Wallets
+description: Which Stellar wallets SO4 supports, what connecting and signing actually authorise, how sessions persist, and what disconnect clears.
+updated: 2026-09-02
+status: stable
+---
+
+SO4's connect dialog offers three wallets: Freighter, xBull, and Hana. All three are browser extensions, reached through Stellar Wallets Kit, which the app initialises on load. Connecting reveals your public address to the interface and nothing else — no spending authority, no allowance, no standing permission. Every movement of your funds needs a separate signature on a specific transaction.
+
+## The supported wallets
+
+The list is defined as `WALLET_OPTIONS` in `apps/web/src/features/wallet/components/ConnectButton.tsx`, and the dialog shows exactly these:
+
+| Wallet | Install from | How the dialog detects it |
+| --- | --- | --- |
+| Freighter | `freighter.app` | The Freighter API reports the extension as connected |
+| xBull | `xbull.app` | Always reported available — see below |
+| Hana | Chrome Web Store | The extension exposes a Stellar interface on the page |
+
+The app initialises Stellar Wallets Kit with the kit's `defaultModules()`, which registers a wider set — Albedo, Fordefi, Rabet, Lobstr, Klever, OneKey, Bitget, CactusLink, and D'Cent alongside the three above. The connect dialog then filters that list down to its own three options, so those are the only wallets reachable from the interface today. A wallet that the kit supports but the dialog does not list cannot be selected.
+
+When the dialog opens it calls `refreshSupportedWallets()` and marks each option available or not, sorting the detected ones first. Choosing a wallet marked "Not installed" does not attempt a connection; the dialog shows an install panel instead, with the text "Install it, then return here and connect without closing this modal".
+
+### What goes wrong, per wallet
+
+Every failed connection produces the same message: **"Could not connect Freighter. Please try again."**, with the chosen wallet's name substituted. The interface does not surface the wallet's own error, so the message is the same for a locked extension as for a rejected prompt. The conditions differ:
+
+- **Freighter** — selecting it calls the wallet's `requestAccess`, which raises Freighter's own approval prompt. Dismissing that prompt, or having the extension locked, produces the failure message. Unlock Freighter, retry, and approve the prompt. The kit also reports Freighter's mobile build as unavailable on purpose, so a mobile Freighter never appears as detected. The failure that costs the most time comes later, at signing. A Freighter left on Mainnet refuses the transaction with "Freighter is set to Main Net", then "The transaction you're trying to sign is on Test Net", then "Signing this transaction is not possible at the moment". [The quickstart](/get-started/quickstart) shows that screen.
+- **xBull** — the kit's xBull module reports itself available unconditionally, so xBull is listed as "Detected" whether or not anything is installed. Selecting it opens xBull's connection bridge; with no xBull present, nothing completes and you get the same message. A "Detected" label next to xBull is not evidence that you have it.
+- **Hana** — detected only when the extension exposes its Stellar interface to the page. Hana installed without that interface active shows as "Not installed", and the kit's own error, "Hana Wallet is not installed", is replaced by SO4's message before you see it.
+
+If the wallet connects and the failure appears later, at signing time, the error reference is organised by the exact on-screen text: see [rejected or declined](/reference/errors#rejected-or-declined) and [`tx_bad_auth`](/reference/errors#tx-bad-auth).
+
+## Networks
+
+SO4 runs against one network at a time, fixed at build time by the `VITE_NETWORK` variable and resolved in `apps/web/src/app/config/network.ts`. The current deployment is testnet, so your wallet must also be on testnet. Stellar Wallets Kit is initialised with the same network the app is configured for, so the passphrase the wallet signs against comes from the app rather than from the wallet's current selection.
+
+Switching networks is done in the wallet, not in SO4. There is no network switcher in the interface.
+
+Be aware of one gap. The app carries a `network` value in its wallet store, but that value is seeded from the app's own configuration and persisted — nothing reads the network your wallet is actually on. The mismatch banner that reads "Your wallet is connected to Mainnet but this app is running on Testnet. Please switch networks in your wallet." can therefore only appear if the app's configured network changed between your visits, not because your wallet disagrees. A wallet on the wrong network usually fails at signing or submission instead, as `tx_bad_auth`: "Transaction signature invalid. Try reconnecting your wallet."
+
+## What connecting grants, and what signing authorises
+
+This section is worth reading closely; it is the part of using any DEX where users are exploited.
+
+**Connecting** hands the interface your public address. With it, the app reads public ledger data on your behalf — your XLM balance and token balances from Horizon's `/accounts/{address}` endpoint (`useBalance.ts`, `useTokenBalances.ts`), and your positions and orders from the contracts. Reading is all it can do. A public address cannot authorise a transfer.
+
+**Signing** authorises exactly one transaction, once. The path is `prepareAndSign` in `apps/web/src/lib/soroban/tx-builder.ts`:
+
+1. The app builds the transaction and simulates it against Soroban RPC, which attaches the resource footprint and the <Term id="authorisation-entry">authorisation entries</Term> the call needs.
+2. The prepared XDR goes to the wallet with the network passphrase.
+3. The wallet returns a signed envelope. The app submits it.
+
+For an order that posts collateral, the transaction the wallet shows is a single `multicall` on ExchangeRouter containing two actions: a `SendTokens` action moving your stated collateral amount to OrderVault, and a `CreateOrder` action (`packages/contracts/src/clients/exchange-router.ts`). That is the whole authorisation. The amount is fixed in the transaction you sign.
+
+What that means in practice:
+
+- **SO4 never asks for an unlimited token approval.** There is no allowance to grant and none to revoke later. Each collateral transfer is written into the transaction that uses it.
+- **A signature does not authorise a future transaction.** Adding collateral, removing collateral, and closing a position are each a separate signature.
+- **A signature does not fill an order.** It creates one. A keeper executes it in a later transaction at a price set then — see [order types](/concepts/order-types).
+- **Read the amounts in the wallet prompt, not only in the interface.** The wallet is showing the transaction that will execute; the interface is showing an estimate of what it will do.
+
+Note that the collateral leaves your wallet at execution and sits in the protocol's contracts until the position closes. It is not in your wallet while the position is open, and it is not in SO4's custody as a company balance either — it is contract state on the public ledger.
+
+## Sessions, persistence, and disconnect
+
+The wallet store (`apps/web/src/features/wallet/store/wallet-store.ts`) persists to `localStorage` under the key `so4-wallet`, and it saves three fields: `address`, `walletId`, and `network`. Connection status is deliberately not persisted.
+
+The consequence is worth stating plainly: after a page reload the app has your address in storage but shows the Connect button until Stellar Wallets Kit re-emits its own stored session. The kit's session, not SO4's, is what keeps you connected across reloads.
+
+**Disconnect** — from the account dropdown — calls the kit's `disconnect()` and clears `address` and `walletId` in the store. What it does not do is remove the `so4-wallet` entry itself, which stays behind holding the network value, or clear anything in your wallet extension. The extension keeps its own record of sites it has connected to; removing SO4 there is done in the wallet.
+
+Two smaller pieces of state are separate from all this: your trade panel selections persist under `so4-trade-state-v2`, and a dismissed network banner is recorded in `sessionStorage` for the tab.
+
+## Mobile wallets
+
+The connect dialog renders a QR code alongside the extension options, built from a SEP-7 URI (`apps/web/src/features/wallet/lib/sep7.ts`). It encodes a `web+stellar:signin` request with the app's origin as the callback and the network passphrase the app is configured for.
+
+Honestly: this is not a working mobile connection path today. No route in the app consumes that callback, and the code that would switch the QR to a transaction request depends on a pending-transaction value that nothing in the app ever sets. Treat the QR as a placeholder and use a browser extension.
+
+## Passkeys and smart accounts
+
+Not supported. The repository contains no passkey, WebAuthn, or smart-account code, no dependency providing it, and no contract client for a smart-account wallet. Every connection path in the interface expects a classic Stellar account: the signing path takes a `G…` address and the order builder validates that shape before submitting.
+
+Stellar Wallets Kit is the layer where such support would arrive, and using it keeps that door open. Until it lands, treat any documentation elsewhere describing passkey login on SO4 as describing an intention rather than the current build. [The roadmap](/resources/roadmap) is where planned work is dated.
+
+## Related
+
+[The introduction](/get-started/introduction) covers what is on-chain and what is served off-chain, which is the other half of what you are trusting. [The faucet guide](/guides/faucet) gets testnet tokens into a connected wallet. [Troubleshooting](/guides/troubleshooting) is organised by symptom when a transaction fails after signing.
