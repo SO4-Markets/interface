@@ -1,72 +1,124 @@
 import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
 import { CONTRACTS } from "@/app/config/contracts"
-import { sorobanRpc } from "@/lib/soroban/client"
+import { queryContractEvents } from "@/lib/soroban/events"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import {
+  decodeOrderEvent,
+  applyOrderEventRefreshMatrix,
+} from "../lib/order-event-decoder"
 
 const CHAIN_ID = "stellar-mainnet"
 const POLL_INTERVAL_MS = 5000
-const TARGET_EVENTS = ["OrderExecuted", "OrderCancelled"]
+const PAGE_LIMIT = 50
+const MAX_PAGES_PER_POLL = 10
 
-function extractEventText(event: unknown): string {
+function getCursorStorageKey(account: string): string {
+  return `so4:order-events:cursor:${account}`
+}
+
+export function loadPersistedCursor(account: string): string | null {
   try {
-    return JSON.stringify(event)
+    return localStorage.getItem(getCursorStorageKey(account))
   } catch {
-    return String(event)
+    return null
   }
+}
+
+export function savePersistedCursor(account: string, cursor: string) {
+  try {
+    localStorage.setItem(getCursorStorageKey(account), cursor)
+  } catch {}
 }
 
 export function useOrderEventPolling() {
   const account = useWalletStore((state) => state.address)
   const queryClient = useQueryClient()
-  const lastCursor = useRef<string | null>(null)
+  const cursorRef = useRef<string | null>(null)
   const timer = useRef<number | null>(null)
+  const processedEventIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     if (!account) return
 
     let cancelled = false
-    lastCursor.current = null
+    // Restore persisted cursor for this account or null
+    cursorRef.current = loadPersistedCursor(account)
+    processedEventIds.current.clear()
 
     const poll = async () => {
       try {
-        const params: Record<string, unknown> = {
-          type: "contract",
-          contractId: CONTRACTS.exchangeRouter,
-          limit: 50,
-          order: "asc",
-        }
+        let pagesProcessed = 0
+        let hasMore = true
 
-        if (lastCursor.current) {
-          params.cursor = lastCursor.current
-        }
+        while (hasMore && !cancelled && pagesProcessed < MAX_PAGES_PER_POLL) {
+          const currentCursor = cursorRef.current ?? undefined
 
-        const response = await sorobanRpc.getEvents(params as any)
-        const events = (response as any)?.records ?? response ?? []
+          // Fetch typed contract events from Soroban RPC
+          const page = await queryContractEvents({
+            contractId: CONTRACTS.exchangeRouter,
+            cursor: currentCursor,
+            limit: PAGE_LIMIT,
+          })
 
-        const matching = (Array.isArray(events) ? events : []).filter((event) => {
-          const text = extractEventText(event).toLowerCase()
-          const name = String(event?.data?.event_name ?? event?.data?.type ?? event?.type ?? "").toLowerCase()
-          const isOrderEvent = TARGET_EVENTS.some((target) => name.includes(target.toLowerCase()) || text.includes(target.toLowerCase()))
-          const isForAccount = account ? text.includes(account.toLowerCase()) : false
-          return isOrderEvent && isForAccount
-        })
+          if (cancelled) return
 
-        if (matching.length > 0) {
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: queryKeys.trade.positions(CHAIN_ID, account) }),
-            queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) }),
-          ])
-        }
+          const events = page.events ?? []
 
-        const lastEvent = (Array.isArray(events) ? events : []).slice(-1)[0]
-        if (lastEvent?.paging_token) {
-          lastCursor.current = lastEvent.paging_token
-        } else if (lastEvent?.id) {
-          lastCursor.current = lastEvent.id
+          // If no events returned, we've reached the tip of the stream
+          if (events.length === 0) {
+            if (page.cursor && page.cursor !== currentCursor) {
+              cursorRef.current = page.cursor
+              savePersistedCursor(account, page.cursor)
+            }
+            break
+          }
+
+          // Process each event in the page with typed decoding
+          for (const rawEvent of events) {
+            if (!rawEvent || !rawEvent.id) continue
+
+            // Deduplicate across pages/restarts
+            if (processedEventIds.current.has(rawEvent.id)) {
+              continue
+            }
+
+            const decoded = decodeOrderEvent(rawEvent)
+            if (!decoded) continue
+
+            // Decoded identity check: ensure event belongs to connected account
+            if (decoded.account && decoded.account.toLowerCase() === account.toLowerCase()) {
+              await applyOrderEventRefreshMatrix(
+                queryClient,
+                decoded.name,
+                CHAIN_ID,
+                account,
+              )
+            }
+
+            processedEventIds.current.add(rawEvent.id)
+          }
+
+          // Bound memory for processed event IDs
+          if (processedEventIds.current.size > 1000) {
+            const arr = Array.from(processedEventIds.current)
+            processedEventIds.current = new Set(arr.slice(arr.length - 500))
+          }
+
+          // Advance cursor ONLY after successfully processing all events on this page
+          if (page.cursor && page.cursor !== currentCursor) {
+            cursorRef.current = page.cursor
+            savePersistedCursor(account, page.cursor)
+          } else {
+            // No next cursor provided; stop paginating this cycle
+            break
+          }
+
+          pagesProcessed++
+          hasMore = events.length === PAGE_LIMIT
         }
       } catch (error) {
+        // Do NOT advance cursor on error — failure before cursor advancement ensures no event is skipped
         if (import.meta.env.DEV) console.warn("Order event polling failed", error)
       } finally {
         if (!cancelled) {
@@ -81,6 +133,7 @@ export function useOrderEventPolling() {
       cancelled = true
       if (timer.current) {
         window.clearTimeout(timer.current)
+        timer.current = null
       }
     }
   }, [account, queryClient])
