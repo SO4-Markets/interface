@@ -1,7 +1,7 @@
 ---
-type: added
-area: landing
-pr: 0
+type: changed
+area: trade
+pr: 788
 breaking: false
 ---
 

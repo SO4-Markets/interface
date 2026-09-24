@@ -1,7 +1,7 @@
 ---
 type: added
 area: trade
-pr: 0
+pr: 787
 breaking: false
 ---
 
