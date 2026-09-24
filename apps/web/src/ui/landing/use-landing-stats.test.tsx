@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
 import { useLandingStats } from "./use-landing-stats"
 
 const createTestQueryClient = () => new QueryClient({
