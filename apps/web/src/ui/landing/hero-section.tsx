@@ -1,12 +1,37 @@
 import { Link } from "@tanstack/react-router"
+import { cn } from "@workspace/ui/lib/utils"
 import { AnimatedTitle } from "./animated-title"
 import { FeatureGrid } from "./feature-grid"
+import { useFirstLoadSequence } from "./use-first-load-sequence"
 import { useLandingStats } from "./use-landing-stats"
 import { shortFormat, shortFormatUsd } from "./utils/formatters"
 
-function Stat({ label, value }: { label: string; value: string }) {
+/*
+ * Hero entrance (OB-022). Only secondary content and the decorative glow are
+ * sequenced: the heading, the subheadline and the trade action are readable at
+ * first paint by design, which is why they take no animation class at all.
+ *
+ * Written as literals rather than assembled from a prefix so Tailwind's source
+ * scan can see the utilities it has to generate.
+ */
+const HERO_SEQUENCE = {
+  fade: "motion-safe:animate-hero-fade",
+  rise: "motion-safe:animate-hero-rise",
+  rise1: "motion-safe:animate-hero-rise-1",
+  rise2: "motion-safe:animate-hero-rise-2",
+} as const
+
+function Stat({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) {
   return (
-    <div>
+    <div className={className}>
       <div className="text-12 text-gmx-slate-400 sm:text-14">{label}</div>
       <div className="mt-1 text-30 font-medium tracking-tight text-white sm:text-40">{value}</div>
     </div>
@@ -21,6 +46,9 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export function HeroSection() {
   const stats = useLandingStats()
+  const playsEntrance = useFirstLoadSequence()
+  const sequence = (step: keyof typeof HERO_SEQUENCE) =>
+    playsEntrance ? HERO_SEQUENCE[step] : undefined
 
   return (
     <section className="relative overflow-hidden bg-gmx-slate-900">
@@ -31,7 +59,10 @@ export function HeroSection() {
           glow's position now matches the reference instead of the centered
           placeholder GF3-002 shipped. */}
       <div
-        className="absolute inset-x-0 top-0 h-160 bg-[radial-gradient(circle_at_75%_15%,var(--color-gmx-slate-700),transparent_55%)] sm:h-215"
+        className={cn(
+          "absolute inset-x-0 top-0 h-160 bg-[radial-gradient(circle_at_75%_15%,var(--color-gmx-slate-700),transparent_55%)] sm:h-215",
+          sequence("fade")
+        )}
         aria-hidden="true"
       />
 
@@ -58,12 +89,18 @@ export function HeroSection() {
           </div>
 
           <div className="flex gap-9 sm:gap-15">
-            <Stat label="Traders" value={stats.traders === null ? "-" : shortFormat(stats.traders)} />
             <Stat
+              className={sequence("rise")}
+              label="Traders"
+              value={stats.traders === null ? "-" : shortFormat(stats.traders)}
+            />
+            <Stat
+              className={sequence("rise1")}
               label="Open interest"
               value={stats.openInterest === null ? "-" : shortFormatUsd(stats.openInterest)}
             />
             <Stat
+              className={sequence("rise2")}
               label="Total volume"
               value={stats.totalVolume === null ? "-" : shortFormatUsd(stats.totalVolume)}
             />

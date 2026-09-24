@@ -298,6 +298,27 @@
         0% { transform: translateY(0%); opacity: 1; }
         100% { transform: translateY(-98%); opacity: 0; }
     }
+
+    /*
+     * Hero first-load sequence (OB-022). Secondary content and the decorative
+     * glow rise into place once the heading, subheadline and trade action are
+     * already readable, so the sequence never gates first paint or the OB-010
+     * loading target. Transform and opacity only, and fill-mode `both` so an
+     * element holds its off-state through its stagger delay — without that,
+     * a delayed element paints at full opacity first and then jumps back.
+     */
+    --animate-hero-rise: hero-rise var(--duration-slowest) var(--ease-out) 90ms both;
+    --animate-hero-rise-1: hero-rise var(--duration-slowest) var(--ease-out) 180ms both;
+    --animate-hero-rise-2: hero-rise var(--duration-slowest) var(--ease-out) 270ms both;
+    --animate-hero-fade: hero-fade var(--duration-slow) var(--ease-out) 0ms both;
+    @keyframes hero-rise {
+        0% { transform: translateY(12px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes hero-fade {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+    }
 }
 
 /*
