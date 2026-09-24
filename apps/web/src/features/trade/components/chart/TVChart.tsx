@@ -1,6 +1,4 @@
 import { useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import { queryKeys } from "../../lib/query-keys"
 import { ChartHeader } from "./ChartHeader"
 import { TVChartContainer } from "./TVChartContainer"
 
@@ -14,14 +12,10 @@ type Props = {
 
 export function TVChart({ symbol, onSelectToken }: Props) {
   const [period, setPeriod] = useState<Period>("5m")
-  const queryClient = useQueryClient()
 
-  // When the period changes, invalidate the candles cache so useOracleCandles refetches
+  // Period change triggers query update via hook
   function handlePeriodChange(p: Period) {
     setPeriod(p)
-    if (symbol) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.oracleCandles(symbol, p) })
-    }
   }
 
   return (

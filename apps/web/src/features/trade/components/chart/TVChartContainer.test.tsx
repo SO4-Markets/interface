@@ -26,12 +26,16 @@ let mockIsLoading = false
 let mockIsError = false
 let mockLiveBar: Record<string, unknown> | null = null
 let mockPositions: Array<Record<string, unknown>> = []
+let mockIsPlaceholderData = false
+let mockIsFetching = false
 
 vi.mock("../../hooks/useOracleCandles", () => ({
   useOracleCandles: () => ({
     data: mockCandles,
     isLoading: mockIsLoading,
     isError: mockIsError,
+    isPlaceholderData: mockIsPlaceholderData,
+    isFetching: mockIsFetching,
   }),
 }))
 
@@ -74,6 +78,8 @@ describe("TVChartContainer", () => {
     mockIsError = false
     mockLiveBar = null
     mockPositions = []
+    mockIsPlaceholderData = false
+    mockIsFetching = false
   })
 
   const defaultProps = { symbol: "BTC", period: "5m" }
@@ -326,5 +332,13 @@ describe("TVChartContainer", () => {
 
     const error = screen.getByRole("alert")
     expect(error).toHaveTextContent(/unable to load chart data for btc/i)
+  })
+
+  it("shows updating indicator when rendering placeholder data during timeframe switch", () => {
+    mockCandles = SAMPLE_CANDLES
+    mockIsPlaceholderData = true
+    render(<TVChartContainer {...defaultProps} />)
+
+    expect(screen.getByText(/Updating 5m…/i)).toBeInTheDocument()
   })
 })

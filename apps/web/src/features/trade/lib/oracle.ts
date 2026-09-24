@@ -256,7 +256,9 @@ export async function fetchOracleCandles(
   symbol: string,
   period: string,
   limit = 500,
+  signal?: AbortSignal,
 ): Promise<Array<OhlcBar>> {
+  if (signal?.aborted) return []
   // Resolve contract address / test symbol → base symbol (BTC, ETH, XLM, USDC)
   const base = resolveBaseSymbol(symbol)
 
@@ -270,9 +272,10 @@ export async function fetchOracleCandles(
         interval: binancePeriod,
         limit: String(Math.min(limit, 1000)),
       })
-      const res = await fetch(`${BINANCE_BASE}/api/v3/klines?${params}`)
+      const res = await fetch(`${BINANCE_BASE}/api/v3/klines?${params}`, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const raw = (await res.json()) as Array<Array<string | number>>
+      if (signal?.aborted) return []
       // Binance klines: [openTime_ms, open, high, low, close, vol, ...] oldest-first
       return raw.map((c) => ({
         time: Math.floor(Number(c[0]) / 1000),
@@ -282,14 +285,16 @@ export async function fetchOracleCandles(
         close: parseFloat(c[4] as string),
       }))
     } catch {
+      if (signal?.aborted) return []
       // Fall through to Pyth Benchmarks
     }
   }
 
   // Fallback: Pyth Benchmarks (reliable, no geo-blocking)
   try {
-    return await fetchPythBenchmarkCandles(base, period, limit)
+    return await fetchPythBenchmarkCandles(base, period, limit, signal)
   } catch {
+    if (signal?.aborted) return []
     // Fall through to GMX
   }
 
@@ -300,9 +305,10 @@ export async function fetchOracleCandles(
       period: period === "1D" ? "1d" : period,
       limit: String(limit),
     })
-    const res = await fetch(`${GMX_BASE}/prices/candles?${params}`)
+    const res = await fetch(`${GMX_BASE}/prices/candles?${params}`, { signal })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = (await res.json()) as { candles: Array<Array<number>> }
+    if (signal?.aborted) return []
     // Reverse to get oldest-first
     return json.candles
       .map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
@@ -422,6 +428,7 @@ async function fetchPythBenchmarkCandles(
   symbol: string,
   period: string,
   limit: number,
+  signal?: AbortSignal,
 ): Promise<Array<OhlcBar>> {
   const pythSym = PYTH_SYMBOL[symbol]
   const resolution = PYTH_BENCHMARKS_RESOLUTION[period]
@@ -439,7 +446,7 @@ async function fetchPythBenchmarkCandles(
     from: String(from),
     to: String(to),
   })
-  const res = await fetch(`${PYTH_BENCHMARKS_BASE}/v1/shims/tradingview/history?${params}`)
+  const res = await fetch(`${PYTH_BENCHMARKS_BASE}/v1/shims/tradingview/history?${params}`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const json = (await res.json()) as PythBenchmarksResponse
