@@ -14,15 +14,14 @@
  */
 
 import { useMemo } from "react"
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import { toKnownOrderType } from "../lib/order-lifecycle"
 import {
   buildOrderHistoryRows,
   dedupeOrderHistoryRows,
   filterOrderHistoryRows,
-  flattenPages,
-  hasMorePages,
-  nextOffset,
+  mergePagesByStableId,
+  nextRetainedPrefixSize,
   normaliseOrderHistoryFilters,
   parseUsdValue,
   toFillRecords,
@@ -39,6 +38,7 @@ import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { getAccountOrdersPagedDocument } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export const ORDERS_PAGE_SIZE = 25
 
@@ -106,23 +106,23 @@ export function useOrderHistory(
         document,
         {
           account,
-          first: ORDERS_PAGE_SIZE,
-          offset: pageParam,
+          first: pageParam,
+          offset: 0,
           ...(marketKey ? { marketKey } : {}),
         },
         { signal },
       )
       return result.orders.nodes
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      hasMorePages(lastPage.length, ORDERS_PAGE_SIZE)
-        ? nextOffset(allPages, ORDERS_PAGE_SIZE)
-        : undefined,
+    initialPageParam: ORDERS_PAGE_SIZE,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      nextRetainedPrefixSize(
+        lastPage.length,
+        lastPageParam,
+        ORDERS_PAGE_SIZE,
+      ),
     enabled,
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
-    retry: 3,
+    ...queryPolicy("history"),
   })
 
   // Fills are read once (newest first) and aggregated per order key, so an
@@ -186,7 +186,10 @@ function buildRows(
   stage: OrderHistoryFilters["stage"],
   range: OrderHistoryFilters["range"],
 ): Array<OrderHistoryRow> {
-  const sources = flattenPages(pages ?? []).map(toOrderHistorySource)
+  const sources = mergePagesByStableId(
+    pages ?? [],
+    (order) => order.key,
+  ).map(toOrderHistorySource)
   const built = dedupeOrderHistoryRows(
     buildOrderHistoryRows(sources, toFillRecords(changes)),
   )

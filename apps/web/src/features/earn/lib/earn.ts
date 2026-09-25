@@ -2,7 +2,7 @@ import { toast } from "@workspace/ui/components/toast"
 import { GLV_VAULTS, GM_POOLS } from "../data/pools"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 import { NETWORK } from "@/app/config/network"
-import { queryClient } from "@/app/providers/QueryProvider"
+import { getQueryClient } from "@/app/providers/QueryProvider"
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import {
   buildClaimRewardsTransaction,
@@ -32,8 +32,8 @@ function isValidAccount(account: string): boolean {
 
 async function invalidateStakingQueries(account: string): Promise<void> {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.earn.stakingInfo(account) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(account) }),
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.earn.stakingInfo(account) }),
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(account) }),
   ])
 }
 
@@ -113,7 +113,7 @@ export async function depositGM(account: string, poolName: string, amountUsd: nu
           ? `~${expectedGm.toString()} GM expected | Tx: ${hash.slice(0, 8)}...`
           : `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: queryKeys.earn.gmPoolData(pool.marketAddress, account) }),
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.earn.gmPoolData(pool.marketAddress, account) }),
       onError: parseSorobanError,
     },
   )
@@ -151,7 +151,7 @@ export async function withdrawGM(account: string, poolName: string, gmAmount: nu
           ? `~${expectedLongTokens.toString()} long + ~${expectedShortTokens.toString()} short expected | Tx: ${hash.slice(0, 8)}...`
           : `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: queryKeys.earn.gmPoolData(pool.marketAddress, account) }),
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.earn.gmPoolData(pool.marketAddress, account) }),
       onError: parseSorobanError,
     },
   )

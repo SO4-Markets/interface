@@ -8,7 +8,7 @@ import type {
 } from "@workspace/contracts"
 
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
-import { queryClient } from "@/app/providers/QueryProvider"
+import { getQueryClient } from "@/app/providers/QueryProvider"
 import { CONTRACTS } from "@/app/config/contracts"
 import { NETWORK } from "@/app/config/network"
 import { queryKeys } from "@/shared/lib/query-keys"
@@ -59,9 +59,9 @@ export async function createDeposit(params: CreateDepositParams): Promise<string
       successMessage: "GLV deposit submitted successfully.",
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account, CHAIN_ID) })
-        queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account) })
-        queryClient.invalidateQueries({ queryKey: queryKeys.earn.glvVaultData(params.glvAddress, params.account) })
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account, CHAIN_ID) })
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account) })
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.earn.glvVaultData(params.glvAddress, params.account) })
       },
       onError: parseSorobanError,
     },
@@ -83,9 +83,9 @@ export async function createWithdrawal(params: CreateWithdrawalParams): Promise<
       successMessage: "GLV withdrawal submitted successfully.",
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account, CHAIN_ID) })
-        queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account) })
-        queryClient.invalidateQueries({ queryKey: queryKeys.earn.glvVaultData(params.glvAddress, params.account) })
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account, CHAIN_ID) })
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(params.account) })
+        getQueryClient().invalidateQueries({ queryKey: queryKeys.earn.glvVaultData(params.glvAddress, params.account) })
       },
       onError: parseSorobanError,
     },

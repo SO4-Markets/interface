@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useWallet } from "@/app/providers"
 import { NETWORK } from "@/app/config/network"
 import { queryKeys } from "@/shared/lib/query-keys"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 async function fetchXlmBalance(address: string, signal?: AbortSignal): Promise<number> {
   const res = await fetch(`${NETWORK.horizonUrl}/accounts/${address}`, { signal })
@@ -20,8 +21,7 @@ export function useBalance() {
     queryKey: queryKeys.wallet.balance(address ?? ""),
     queryFn: ({ signal }) => fetchXlmBalance(address as string, signal),
     enabled: !!address,
-    staleTime: 15_000,
-    refetchInterval: 15_000,
+    ...queryPolicy("balances"),
   })
 
   if (!address) return null
