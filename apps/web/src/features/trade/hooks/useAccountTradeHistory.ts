@@ -35,16 +35,16 @@ const NO_HISTORY: Array<PositionChange> = []
 export function useAccountTradeHistory(account: string | null): UseAccountTradeHistoryResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.tradeHistory.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_POSITION_CHANGES, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_POSITION_CHANGES, { account }, { signal })
       return result.positionChanges.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
     retry: 3,
-    staleTime: 30_000, // 30 seconds - trade history is more stable
+    staleTime: 30_000,
   })
 
   if (!INDEXER_CONFIG.enabled) {

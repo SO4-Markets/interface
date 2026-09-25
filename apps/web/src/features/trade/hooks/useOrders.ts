@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { MARKETS } from "../data/markets"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { syntheticsReaderClient } from "@/lib/contracts"
 import { fromSorobanAmount } from "@/shared/lib/bignum"
 
 const USD_DECIMALS = 30
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 
 export type OrderType =
   | "MarketIncrease"

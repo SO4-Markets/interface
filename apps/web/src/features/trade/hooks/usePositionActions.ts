@@ -24,8 +24,8 @@ import { useCallback, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@workspace/ui/components/toast"
 import {
-  invalidatePositionActionTargets,
-  type PositionActionKind,
+  
+  invalidatePositionActionTargets
 } from "../lib/position-refresh"
 import {
   classifyTransactionFailure,
@@ -35,8 +35,9 @@ import {
   validateCollateralChange,
 } from "../lib/position-constraints"
 import { deriveMarkPriceUsd } from "../lib/position-risk"
-import { freshPositionKey } from "./usePositionState"
 import { createDecreaseOrder, createIncreaseOrder } from "../lib/stellar"
+import { freshPositionKey } from "./usePositionState"
+import type {PositionActionKind} from "../lib/position-refresh";
 import type { CloseConstraintPayload, PositionConstraintState } from "../lib/position-constraints"
 import type { Position } from "./usePositions"
 import type { PositionInfo } from "@/lib/contracts"
@@ -73,7 +74,7 @@ export type CollateralActionInput = {
 
 export type UsePositionActionsResult = {
   /** Per-position action state, keyed by position key. */
-  actions: Record<string, PositionActionState>
+  actions: Partial<Record<string, PositionActionState>>
   submitClose: (
     position: Position,
     payload: CloseConstraintPayload,
@@ -155,7 +156,9 @@ export function usePositionActions(): UsePositionActionsResult {
   const queryClient = useQueryClient()
   const account = useWalletStore((state) => state.address)
   const { data: balances } = useTokenBalances()
-  const [actions, setActions] = useState<Record<string, PositionActionState>>({})
+  const [actions, setActions] = useState<
+    Partial<Record<string, PositionActionState>>
+  >({})
 
   const setAction = useCallback(
     (positionKey: string, state: PositionActionState) => {

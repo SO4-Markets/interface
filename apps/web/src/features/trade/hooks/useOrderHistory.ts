@@ -15,11 +15,6 @@
 
 import { useMemo } from "react"
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
-import { executeGraphQLQuery } from "@/lib/graphql/client"
-import { getAccountOrdersPagedDocument } from "@/lib/graphql/queries"
-import { indexerQueryKeys } from "@/lib/graphql/query-keys"
-import { INDEXER_CONFIG } from "@/app/config/indexer"
-import { useAccountTradeHistory } from "./useAccountTradeHistory"
 import { toKnownOrderType } from "../lib/order-lifecycle"
 import {
   buildOrderHistoryRows,
@@ -33,12 +28,17 @@ import {
   toFillRecords,
   toTimestampMillis,
 } from "../lib/order-history"
+import { useAccountTradeHistory } from "./useAccountTradeHistory"
 import type {
   OrderHistoryFilters,
   OrderHistoryRow,
   OrderHistorySource,
 } from "../lib/order-history"
 import type { Order as IndexedOrder } from "@/lib/graphql/types"
+import { executeGraphQLQuery } from "@/lib/graphql/client"
+import { getAccountOrdersPagedDocument } from "@/lib/graphql/queries"
+import { indexerQueryKeys } from "@/lib/graphql/query-keys"
+import { INDEXER_CONFIG } from "@/app/config/indexer"
 
 export const ORDERS_PAGE_SIZE = 25
 
@@ -100,14 +100,18 @@ export function useOrderHistory(
 
   const query = useInfiniteQuery({
     queryKey: indexerQueryKeys.orders.history(account ?? "", normal),
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       if (!enabled || !account) return []
-      const result = await executeGraphQLQuery(document, {
-        account,
-        first: ORDERS_PAGE_SIZE,
-        offset: pageParam,
-        ...(marketKey ? { marketKey } : {}),
-      })
+      const result = await executeGraphQLQuery(
+        document,
+        {
+          account,
+          first: ORDERS_PAGE_SIZE,
+          offset: pageParam,
+          ...(marketKey ? { marketKey } : {}),
+        },
+        { signal },
+      )
       return result.orders.nodes
     },
     initialPageParam: 0,

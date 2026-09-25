@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest"
 import {
+  
+  
   buildOrderHistoryRow,
   dedupeById,
-  filterFills,
-  type FillRecord,
-  type OrderHistorySource,
+  filterFills
 } from "./order-history"
 import { deriveOrderLifecycleStage } from "./order-lifecycle"
+import type {FillRecord, OrderHistorySource} from "./order-history";
 
 const order: OrderHistorySource = {
   key: "order-1",

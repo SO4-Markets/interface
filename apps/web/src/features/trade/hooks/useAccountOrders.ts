@@ -28,16 +28,16 @@ export type UseAccountOrdersResult = {
 export function useAccountOrders(account: string | null): UseAccountOrdersResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.orders.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_ORDERS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_ORDERS, { account }, { signal })
       return result.orders.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
     retry: 3,
-    staleTime: 10_000, // 10 seconds
+    staleTime: 10_000,
   })
 
   if (!INDEXER_CONFIG.enabled) {

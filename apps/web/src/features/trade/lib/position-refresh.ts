@@ -19,11 +19,11 @@
  *     indexer namespace.
  */
 
+import { activeQueryNetwork, queryKeys } from "./query-keys"
 import type { QueryClient, QueryKey } from "@tanstack/react-query"
-import { queryKeys } from "./query-keys"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 
 export type PositionActionKind = "close" | "add-collateral" | "remove-collateral"
 
@@ -78,7 +78,7 @@ export function positionRefreshKeys(
     positionsFresh: [queryKeys.trade.positionsFresh(CHAIN_ID, account)],
     positions: [queryKeys.trade.positions(CHAIN_ID, account)],
     orders: [queryKeys.trade.orders(CHAIN_ID, account)],
-    tokenBalances: [queryKeys.trade.tokenBalances(CHAIN_ID, account)],
+    tokenBalances: [queryKeys.wallet.tokenBalances(account, CHAIN_ID)],
     indexerPositions: [indexerQueryKeys.positions.byAccount(account)],
     indexerOrders: [
       indexerQueryKeys.orders.byAccount(account),
