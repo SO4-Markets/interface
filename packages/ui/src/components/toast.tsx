@@ -214,20 +214,23 @@ export function useToast() {
   return { toasts: current.toasts, tracked: current.tracked, inFlight, toast, dismiss: toast.dismiss }
 }
 
+// Semantic token surfaces (OB-092): no raw variant colors. Pairs mirror
+// `status-badge` subtle fills so a success toast reads as the same green as
+// a success badge in either theme.
 const VARIANT_CLASSES: Record<ToastVariant, string> = {
-  success: "bg-green-900/90 text-green-100 border-green-700/50",
-  error: "bg-red-900/90 text-red-100 border-red-700/50",
-  warning: "bg-yellow-900/90 text-yellow-100 border-yellow-700/50",
-  info: "bg-slate-800/90 text-slate-100 border-slate-700/50",
-  "transaction-progress": "bg-blue-900/90 text-blue-100 border-blue-700/50",
+  success: "border-success-border bg-success-subtle text-success-foreground",
+  error: "border-danger-border bg-danger-subtle text-danger-foreground",
+  warning: "border-warning-border bg-warning-subtle text-warning-foreground",
+  info: "border-info-border bg-info-subtle text-info-foreground",
+  "transaction-progress": "border-info-border bg-info-subtle text-info-foreground",
 }
 
 const VARIANT_ICONS: Record<ToastVariant, React.ReactNode> = {
-  success: <Icon icon={Tick02Icon} size="md" tone="success" className="text-green-400" />,
-  error: <Icon icon={Cancel01Icon} size="md" tone="error" className="text-red-400" />,
-  warning: <Icon icon={Alert01Icon} size="md" tone="warning" className="text-yellow-400" />,
-  info: <Icon icon={InformationCircleIcon} size="md" tone="info" className="text-blue-400" />,
-  "transaction-progress": <Icon icon={ReloadIcon} size="md" tone="info" className="text-blue-400 animate-spin" />,
+  success: <Icon icon={Tick02Icon} size="md" tone="success" />,
+  error: <Icon icon={Cancel01Icon} size="md" tone="error" />,
+  warning: <Icon icon={Alert01Icon} size="md" tone="warning" />,
+  info: <Icon icon={InformationCircleIcon} size="md" tone="info" />,
+  "transaction-progress": <Icon icon={ReloadIcon} size="md" tone="info" className="animate-spin motion-reduce:animate-none" />,
 }
 
 const VARIANT_LABEL: Record<ToastVariant, string> = {
@@ -236,6 +239,22 @@ const VARIANT_LABEL: Record<ToastVariant, string> = {
   warning: "Warning",
   info: "Info",
   "transaction-progress": "Transaction in progress",
+}
+
+/** Exit duration matches `--duration-base` (motion spec: toast 150ms ease-out/in). */
+export const TOAST_EXIT_MS = 150
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = React.useState(false)
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)")
+    setReduced(query.matches)
+    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches)
+    query.addEventListener("change", onChange)
+    return () => query.removeEventListener("change", onChange)
+  }, [])
+  return reduced
 }
 
 function Toast({
@@ -248,7 +267,52 @@ function Toast({
   onDismiss: (id: string) => void
 }) {
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const exitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isHovered, setIsHovered] = React.useState(false)
+  // Entrance runs once on mount; content updates reuse the same node (OB-092).
+  const [entered, setEntered] = React.useState(false)
+  const [closing, setClosing] = React.useState(false)
+  const reducedMotion = usePrefersReducedMotion()
+
+  React.useEffect(() => {
+    if (reducedMotion) {
+      setEntered(true)
+      return
+    }
+    const frame = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(frame)
+  }, [reducedMotion])
+
+  // A content update for the same id cancels a pending exit (rapid reversal).
+  // Guarded by a content snapshot so starting an exit does not immediately
+  // cancel itself: only a changed message/description/variant reverses it.
+  const lastContent = React.useRef({ message: item.message, description: item.description, variant: item.variant })
+  React.useEffect(() => {
+    const prev = lastContent.current
+    const changed =
+      prev.message !== item.message || prev.description !== item.description || prev.variant !== item.variant
+    lastContent.current = { message: item.message, description: item.description, variant: item.variant }
+    if (changed && closing) {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+      setClosing(false)
+    }
+  }, [item.message, item.description, item.variant, closing])
+
+  const requestDismiss = React.useCallback(() => {
+    if (reducedMotion) {
+      onDismiss(item.id)
+      return
+    }
+    setClosing(true)
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    exitTimerRef.current = setTimeout(() => onDismiss(item.id), TOAST_EXIT_MS)
+  }, [item.id, onDismiss, reducedMotion])
+
+  React.useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    }
+  }, [])
 
   React.useEffect(() => {
     const shouldAutoDismiss = item.isTerminal || (!item.persistent && item.duration > 0)
@@ -256,23 +320,33 @@ function Toast({
       if (timerRef.current) clearTimeout(timerRef.current)
       return
     }
-    timerRef.current = setTimeout(() => onDismiss(item.id), item.duration)
+    timerRef.current = setTimeout(() => requestDismiss(), item.duration)
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [item.id, item.duration, item.persistent, item.isTerminal, isHovered, onDismiss, revision])
+  }, [item.id, item.duration, item.persistent, item.isTerminal, isHovered, onDismiss, revision, requestDismiss])
+
+  const visible = entered && !closing
 
   return (
     <div
       role="status"
       aria-live="polite"
+      data-slot="toast"
+      data-variant={item.variant}
+      data-state={visible ? "open" : "closed"}
+      aria-hidden={!visible || undefined}
+      inert={!visible ? true : undefined}
       aria-label={`${VARIANT_LABEL[item.variant]}: ${item.message}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsHovered(true)}
       onBlur={() => setIsHovered(false)}
       className={cn(
-        "flex flex-col gap-2 rounded-lg border p-4 text-sm shadow-lg pointer-events-auto transition-all w-80",
+        "pointer-events-auto flex w-80 flex-col gap-2 rounded-lg border p-4 text-sm shadow-lg",
+        "transition-[opacity,transform] duration-[var(--duration-base)] motion-reduce:transition-none",
+        visible ? "translate-y-0 opacity-100 ease-[var(--ease-out)]" : "-translate-y-2 opacity-0 ease-[var(--ease-in)]",
+        !visible && "pointer-events-none",
         VARIANT_CLASSES[item.variant],
       )}
       tabIndex={0}
@@ -289,7 +363,7 @@ function Toast({
         </div>
         <button
           aria-label="Dismiss"
-          onClick={() => onDismiss(item.id)}
+          onClick={() => requestDismiss()}
           className="shrink-0 opacity-70 hover:opacity-100 focus:opacity-100 outline-none"
         >
           <Icon icon={Cancel01Icon} size="sm" />
@@ -300,7 +374,7 @@ function Toast({
           <button
             onClick={() => {
               item.action?.onClick()
-              onDismiss(item.id)
+              requestDismiss()
             }}
             className="text-xs font-medium underline underline-offset-2 opacity-80 hover:opacity-100 focus:opacity-100 outline-none"
           >

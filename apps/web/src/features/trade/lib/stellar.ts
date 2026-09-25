@@ -9,6 +9,13 @@ import {
 } from "./order-encoding"
 import { queryKeys } from "./query-keys"
 import { registerPendingOrder } from "./pending-orders"
+import {
+  foldAmendReplaceOutcome,
+  resolveAmendReplaceSteps,
+  validateAmendPayload,
+  type AmendPayload,
+  type AmendReplaceOutcome,
+} from "./order-amendment"
 import type { CreateOrderParams, OrderKey } from "@/lib/contracts"
 import type { OrderType } from "../hooks/useOrders"
 import { NETWORK } from "@/app/config/network"
@@ -235,6 +242,139 @@ export async function cancelOrder(account: string, orderKey: OrderKey): Promise<
       onError: parseSorobanError,
     },
   )
+}
+
+export type AmendOrderTarget = {
+  orderKey: OrderKey
+  marketAddress: string
+  collateralToken: string
+  orderType: OrderType
+  isLong: boolean
+  acceptablePrice: number
+  triggerPrice: number
+  positionKey: string | null
+  /** Current remaining (unfilled) size in USD — re-read immediately before submitting. */
+  remainingSizeUsd: number
+  filledSizeUsd: number
+  stage: "accepted" | "partially-filled" | "pending" | "frozen" | "pending-cancellation" | "filled" | "cancelled"
+  awaitingIndex?: boolean
+}
+
+/**
+ * Amend an order via cancel-and-replace as two separate consequential steps
+ * (OB-084). The venue has no in-place update, so the replacement loses queue
+ * priority. If cancellation succeeds but the replacement fails, the outcome is
+ * `replace-failed` with `originalGone: true` — callers must never present the
+ * original order as still live in that case.
+ */
+export async function amendOrderViaReplace(
+  account: string,
+  original: AmendOrderTarget,
+  payload: AmendPayload,
+): Promise<AmendReplaceOutcome> {
+  if (!isValidAccount(account)) {
+    throw new Error("Connect your wallet before amending an order.")
+  }
+
+  const validationError = validateAmendPayload(payload, {
+    orderType: original.orderType,
+    stage: original.stage,
+    awaitingIndex: original.awaitingIndex,
+    currentTriggerPrice: original.triggerPrice,
+    remainingSizeUsd: original.remainingSizeUsd,
+  })
+  if (validationError) throw new Error(validationError)
+
+  const [cancelStep, createStep] = resolveAmendReplaceSteps(
+    {
+      orderKey: original.orderKey,
+      account,
+      marketAddress: original.marketAddress,
+      collateralToken: original.collateralToken,
+      orderType: original.orderType,
+      isLong: original.isLong,
+      acceptablePrice: original.acceptablePrice,
+      originalTriggerPrice: original.triggerPrice,
+      positionKey: original.positionKey,
+      payload,
+    },
+    original.remainingSizeUsd,
+  )
+
+  if (cancelStep.kind !== "cancel" || createStep.kind !== "create") {
+    throw new Error("Amendment failed to resolve cancel-and-replace steps.")
+  }
+
+  let cancelTxHash: string
+  try {
+    cancelTxHash = await submitTx(
+      async () => {
+        const tx = await buildCancelOrderTransaction(account, cancelStep.orderKey)
+        return prepareAndSign(tx, walletKit, NETWORK.networkPassphrase)
+      },
+      {
+        loadingMessage: "Cancelling order for replacement...",
+        successMessage: "Original order cancelled — creating replacement...",
+        successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
+        onError: parseSorobanError,
+      },
+    )
+  } catch (error) {
+    return foldAmendReplaceOutcome({
+      cancelError: error instanceof Error ? error.message : "Cancellation failed",
+    })
+  }
+
+  try {
+    const createTxHash = await submitTx(
+      async () => {
+        const tx = await buildCreateOrderTransaction(account, {
+          receiver: account,
+          market: createStep.marketAddress,
+          initialCollateralToken: original.collateralToken,
+          swapPath: [],
+          sizeDeltaUsd: encodeUsdAmount(createStep.sizeUsd),
+          collateralDeltaAmount: 0n,
+          triggerPrice:
+            createStep.triggerPrice !== undefined ? encodeOraclePrice(createStep.triggerPrice) : 0n,
+          acceptablePrice: encodeOraclePrice(createStep.acceptablePrice),
+          executionFee: encodeExecutionFeeXlm(),
+          minOutputAmount: 0n,
+          orderType: createStep.orderType,
+          isLong: createStep.isLong,
+        })
+        return prepareAndSign(tx, walletKit, NETWORK.networkPassphrase)
+      },
+      {
+        loadingMessage: "Creating replacement order...",
+        successMessage: "Replacement order submitted (back of queue)",
+        successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
+        onSuccess: (hash) => {
+          trackPendingOrder(
+            account,
+            {
+              marketAddress: createStep.marketAddress,
+              orderType: createStep.orderType,
+              isLong: createStep.isLong,
+              sizeUsd: createStep.sizeUsd,
+              triggerPrice: createStep.triggerPrice,
+            },
+            hash,
+          )
+          return invalidateTradeQueries(account)
+        },
+        onError: parseSorobanError,
+      },
+    )
+    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    return foldAmendReplaceOutcome({ cancelTxHash, createTxHash })
+  } catch (error) {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    return foldAmendReplaceOutcome({
+      cancelTxHash,
+      createError: error instanceof Error ? error.message : "Replacement order failed",
+    })
+  }
 }
 
 export async function claimFundingFees(
