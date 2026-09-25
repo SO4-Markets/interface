@@ -22,8 +22,8 @@ async function invalidateReferralQueries(account: string, code?: string | null):
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.referrals.code(account) }),
     queryClient.invalidateQueries({ queryKey: queryKeys.referrals.tier(account) }),
-    queryClient.invalidateQueries({ queryKey: ["referrals", "trader-stats"] }),
-    queryClient.invalidateQueries({ queryKey: ["referrals", "distributions"] }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.referrals.traderStatsAll() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.referrals.distributionsAll() }),
     ...(code
       ? [queryClient.invalidateQueries({ queryKey: queryKeys.referrals.stats(code) })]
       : []),
@@ -113,7 +113,7 @@ export async function claimRebates(account: string, epochIds: Array<string>): Pr
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: async () => {
         await invalidateReferralQueries(account)
-        await queryClient.invalidateQueries({ queryKey: ["referrals", "stats"] })
+        await queryClient.invalidateQueries({ queryKey: queryKeys.referrals.statsAll() })
       },
       onError: (error) => mapContractError(error) || parseSorobanError(error),
     },

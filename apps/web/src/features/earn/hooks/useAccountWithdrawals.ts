@@ -28,11 +28,11 @@ export type UseAccountWithdrawalsResult = {
 export function useAccountWithdrawals(account: string | null): UseAccountWithdrawalsResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.withdrawals.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_WITHDRAWALS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_WITHDRAWALS, { account }, { signal })
       return result.withdrawals.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,

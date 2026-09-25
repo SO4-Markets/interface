@@ -10,10 +10,6 @@
  */
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
-import { executeGraphQLQuery } from "@/lib/graphql/client"
-import { getAccountPositionChangesPagedDocument } from "@/lib/graphql/queries"
-import { indexerQueryKeys } from "@/lib/graphql/query-keys"
-import { INDEXER_CONFIG } from "@/app/config/indexer"
 import {
   dedupeById,
   filterFills,
@@ -24,6 +20,10 @@ import {
   toFillRecords,
 } from "../lib/order-history"
 import type { FillFilters, FillRecord } from "../lib/order-history"
+import { executeGraphQLQuery } from "@/lib/graphql/client"
+import { getAccountPositionChangesPagedDocument } from "@/lib/graphql/queries"
+import { indexerQueryKeys } from "@/lib/graphql/query-keys"
+import { INDEXER_CONFIG } from "@/app/config/indexer"
 
 export const FILLS_PAGE_SIZE = 25
 
@@ -54,14 +54,18 @@ export function useAccountFillPages(
 
   const query = useInfiniteQuery({
     queryKey: indexerQueryKeys.tradeHistory.pages(account ?? "", normal),
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       if (!enabled || !account) return []
-      const result = await executeGraphQLQuery(document, {
-        account,
-        first: FILLS_PAGE_SIZE,
-        offset: pageParam,
-        ...(normal.marketKey ? { marketKey: normal.marketKey } : {}),
-      })
+      const result = await executeGraphQLQuery(
+        document,
+        {
+          account,
+          first: FILLS_PAGE_SIZE,
+          offset: pageParam,
+          ...(normal.marketKey ? { marketKey: normal.marketKey } : {}),
+        },
+        { signal },
+      )
       return result.positionChanges.nodes
     },
     initialPageParam: 0,

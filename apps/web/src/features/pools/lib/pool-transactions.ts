@@ -93,7 +93,7 @@ function invalidatePoolQueries(market: PoolMarketConfig, account: string) {
   queryClient.invalidateQueries({
     queryKey: queryKeys.pools.row(market.marketToken, account),
   })
-  queryClient.invalidateQueries({ queryKey: ["tokenBalances", account] })
+  queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(account) })
 }
 
 export async function submitPoolDeposit(args: {

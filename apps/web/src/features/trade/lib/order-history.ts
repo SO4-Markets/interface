@@ -21,10 +21,10 @@
  * `fromSorobanAmount(raw, 30)`.
  */
 
-import { fromSorobanAmount } from "@/shared/lib/bignum"
-import type { PositionChange } from "@/lib/graphql/types"
 import { deriveOrderLifecycleStage } from "./order-lifecycle"
+import type { PositionChange } from "@/lib/graphql/types"
 import type { OrderLifecycleStage } from "./order-lifecycle"
+import { fromSorobanAmount } from "@/shared/lib/bignum"
 
 /** USD values in the indexer are 1e30 fixed point. */
 export const USD_DECIMALS = 30

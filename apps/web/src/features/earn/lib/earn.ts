@@ -33,7 +33,7 @@ function isValidAccount(account: string): boolean {
 async function invalidateStakingQueries(account: string): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.earn.stakingInfo(account) }),
-    queryClient.invalidateQueries({ queryKey: ["tokenBalances", account] }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(account) }),
   ])
 }
 

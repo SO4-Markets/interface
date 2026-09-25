@@ -5,6 +5,7 @@ import { sorobanRpc } from "../../../lib/soroban/client"
 import { NETWORK } from "../../../app/config/network"
 import { CONTRACTS } from "../../../app/config/contracts"
 import type { Token } from "../data/tokens"
+import { queryKeys } from "@/shared/lib/query-keys"
 
 const DUMMY_ACCOUNT = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
 
@@ -104,7 +105,7 @@ async function fetchTokensFromChain(): Promise<Array<Token>> {
 
 export function useTokenList() {
   const { data, isLoading, error } = useQuery<Array<Token>>({
-    queryKey: ["tokenList", NETWORK.name],
+    queryKey: queryKeys.trade.tokenList(NETWORK.name),
     queryFn: fetchTokensFromChain,
     staleTime: 600_000, // 10 minutes cache
     gcTime: 1_200_000,

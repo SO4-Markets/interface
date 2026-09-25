@@ -7,7 +7,7 @@ import {
   toDecreaseOrderParams,
   toSwapOrderParams,
 } from "./order-encoding"
-import { queryKeys } from "./query-keys"
+import { activeQueryNetwork, queryKeys } from "./query-keys"
 import { registerPendingOrder } from "./pending-orders"
 import type { CreateOrderParams, OrderKey } from "@/lib/contracts"
 import type { OrderType } from "../hooks/useOrders"
@@ -25,7 +25,7 @@ import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { formatUsd } from "@/shared/lib/format"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 
 /**
  * Remember a confirmed order locally until the indexer serves it.
@@ -209,7 +209,7 @@ export async function createSwapOrder(params: SwapOrderParams): Promise<string> 
         `${params.amountIn} ${params.fromToken} → ${params.minAmountOut} ${params.toToken} | Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () =>
         queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.tokenBalances(CHAIN_ID, params.account),
+          queryKey: queryKeys.wallet.tokenBalances(params.account, CHAIN_ID),
         }),
       onError: parseSorobanError,
     },

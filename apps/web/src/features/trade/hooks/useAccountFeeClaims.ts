@@ -29,16 +29,16 @@ export type UseAccountFeeClaimsResult = {
 export function useAccountFeeClaims(account: string | null): UseAccountFeeClaimsResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.fees.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_FEE_CLAIMS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_FEE_CLAIMS, { account }, { signal })
       return result.feeClaims.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
     retry: 3,
-    staleTime: 30_000, // 30 seconds
+    staleTime: 30_000,
   })
 
   if (!INDEXER_CONFIG.enabled) {

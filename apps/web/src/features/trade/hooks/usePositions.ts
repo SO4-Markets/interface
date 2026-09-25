@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { MARKETS } from "../data/markets"
 import { useTokenPrices } from "./useTokenPrices"
 import type { PositionInfo } from "@/lib/contracts"
@@ -29,7 +29,7 @@ export type Position = {
   fundingFeeUsd: number
 }
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 const USD_DECIMALS = 30
 const TOKEN_DECIMALS = 7
 

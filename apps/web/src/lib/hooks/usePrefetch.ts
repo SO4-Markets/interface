@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
+import { queryKeys } from "@/shared/lib/query-keys"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 /**
  * Prefetch market data and related queries on navigation intent.
@@ -7,28 +9,30 @@ import { useCallback } from "react"
  */
 export function usePrefetch() {
   const queryClient = useQueryClient()
+  const account = useWalletStore((state) => state.address)
 
   const prefetchMarket = useCallback(
     async (marketId: string) => {
-      // Prefetch in parallel to avoid waterfalls
+      // Prefetch in parallel to avoid waterfalls. The canonical keys keep
+      // prefetch state isolated by active network and data class.
       await Promise.all([
         queryClient.prefetchQuery({
-          queryKey: ["market", marketId],
-          staleTime: 30_000, // 30s for market data
+          queryKey: queryKeys.landing.market(marketId),
+          staleTime: 30_000,
         }),
         queryClient.prefetchQuery({
-          queryKey: ["orderBook", marketId],
-          staleTime: 5_000, // 5s for rapid updates
+          queryKey: queryKeys.landing.orderBook(marketId),
+          staleTime: 5_000,
         }),
         queryClient.prefetchQuery({
-          queryKey: ["trades", marketId],
-          staleTime: 2_000, // 2s for recent trades
+          queryKey: queryKeys.landing.trades(marketId),
+          staleTime: 2_000,
         }),
       ]).catch(() => {
         // Silently fail on constrained networks
       })
     },
-    [queryClient]
+    [queryClient],
   )
 
   const prefetchBeforeTrade = useCallback(
@@ -36,18 +40,18 @@ export function usePrefetch() {
       await Promise.all([
         prefetchMarket(marketId),
         queryClient.prefetchQuery({
-          queryKey: ["account"],
-          staleTime: 60_000, // 60s for account data
+          queryKey: queryKeys.landing.account(account),
+          staleTime: 60_000,
         }),
         queryClient.prefetchQuery({
-          queryKey: ["positions"],
-          staleTime: 10_000, // 10s for positions
+          queryKey: queryKeys.landing.positions(account),
+          staleTime: 10_000,
         }),
       ]).catch(() => {
         // Constrained network fallback
       })
     },
-    [queryClient, prefetchMarket]
+    [account, queryClient, prefetchMarket],
   )
 
   return {

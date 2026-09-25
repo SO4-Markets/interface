@@ -28,16 +28,16 @@ export type UseAccountPositionsResult = {
 export function useAccountPositions(account: string | null): UseAccountPositionsResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.positions.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_POSITIONS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_POSITIONS, { account }, { signal })
       return result.positions.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
     retry: 3,
-    staleTime: 10_000, // 10 seconds - positions update frequently
+    staleTime: 10_000,
   })
 
   if (!INDEXER_CONFIG.enabled) {
