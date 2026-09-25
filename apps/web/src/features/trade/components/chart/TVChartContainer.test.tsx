@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
 import { TVChartContainer } from "./TVChartContainer"
+import { useOracleCandles } from "../../hooks/useOracleCandles"
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ let mockIsLoading = false
 let mockIsError = false
 let mockLiveBar: Record<string, unknown> | null = null
 let mockPositions: Array<Record<string, unknown>> = []
+let mockRefetch = vi.fn()
 
 vi.mock("../../hooks/useOracleCandles", () => ({
   useOracleCandles: () => ({
@@ -39,6 +41,9 @@ vi.mock("../../hooks/useOracleCandles", () => ({
     },
     isLoading: mockIsLoading,
     isError: mockIsError,
+    isFetching: false,
+    isPlaceholderData: false,
+    refetch: mockRefetch,
   }),
 }))
 
@@ -81,6 +86,7 @@ describe("TVChartContainer", () => {
     mockIsError = false
     mockLiveBar = null
     mockPositions = []
+    mockRefetch = vi.fn()
   })
 
   const defaultProps = { symbol: "BTC", period: "5m" }
@@ -333,6 +339,93 @@ describe("TVChartContainer", () => {
 
     const error = screen.getByRole("alert")
     expect(error).toHaveTextContent(/unable to load chart data for btc/i)
+  })
+
+  it("provides a Retry button when data load fails", () => {
+    mockIsError = true
+    mockCandles = []
+    render(<TVChartContainer {...defaultProps} />)
+
+    const retryButton = screen.getByRole("button", { name: /retry loading/i })
+    expect(retryButton).toBeInTheDocument()
+  })
+
+  it("calls refetch when Retry button is clicked after error", async () => {
+    mockIsError = true
+    mockCandles = []
+    render(<TVChartContainer {...defaultProps} />)
+
+    const retryButton = screen.getByRole("button", { name: /retry loading/i })
+    retryButton.click()
+
+    expect(mockRefetch).toHaveBeenCalled()
+  })
+
+  it("distinguishes no-history from error state", () => {
+    mockIsError = false
+    mockCandles = []
+    render(<TVChartContainer {...defaultProps} />)
+
+    const status = screen.getByRole("status", { name: "" })
+    expect(status).toHaveTextContent(/no trading history available for btc/i)
+    expect(status).toHaveTextContent(/market may be new/i)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("shows stale state with last known data when live feed stops", async () => {
+    mockCandles = SAMPLE_CANDLES
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    // Simulate live feed stopping (isPlaceholderData or isFetching with hasData)
+    vi.mocked(useOracleCandles).mockReturnValue({
+      data: {
+        candles: SAMPLE_CANDLES,
+        sourceType: "oracle_reference",
+        venueName: "Binance Reference",
+        symbol: "BTC",
+        period: "5m",
+        network: "testnet",
+      },
+      isLoading: false,
+      isError: false,
+      isFetching: true,
+      isPlaceholderData: false,
+      refetch: mockRefetch,
+    } as any)
+
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent(/live data unavailable for 5m/i)
+    expect(alert).toHaveTextContent(/showing last known data/i)
+  })
+
+  it("provides Refresh Now button in stale state", async () => {
+    mockCandles = SAMPLE_CANDLES
+    vi.mocked(useOracleCandles).mockReturnValue({
+      data: {
+        candles: SAMPLE_CANDLES,
+        sourceType: "oracle_reference",
+        venueName: "Binance Reference",
+        symbol: "BTC",
+        period: "5m",
+        network: "testnet",
+      },
+      isLoading: false,
+      isError: false,
+      isFetching: true,
+      isPlaceholderData: false,
+      refetch: mockRefetch,
+    } as any)
+
+    render(<TVChartContainer {...defaultProps} />)
+
+    const refreshButton = screen.getByRole("button", { name: /refresh now/i })
+    expect(refreshButton).toBeInTheDocument()
+
+    refreshButton.click()
+    expect(mockRefetch).toHaveBeenCalled()
   })
 
   it("renders data source and venue identification metadata badge", () => {
