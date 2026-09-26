@@ -363,6 +363,57 @@ export const GET_ACCOUNT_FEE_CLAIMS = gql<
   }
 `)
 
+export type PagedFeeClaimsVariables = {
+  account: string
+  first: number
+  offset: number
+  feeType?: string
+}
+
+const FEE_CLAIM_FIELDS = `
+        id
+        key
+        account
+        feeType
+        amount
+        amountUsd
+        status
+        ledger
+        timestamp
+        transactionHash
+        market { id key name }
+        token { address symbol decimals }
+`
+
+export function getAccountFeeClaimsPagedDocument(
+  feeType?: string | null,
+) {
+  const hasFeeType = typeof feeType === "string" && feeType.length > 0
+  const variables = hasFeeType
+    ? "$account: String!, $feeType: String!, $first: Int!, $offset: Int!"
+    : "$account: String!, $first: Int!, $offset: Int!"
+  const filter = hasFeeType
+    ? "account: { equalTo: $account }, feeType: { equalTo: $feeType }"
+    : "account: { equalTo: $account }"
+
+  return gql<
+    { feeClaims: { nodes: Array<FeeClaim> } },
+    PagedFeeClaimsVariables
+  >(`
+    query GetAccountFeeClaimsPaged(${variables}) {
+      feeClaims(
+        filter: { ${filter} }
+        orderBy: [TIMESTAMP_DESC, ID_DESC]
+        first: $first
+        offset: $offset
+      ) {
+        nodes {${FEE_CLAIM_FIELDS}
+        }
+      }
+    }
+  `)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Paginated history queries (OB-082, OB-087)
 //

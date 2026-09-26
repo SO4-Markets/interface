@@ -9,6 +9,7 @@ const numericVariants = cva('font-mono tabular-nums', {
       positive: 'text-green-500',
       negative: 'text-red-500',
       neutral: 'text-muted-foreground',
+      warning: 'text-warning',
       danger: 'text-red-500 font-bold',
       'brand-long': 'text-green-500',
       'brand-short': 'text-red-500',

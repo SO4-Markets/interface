@@ -1,18 +1,16 @@
 /**
- * apps/web/src/features/trade/hooks/useOrdersWithIndexer.ts
- *
- * Enhanced orders hook that uses SubQuery for order history and status.
- * Includes frozen, cancelled, and executed states from indexer.
+ * Enhanced orders hook backed by indexer lifecycle data with a contract-read
+ * fallback and confirmed-but-not-yet-indexed pending rows.
  */
 
-import { useAccountOrders } from "./useAccountOrders"
-import { useOrders } from "./useOrders"
 import { reconcilePendingOrders, toKnownOrderType } from "../lib/order-lifecycle"
 import { toTimestampMillis } from "../lib/order-history"
 import { usePendingOrders } from "../lib/pending-orders"
+import { useAccountOrders } from "./useAccountOrders"
+import { useOrders } from "./useOrders"
 import type { Order as ContractOrder, OrderType } from "./useOrders"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 export type OrderWithIndexer = ContractOrder & {
   /** Stable identity that survives the indexer assigning a real key. */
@@ -49,6 +47,17 @@ function describeTrigger(
   return "market"
 }
 
+function contractFallback(order: ContractOrder): OrderWithIndexer {
+  return {
+    ...order,
+    clientOrderId: order.key,
+    awaitingIndex: false,
+    limitOrTrigger: describeTrigger(order.orderType, order.triggerPrice),
+    positionKey: null,
+    createdAt: order.updatedAt,
+  }
+}
+
 /** Open lifecycle statuses — everything the resting-order table may show. */
 const OPEN_STATUSES: ReadonlySet<string> = new Set([
   "created",
@@ -56,31 +65,29 @@ const OPEN_STATUSES: ReadonlySet<string> = new Set([
   "frozen",
 ])
 
-/**
- * Enhanced useOrders that uses SubQuery for order status and history.
- * Falls back to contract-only data when indexer is disabled.
- */
 export function useOrdersWithIndexer() {
   const account = useWalletStore((state) => state.address)
-  
-  // Get indexed orders from SubQuery
-  const { data: indexedOrders = [], isLoading: isLoadingIndexer, isDisabled } = useAccountOrders(account)
-  
-  // Get contract orders as fallback
-  const { data: contractOrders = [], isLoading: isLoadingContract } = useOrders()
-  
-  // If indexer is disabled, return contract-only data
+  const {
+    data: indexedOrders = [],
+    isLoading: isLoadingIndexer,
+    isDisabled,
+  } = useAccountOrders(account)
+  const {
+    data: contractOrders = [],
+    isLoading: isLoadingContract,
+  } = useOrders()
+  const pendingOrders = usePendingOrders(account)
+
   if (isDisabled || !INDEXER_CONFIG.enabled) {
     return {
-      data: contractOrders,
+      data: contractOrders.map(contractFallback),
       isLoading: isLoadingContract,
       isDisabled: true,
     }
   }
-  
-  // Map indexed orders to the expected format
+
   const enhancedOrders: Array<OrderWithIndexer> = indexedOrders
-    .filter((o) => OPEN_STATUSES.has(o.status.trim().toLowerCase()))
+    .filter((order) => OPEN_STATUSES.has(order.status.trim().toLowerCase()))
     .map((indexedOrder) => {
       const orderType = toKnownOrderType(indexedOrder.orderType)
       const sizeUsd = toUsd(indexedOrder.sizeDeltaUsd)
@@ -104,7 +111,9 @@ export function useOrdersWithIndexer() {
         triggerPrice,
         acceptablePrice: toUsd(indexedOrder.acceptablePrice),
         updatedAt:
-          toTimestampMillis(indexedOrder.updatedTimestamp) ?? createdAt ?? Date.now(),
+          toTimestampMillis(indexedOrder.updatedTimestamp) ??
+          createdAt ??
+          Date.now(),
         awaitingIndex: false,
         limitOrTrigger: describeTrigger(orderType, triggerPrice),
         positionKey: indexedOrder.positionKey,
@@ -119,8 +128,14 @@ export function useOrdersWithIndexer() {
       }
     })
 
-  // Confirmed submissions the indexer has not served yet still get a row.
-  const awaitingIndex = reconcilePendingOrders(pendingOrders, enhancedOrders)
+  const unresolvedIds = new Set(
+    reconcilePendingOrders(pendingOrders, enhancedOrders).map(
+      (pending) => pending.clientOrderId,
+    ),
+  )
+  const awaitingIndex = pendingOrders.filter((pending) =>
+    unresolvedIds.has(pending.clientOrderId),
+  )
 
   const pendingRows: Array<OrderWithIndexer> = awaitingIndex.map((pending) => ({
     key: "",

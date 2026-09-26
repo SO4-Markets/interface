@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { queryKeys } from "@/shared/lib/query-keys"
 
 // No aggregate stats endpoint exists yet (verified against
 // apps/web/src/lib/graphql/queries.ts — no platform-wide traders/volume/OI
@@ -39,7 +40,7 @@ export function useLandingStats(): LandingStats {
   // Cache is kept for 30 seconds; refetch after that to keep data fresh
   // This is separate from staleTime — we show stale data but mark it as such
   const { data, isLoading, isFetching, status } = useQuery<AggregateStats>({
-    queryKey: ["landing-stats"],
+    queryKey: queryKeys.landing.stats(),
     queryFn: async () => {
       // Placeholder: returns null until indexer endpoints are available
       // The query infra is in place for stale-time, cache management, and

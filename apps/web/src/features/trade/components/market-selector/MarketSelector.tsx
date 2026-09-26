@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { activeQueryNetwork } from "../../lib/query-keys"
 
 export type MarketItem = {
   id: string      // indexTokenAddress
@@ -25,7 +26,7 @@ type Props = {
   network?: string
 }
 
-export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect, network = "stellar-mainnet" }: Props) {
+export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect, network = activeQueryNetwork() }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [favorites, setFavorites] = useState<Array<string>>(() => loadFavorites(network))

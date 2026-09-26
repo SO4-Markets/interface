@@ -3,24 +3,24 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { Numeric } from "@workspace/ui/components/numeric"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useOrderHistory } from "../../hooks/useOrderHistory"
 import { amendOrderViaReplace, cancelOrder } from "../../lib/stellar"
 import {
   DEFAULT_ORDER_HISTORY_FILTERS,
-  HISTORY_TIME_RANGE_LABEL,
-  type OrderHistoryFilters,
-  type OrderHistoryRow,
+  HISTORY_TIME_RANGE_LABEL
+  
+  
 } from "../../lib/order-history"
 import {
-  isCancellableStage,
   ORDER_LIFECYCLE_BADGE,
   ORDER_LIFECYCLE_LABEL,
+  isCancellableStage,
 } from "../../lib/order-lifecycle"
 import { getOrderAmendCapability, type AmendPayload, type AmendReplaceOutcome } from "../../lib/order-amendment"
 import { AmendOrderDialog, type AmendTarget } from "./AmendOrderDialog"
 import { AccountOrderCard } from "./AccountRowDetails"
 import { HistoryFilters } from "./HistoryFilters"
+import type {OrderHistoryFilters, OrderHistoryRow} from "../../lib/order-history";
 import type { Column } from "@workspace/ui/components/data-table"
 import type { OrderType } from "../../hooks/useOrders"
 
@@ -180,7 +180,10 @@ export function OrderHistoryList() {
     },
   ]
 
-  const setFilter = <K extends keyof OrderHistoryFilters>(key: K, value: OrderHistoryFilters[K]) => {
+  const setFilter = <TKey extends keyof OrderHistoryFilters>(
+    key: TKey,
+    value: OrderHistoryFilters[TKey],
+  ) => {
     setFilters((current) => ({ ...current, [key]: value }))
   }
 
