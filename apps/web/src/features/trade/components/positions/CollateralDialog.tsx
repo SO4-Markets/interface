@@ -16,6 +16,7 @@ import type { Position } from "../../hooks/usePositions"
 import { formatUsd } from "@/shared/lib/format"
 import { useTokenBalances } from "@/features/wallet/hooks/useTokenBalances"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import { getOrderVaultCapability } from "../../lib/order-vault-capability"
 
 type Props = {
   position: Position | null
@@ -34,6 +35,13 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
   const { data: balances } = useTokenBalances()
   const { getMidPrice } = useTokenPrices()
   const queryClient = useQueryClient()
+
+  // OB-089: Check whether the OrderVault is a real deployed contract.
+  // Deposit (add collateral) goes through the vault; withdrawal (remove
+  // collateral) creates a DecreaseOrder and does not touch the vault directly.
+  // Only block "add" mode — "remove" is still backed by an executable path.
+  const vaultCapability = getOrderVaultCapability()
+  const isDepositBlocked = mode === "add" && !vaultCapability.isDeployed
 
   // Reset inputs when opened/closed/changed
   useEffect(() => {
@@ -63,10 +71,13 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
   const newLeverage = newCollateralUsd > 0 ? position.sizeUsd / newCollateralUsd : 0
 
   // Validate inputs
-  let isValid = amountNum > 0
-  let validationError = ""
+  // OB-089: A stub vault must never produce a successful deposit response.
+  // Setting isValid=false here ensures both the UI button and handleConfirm()
+  // are blocked — defence-in-depth against any path that could reach submit.
+  let isValid = amountNum > 0 && !isDepositBlocked
+  let validationError = isDepositBlocked ? (vaultCapability.unavailableReason ?? "") : ""
 
-  if (amountNum > 0) {
+  if (amountNum > 0 && !isDepositBlocked) {
     if (mode === "add") {
       if (amountNum > walletBalance) {
         isValid = false
@@ -150,6 +161,17 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
         </DialogHeader>
 
         <div className="space-y-4 py-2 text-sm">
+          {/* OB-089: Inform the user when collateral transfer is unavailable because
+              the OrderVault contract is not deployed on this network. */}
+          {isDepositBlocked && (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400"
+            >
+              {vaultCapability.unavailableReason}
+            </p>
+          )}
           {/* Market Status details */}
           <div className="rounded-lg bg-muted/30 p-3 space-y-1.5 border border-border/50">
             <div className="flex justify-between">

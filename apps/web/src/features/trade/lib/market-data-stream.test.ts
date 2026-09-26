@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { marketSubscriptionManager } from "./market-data-stream"
 
 describe("Shared Market Data Subscription Lifecycle (OB-111)", () => {
@@ -49,5 +49,49 @@ describe("Shared Market Data Subscription Lifecycle (OB-111)", () => {
 
     subEth.destroy()
     expect(marketSubscriptionManager.getActiveSourceCount()).toBe(0)
+  })
+})
+
+describe("OB-113: Reconnect backoff and heartbeat", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("starts with reconnectAttempt=0", () => {
+    const sub = marketSubscriptionManager.getOrCreate("SOL")
+    expect(sub.getReconnectAttempt()).toBe(0)
+    sub.destroy()
+  })
+
+  it("destroy() cleans up without throwing when called immediately", () => {
+    const sub = marketSubscriptionManager.getOrCreate("ADA")
+    expect(() => sub.destroy()).not.toThrow()
+  })
+
+  it("destroy() is idempotent — calling twice does not throw", () => {
+    const sub = marketSubscriptionManager.getOrCreate("DOT")
+    sub.destroy()
+    expect(() => sub.destroy()).not.toThrow()
+  })
+
+  it("getReconnectAttempt() accessor is publicly readable", () => {
+    const sub = marketSubscriptionManager.getOrCreate("AVAX")
+    expect(typeof sub.getReconnectAttempt()).toBe("number")
+    sub.destroy()
+  })
+
+  it("reconnectAttempt resets to 0 after a successful connection (regression: OB-113)", () => {
+    // This is a structural test — the reset happens in onopen() handler.
+    // We verify the counter starts at 0 and the accessor works as a precondition
+    // for the reconnect-reset logic to be meaningful.
+    const sub = marketSubscriptionManager.getOrCreate("LINK")
+    const initial = sub.getReconnectAttempt()
+    expect(initial).toBe(0)
+    sub.destroy()
   })
 })

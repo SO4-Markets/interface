@@ -1,17 +1,20 @@
 import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { CONTRACTS } from "@/app/config/contracts"
-import { queryContractEvents } from "@/lib/soroban/events"
+import { sorobanRpc } from "@/lib/soroban/client"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
-import {
-  decodeOrderEvent,
-  applyOrderEventRefreshMatrix,
-} from "../lib/order-event-decoder"
 
 const CHAIN_ID = "stellar-mainnet"
 const POLL_INTERVAL_MS = 5000
-const PAGE_LIMIT = 50
-const MAX_PAGES_PER_POLL = 10
+const TARGET_EVENTS = ["OrderExecuted", "OrderCancelled"]
+
+function extractEventText(event: unknown): string {
+  try {
+    return JSON.stringify(event)
+  } catch {
+    return String(event)
+  }
+}
 
 function getCursorStorageKey(account: string): string {
   return `so4:order-events:cursor:${account}`
@@ -25,7 +28,7 @@ export function loadPersistedCursor(account: string): string | null {
   }
 }
 
-export function savePersistedCursor(account: string, cursor: string) {
+export function savePersistedCursor(account: string, cursor: string): void {
   try {
     localStorage.setItem(getCursorStorageKey(account), cursor)
   } catch {}
@@ -34,7 +37,7 @@ export function savePersistedCursor(account: string, cursor: string) {
 export function useOrderEventPolling() {
   const account = useWalletStore((state) => state.address)
   const queryClient = useQueryClient()
-  const cursorRef = useRef<string | null>(null)
+  const lastCursor = useRef<string | null>(null)
   const timer = useRef<number | null>(null)
   const processedEventIds = useRef<Set<string>>(new Set())
 
@@ -48,11 +51,16 @@ export function useOrderEventPolling() {
 
     const poll = async () => {
       try {
-        let pagesProcessed = 0
-        let hasMore = true
+        const params: Record<string, unknown> = {
+          type: "contract",
+          contractId: CONTRACTS.exchangeRouter,
+          limit: 50,
+          order: "asc",
+        }
 
-        while (hasMore && !cancelled && pagesProcessed < MAX_PAGES_PER_POLL) {
-          const currentCursor = cursorRef.current ?? undefined
+        if (lastCursor.current) {
+          params.cursor = lastCursor.current
+        }
 
           // Fetch typed contract events from Soroban RPC
           const page = await queryContractEvents({
@@ -118,7 +126,6 @@ export function useOrderEventPolling() {
           hasMore = events.length === PAGE_LIMIT
         }
       } catch (error) {
-        // Do NOT advance cursor on error — failure before cursor advancement ensures no event is skipped
         if (import.meta.env.DEV) console.warn("Order event polling failed", error)
       } finally {
         if (!cancelled) {

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
-import { marketSubscriptionManager } from "../lib/market-data-stream"
+import { marketSubscriptionManager, applyDelta, buildLevels } from "../lib/market-data-stream"
+
+export { applyDelta, buildLevels }
 
 export type OrderBookLevel = {
   price: number
