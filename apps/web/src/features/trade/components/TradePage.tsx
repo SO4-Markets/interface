@@ -18,14 +18,21 @@ import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
 import { OrderBookPanel } from "./orderbook/OrderBookPanel"
 import type {MobileTradeView} from "./MobileTradeNav";
 import { saveReferralCode } from "@/lib/contracts"
+import { useAppFocusRecovery } from "@/shared/hooks/useAppFocusRecovery"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 const tradeRoute = getRouteApi("/trade")
 
 export function TradePage() {
   const trade = useTradeState()
   const { setToTokenAddress, setTradeType } = trade
+  const account = useWalletStore((state) => state.address)
 
   useOrderEventPolling()
+
+  // OB-114: Pause/reduce non-essential work when hidden or offline; revalidate
+  // active market and account data on return to prevent stale execution estimates.
+  useAppFocusRecovery({ account })
 
   // Pre-fill the form from a shared deeplink (e.g. /trade?market=BTC&type=long).
   const search = tradeRoute.useSearch()

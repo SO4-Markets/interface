@@ -12,13 +12,22 @@ const MAX_TRADES = 50
 const FALLBACK_POLL_INTERVAL_MS = 2000
 const WS_CONNECT_TIMEOUT_MS = 4000
 
+// OB-113: Reconnect backoff with jitter — exponential from 1 s up to 30 s cap.
+const RECONNECT_BASE_MS = 1_000
+const RECONNECT_MAX_MS = 30_000
+const RECONNECT_JITTER_RATIO = 0.25
+// OB-113: Heartbeat — Binance sends a ping/pong or a message roughly every
+// 3 s when data is flowing. We tolerate 20 s of silence before declaring a
+// missed heartbeat and tearing down the WebSocket.
+const HEARTBEAT_TIMEOUT_MS = 20_000
+
 type RawBook = {
   bids: Map<string, string>
   asks: Map<string, string>
   lastUpdateId: number
 }
 
-function applyDelta(map: Map<string, string>, entries: Array<[string, string]>) {
+export function applyDelta(map: Map<string, string>, entries: Array<[string, string]>) {
   for (const [price, size] of entries) {
     if (parseFloat(size) === 0) {
       map.delete(price)
@@ -28,7 +37,7 @@ function applyDelta(map: Map<string, string>, entries: Array<[string, string]>) 
   }
 }
 
-function buildLevels(map: Map<string, string>, ascending: boolean): Array<OrderBookLevel> {
+export function buildLevels(map: Map<string, string>, ascending: boolean): Array<OrderBookLevel> {
   const pairs = Array.from(map.entries())
     .map(([p, s]) => [parseFloat(p), parseFloat(s)] as [number, number])
     .filter(([, s]) => s > 0)
@@ -98,6 +107,12 @@ class SharedMarketSubscription {
   private wsTimeout: ReturnType<typeof setTimeout> | null = null
   private isDestroyed = false
 
+  // OB-113: Reconnect backoff state.
+  private reconnectAttempt = 0
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  // OB-113: Heartbeat — reset whenever any message is received from the WS.
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
+
   private bookSubscribers = new Set<(state: OrderBookState) => void>()
   private tradesSubscribers = new Set<(result: UseRecentTradesResult) => void>()
   private klineSubscribers = new Map<string, Set<(bar: OhlcBar) => void>>()
@@ -154,6 +169,11 @@ class SharedMarketSubscription {
 
   public getLiveBar(period: string): OhlcBar | null {
     return this.liveBars.get(period) ?? null
+  }
+
+  /** OB-113: Exposed for testing — number of WS reconnect attempts made. */
+  public getReconnectAttempt(): number {
+    return this.reconnectAttempt
   }
 
   // ── Subscription methods (Reference-counted) ────────────────────────────────
@@ -237,6 +257,84 @@ class SharedMarketSubscription {
 
   // ── Transport management ───────────────────────────────────────────────────
 
+  /**
+   * OB-113: Compute the next reconnect delay with exponential backoff + jitter.
+   *
+   * Backoff: BASE * 2^attempt, capped at MAX.
+   * Jitter: ±JITTER_RATIO of the capped value so multiple clients do not
+   * reconnect in lock-step after a server restart.
+   */
+  private nextReconnectDelay(): number {
+    const base = Math.min(RECONNECT_BASE_MS * 2 ** this.reconnectAttempt, RECONNECT_MAX_MS)
+    const jitter = base * RECONNECT_JITTER_RATIO * (Math.random() * 2 - 1)
+    return Math.max(0, Math.round(base + jitter))
+  }
+
+  /** OB-113: Reset the heartbeat watchdog; each WS message must call this. */
+  private resetHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearTimeout(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+    if (this.isDestroyed || this.usingPolling) return
+    this.heartbeatTimer = setTimeout(() => {
+      // No message received within the window — treat as a missed heartbeat.
+      if (!this.isDestroyed && !this.usingPolling) {
+        this.scheduleWsReconnect()
+      }
+    }, HEARTBEAT_TIMEOUT_MS)
+  }
+
+  /** OB-113: Stop the heartbeat watchdog. */
+  private stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearTimeout(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+  }
+
+  /**
+   * OB-113: Tear down the current WebSocket and schedule a reconnect attempt
+   * using the exponential backoff timer. Falls back to polling when the backoff
+   * cap is reached so the UI is never left blank forever.
+   */
+  private scheduleWsReconnect() {
+    this.stopHeartbeat()
+
+    if (this.ws) {
+      this.ws.onopen = null
+      this.ws.onmessage = null
+      this.ws.onerror = null
+      this.ws.onclose = null
+      try { this.ws.close() } catch {}
+      this.ws = null
+    }
+
+    if (this.isDestroyed) return
+
+    // Once we hit the ceiling, give up on WS and stay on polling.
+    const delay = this.nextReconnectDelay()
+    const isAtCeiling = RECONNECT_BASE_MS * 2 ** this.reconnectAttempt >= RECONNECT_MAX_MS
+
+    this.reconnectAttempt++
+
+    if (isAtCeiling && !this.usingPolling) {
+      this.startPollingFallback()
+      return
+    }
+
+    // Optimistically mark as connecting while we wait for the timer.
+    this.setStatus("connecting")
+
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      if (!this.isDestroyed && !this.usingPolling) {
+        this.initTransport()
+      }
+    }, delay)
+  }
+
   private initTransport() {
     this.setStatus("connecting")
 
@@ -255,10 +353,13 @@ class SharedMarketSubscription {
           clearTimeout(this.wsTimeout)
           this.wsTimeout = null
         }
+        // Successful connection — reset backoff counter.
+        this.reconnectAttempt = 0
         this.setStatus("connected")
         this.stopPollingFallback()
+        this.resetHeartbeat()
 
-        // Resubscribe active streams
+        // Resubscribe active streams.
         if (this.activeStreams.size > 0 && this.ws?.readyState === WebSocket.OPEN) {
           const params = Array.from(this.activeStreams)
           this.ws.send(
@@ -269,22 +370,36 @@ class SharedMarketSubscription {
             }),
           )
         }
+
+        // OB-113: Re-fetch the depth snapshot on reconnect to recover from
+        // any revision gaps that accumulated while the connection was down.
+        // Mark the book as not-yet-synced so updates are buffered until the
+        // snapshot's lastUpdateId is known.
+        if (this.bookSubscribers.size > 0) {
+          this.snapshotLoaded = false
+          this.bookBuffer = []
+          void this.fetchDepthSnapshot()
+        }
       }
 
       this.ws.onmessage = (evt: MessageEvent) => {
         if (this.isDestroyed) return
+        // OB-113: Any arriving message proves the connection is alive.
+        this.resetHeartbeat()
         this.handleWsMessage(evt.data)
       }
 
       this.ws.onerror = () => {
         if (this.isDestroyed) return
-        this.startPollingFallback()
+        this.stopHeartbeat()
+        this.scheduleWsReconnect()
       }
 
       this.ws.onclose = () => {
         if (this.isDestroyed) return
+        this.stopHeartbeat()
         if (!this.usingPolling) {
-          this.startPollingFallback()
+          this.scheduleWsReconnect()
         }
       }
     } catch {
@@ -416,7 +531,8 @@ class SharedMarketSubscription {
         for (const period of this.klineSubscribers.keys()) {
           tasks.push(
             fetchOracleCandles(this.symbol, period, 1)
-              .then((bars) => {
+              .then((res) => {
+                const bars = res.candles
                 if (bars.length > 0) {
                   const bar = bars[bars.length - 1]
                   this.liveBars.set(period, bar)
@@ -581,6 +697,12 @@ class SharedMarketSubscription {
     if (this.wsTimeout) {
       clearTimeout(this.wsTimeout)
       this.wsTimeout = null
+    }
+    // OB-113: cancel pending reconnect and heartbeat timers.
+    this.stopHeartbeat()
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
     }
     this.stopPollingFallback()
 
