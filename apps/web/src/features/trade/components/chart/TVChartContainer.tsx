@@ -1,5 +1,6 @@
 import { CandlestickSeries, LineStyle, createChart } from "lightweight-charts"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
@@ -107,12 +108,15 @@ export function TVChartContainer({ symbol, period }: Props) {
   // Prevents series.update() from firing against an empty or stale series.
   const hasDataRef = useRef(false)
 
+  const queryClient = useQueryClient()
+
   const {
     data: candleData,
     isLoading: isQueryLoading = false,
     isError = false,
     isPlaceholderData = false,
     isFetching = false,
+    refetch,
   } = useOracleCandles(symbol, period)
 
   const candles = candleData?.candles ?? []
@@ -133,6 +137,8 @@ export function TVChartContainer({ symbol, period }: Props) {
   const hasData = candles.length > 0
   const isLoading = isQueryLoading || (!hasData && isFetching)
   const isStale = isPlaceholderData || (isFetching && hasData)
+  const isNoHistory = !isLoading && !hasData && !isError && !isStale
+  const isFailed = isError && !hasData
   const isIdle = !isLoading && !hasData && !isError
 
   const summary = useMemo(() => getChartSummary(candles, liveBar, symbol, period), [candles, liveBar, symbol, period])
@@ -365,17 +371,53 @@ export function TVChartContainer({ symbol, period }: Props) {
           </div>
         )}
 
-        {/* Empty state */}
-        {isIdle && (
-          <div role="status" className="flex h-full items-center justify-center text-xs text-muted-foreground">
-            No trading data available for {symbol}
+        {/* No history state: market has no data yet */}
+        {isNoHistory && (
+          <div role="status" className="flex h-full flex-col items-center justify-center gap-3 text-center px-4 py-8">
+            <p className="text-xs text-muted-foreground">
+              No trading history available for {symbol}
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              This market may be new. Check back once trading begins.
+            </p>
           </div>
         )}
 
-        {/* Error state */}
-        {isError && !hasData && (
-          <div role="alert" className="flex h-full items-center justify-center text-xs text-destructive">
-            Unable to load chart data for {symbol}
+        {/* Failed load state: fetch error, no fallback data */}
+        {isFailed && (
+          <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-center px-4 py-8">
+            <p className="text-xs text-destructive">
+              Unable to load {period} chart data
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              {venueName} data source is unavailable. Please try again.
+            </p>
+            <button
+              onClick={() => void refetch()}
+              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
+              aria-label={`Retry loading chart for ${symbol}`}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Stale data state: live feed stopped updating */}
+        {isStale && hasData && !isLoading && (
+          <div role="alert" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-sm pointer-events-auto">
+            <p className="text-xs text-destructive font-medium">
+              Live data unavailable for {period}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Showing last known data. Waiting for connection to recover…
+            </p>
+            <button
+              onClick={() => void refetch()}
+              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors pointer-events-auto"
+              aria-label={`Retry updating chart for ${symbol}`}
+            >
+              Refresh Now
+            </button>
           </div>
         )}
 
@@ -387,7 +429,7 @@ export function TVChartContainer({ symbol, period }: Props) {
           role="img"
           aria-label={`Price chart for ${symbol}`}
           aria-describedby="chart-desc"
-          aria-hidden={isIdle || (isError && !hasData)}
+          aria-hidden={isNoHistory || isFailed}
         />
       </div>
 
