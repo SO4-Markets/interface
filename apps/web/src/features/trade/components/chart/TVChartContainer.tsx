@@ -158,14 +158,18 @@ export function TVChartContainer({ symbol, period }: Props) {
     chartRef.current = chart
     seriesRef.current = series
 
-    // Responsive resize
+    // Responsive resize — guard against zero-size to avoid chart overflow or
+    // dimension errors. Preserve the chart instance across ordinary layout changes.
     const resizeObserver = new ResizeObserver(() => {
-      if (containerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        })
-      }
+      if (!containerRef.current || !chartRef.current) return
+
+      const width = containerRef.current.clientWidth
+      const height = containerRef.current.clientHeight
+
+      // Skip updates when container collapses to zero to prevent rendering issues
+      if (width === 0 || height === 0) return
+
+      chartRef.current.applyOptions({ width, height })
     })
     resizeObserver.observe(containerRef.current)
 

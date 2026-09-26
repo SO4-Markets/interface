@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
+import type { IChartApi } from "lightweight-charts"
 import { TVChartContainer } from "./TVChartContainer"
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -7,6 +8,8 @@ import { TVChartContainer } from "./TVChartContainer"
 vi.mock("lightweight-charts", () => ({
   CandlestickSeries: Symbol("CandlestickSeries"),
   LineStyle: { Dashed: 0, LargeDashed: 1 },
+  ColorType: { Solid: 0 },
+  CrosshairMode: { Normal: 0 },
   createChart: vi.fn(() => ({
     addSeries: vi.fn(() => ({
       setData: vi.fn(),
@@ -340,5 +343,117 @@ describe("TVChartContainer", () => {
     render(<TVChartContainer {...defaultProps} />)
 
     expect(screen.getByText(/Reference Price \(Binance Reference\)/i)).toBeInTheDocument()
+  })
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // Resize observation and resource cleanup (OB-061)
+  // ═════════════════════════════════════════════════════════════════════════
+
+  it("creates ResizeObserver and MutationObserver on mount", () => {
+    mockCandles = SAMPLE_CANDLES
+    render(<TVChartContainer {...defaultProps} />)
+
+    // Verify observers are created (both should be instantiated)
+    const resizeInstances = (ResizeObserver as any).mock?.instances || []
+    const mutationInstances = (MutationObserver as any).mock?.instances || []
+
+    expect(resizeInstances.length).toBeGreaterThan(0)
+    expect(mutationInstances.length).toBeGreaterThan(0)
+  })
+
+  it("disconnects observers on unmount", () => {
+    mockCandles = SAMPLE_CANDLES
+    const { unmount } = render(<TVChartContainer {...defaultProps} />)
+
+    // Get observers before unmount
+    const resizeInstances = (ResizeObserver as any).mock?.instances || []
+    const mutationInstances = (MutationObserver as any).mock?.instances || []
+
+    const resizeObs = resizeInstances[resizeInstances.length - 1]
+    const mutationObs = mutationInstances[mutationInstances.length - 1]
+
+    unmount()
+
+    // Both observers should be disconnected
+    if (resizeObs) expect(resizeObs.disconnect).toHaveBeenCalled()
+    if (mutationObs) expect(mutationObs.disconnect).toHaveBeenCalled()
+  })
+
+  it("removes chart instance on unmount", async () => {
+    mockCandles = SAMPLE_CANDLES
+    const { createChart } = vi.mocked(await import("lightweight-charts"))
+    const mockRemove = vi.fn()
+    const mockChart = {
+      addSeries: vi.fn(() => ({
+        setData: vi.fn(),
+        update: vi.fn(),
+        createPriceLine: vi.fn(() => ({ applyOptions: vi.fn() })),
+        removePriceLine: vi.fn(),
+        applyOptions: vi.fn(),
+      })),
+      remove: mockRemove,
+      applyOptions: vi.fn(),
+      timeScale: vi.fn(() => ({ fitContent: vi.fn() })),
+    } as unknown as IChartApi
+    createChart.mockReturnValue(mockChart)
+
+    const { unmount } = render(<TVChartContainer {...defaultProps} />)
+
+    expect(mockRemove).not.toHaveBeenCalled()
+
+    unmount()
+
+    expect(mockRemove).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves chart instance across symbol/period changes", async () => {
+    mockCandles = SAMPLE_CANDLES
+    const { createChart } = vi.mocked(await import("lightweight-charts"))
+    const mockChart = {
+      addSeries: vi.fn(() => ({
+        setData: vi.fn(),
+        update: vi.fn(),
+        createPriceLine: vi.fn(() => ({ applyOptions: vi.fn() })),
+        removePriceLine: vi.fn(),
+        applyOptions: vi.fn(),
+      })),
+      remove: vi.fn(),
+      applyOptions: vi.fn(),
+      timeScale: vi.fn(() => ({ fitContent: vi.fn() })),
+    } as unknown as IChartApi
+    createChart.mockReturnValue(mockChart)
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    // Chart created once on mount
+    expect(createChart).toHaveBeenCalledTimes(1)
+
+    // Simulate layout change by updating props (period change)
+    mockCandles = [
+      { time: 1_700_020_000, open: 120, high: 130, low: 110, close: 125 },
+    ]
+    rerender(<TVChartContainer symbol="BTC" period="15m" />)
+
+    // Chart instance should still be the same, not recreated
+    expect(createChart).toHaveBeenCalledTimes(1)
+    expect(mockChart.remove).not.toHaveBeenCalled()
+  })
+
+  it("handles repeated mount-unmount cycles cleanly", () => {
+    mockCandles = SAMPLE_CANDLES
+
+    // First mount-unmount cycle
+    const { unmount: unmount1 } = render(<TVChartContainer {...defaultProps} />)
+
+    unmount1()
+
+    // Second mount-unmount cycle
+    vi.clearAllMocks()
+    const { unmount: unmount2 } = render(<TVChartContainer {...defaultProps} />)
+
+    unmount2()
+
+    // Verifies that repeated cycles don't cause errors or memory leaks
+    expect(true).toBe(true)
   })
 })

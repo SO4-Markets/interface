@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { BINANCE_SYMBOL } from "../lib/oracle"
+import { deriveSourceHealth } from "./useSourceHealth"
+import type { SourceHealth } from "./useSourceHealth"
 
 export type TradeSide = "buy" | "sell" | "unknown"
 
@@ -17,6 +19,7 @@ export type UseRecentTradesResult = {
   status: "connecting" | "connected" | "disconnected" | "error"
   error: Error | null
   isLoading: boolean
+  sourceHealth: SourceHealth    // OB-058: comprehensive health tracking
 }
 
 const BINANCE_WS_BASE = "wss://stream.binance.com:9443/ws"
@@ -68,8 +71,19 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
   const [status, setStatus] = useState<"connecting" | "connected" | "disconnected" | "error">("connecting")
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [sourceHealth, setSourceHealth] = useState<SourceHealth>({
+    status: "initial-load",
+    lastUpdateTime: null,
+    staleDuration: null,
+    reconnectAttempt: 0,
+    isExecutable: false,
+    message: "Connecting to trade feed…",
+  })
 
   const wsRef = useRef<WebSocket | null>(null)
+  // OB-058: track reconnect attempts and last data timestamp
+  const reconnectAttemptRef = useRef(0)
+  const lastDataTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -79,10 +93,24 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
     setStatus("connecting")
 
     if (!symbol) {
+      const emptyHealth = deriveSourceHealth(
+        { status: "disconnected", hasData: false, lastDataTime: null },
+        Date.now(),
+        0
+      )
+      setSourceHealth(emptyHealth)
       setIsLoading(false)
       setStatus("disconnected")
       return () => { mounted = false }
     }
+
+    reconnectAttemptRef.current += 1
+    const initialHealth = deriveSourceHealth(
+      { status: "connecting", hasData: false, lastDataTime: lastDataTimeRef.current },
+      Date.now(),
+      reconnectAttemptRef.current
+    )
+    setSourceHealth(initialHealth)
 
     const binanceSym = BINANCE_SYMBOL[symbol] ?? symbol.toUpperCase() + "USDT"
     const lowerSym = binanceSym.toLowerCase()
@@ -106,6 +134,15 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
 
         setTrades((prev) => deduplicateAndSortTrades([...parsed, ...prev]))
         setIsLoading(false)
+        
+        // OB-058: Update health after REST snapshot
+        lastDataTimeRef.current = Date.now()
+        const health = deriveSourceHealth(
+          { status: "connecting", hasData: parsed.length > 0, lastDataTime: lastDataTimeRef.current },
+          Date.now(),
+          reconnectAttemptRef.current
+        )
+        setSourceHealth(health)
       } catch {
         if (!mounted) return
         setIsLoading(false)
@@ -125,6 +162,15 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
           if (!mounted) return
           setStatus("connected")
           setError(null)
+          
+          // OB-058: Update health on connection
+          reconnectAttemptRef.current = 0
+          const health = deriveSourceHealth(
+            { status: "connected", hasData: true, lastDataTime: lastDataTimeRef.current },
+            Date.now(),
+            0
+          )
+          setSourceHealth(health)
         }
 
         ws.onmessage = (evt: MessageEvent) => {
@@ -144,6 +190,15 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
 
             setTrades((prev) => deduplicateAndSortTrades([newTrade, ...prev]))
             setIsLoading(false)
+            
+            // OB-058: Update health on each message
+            lastDataTimeRef.current = Date.now()
+            const health = deriveSourceHealth(
+              { status: "connected", hasData: true, lastDataTime: lastDataTimeRef.current },
+              Date.now(),
+              0
+            )
+            setSourceHealth(health)
           } catch {
             /* ignore malformed message */
           }
@@ -153,11 +208,27 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
           if (!mounted) return
           setStatus("error")
           setError(new Error("Trade feed connection error"))
+          
+          // OB-058: Update health on error
+          const health = deriveSourceHealth(
+            { status: "error", hasData: true, lastDataTime: lastDataTimeRef.current },
+            Date.now(),
+            reconnectAttemptRef.current
+          )
+          setSourceHealth(health)
         }
 
         ws.onclose = () => {
           if (!mounted) return
           setStatus("disconnected")
+          
+          // OB-058: Update health on disconnect
+          const health = deriveSourceHealth(
+            { status: "disconnected", hasData: true, lastDataTime: lastDataTimeRef.current },
+            Date.now(),
+            reconnectAttemptRef.current
+          )
+          setSourceHealth(health)
         }
       } catch (err) {
         setStatus("disconnected")
@@ -177,5 +248,5 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
     }
   }, [symbol])
 
-  return { trades, status, error, isLoading }
+  return { trades, status, error, isLoading, sourceHealth }
 }

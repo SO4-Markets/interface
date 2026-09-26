@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { RecentTradesTape } from "./RecentTradesTape"
+import { DepthLadder } from "./DepthLadder"
 
 type Props = {
   symbol: string | undefined
@@ -46,9 +47,7 @@ export function OrderBookPanel({ symbol }: Props) {
       {/* ── Tab Content ──────────────────────────────────────────────────── */}
       <div className="min-h-0 flex-1">
         {activeTab === "book" ? (
-          <div className="flex flex-1 items-center justify-center p-4 text-center text-xs text-muted-foreground h-full">
-            Executable order-book depth is unavailable until a verified matching source is connected.
-          </div>
+          <DepthLadder symbol={symbol} compact={false} />
         ) : (
           <RecentTradesTape symbol={symbol} />
         )}
