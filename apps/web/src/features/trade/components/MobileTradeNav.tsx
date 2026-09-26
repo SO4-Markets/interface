@@ -1,6 +1,6 @@
 import { cn } from "@workspace/ui/lib/utils"
 
-// Issue #684 (OB-037): mobile chart, book, and trade navigation.
+// Issue 684 (OB-037): mobile chart, book, and trade navigation.
 //
 // A bottom tab bar that switches which trading-layout region is visible
 // on narrow viewports. Panels stay mounted (the caller toggles visibility

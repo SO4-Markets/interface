@@ -1,12 +1,13 @@
 import { useCallback, useMemo } from "react"
-import { useQuery, type UseQueryOptions } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
+import type { UseQueryOptions } from "@tanstack/react-query"
 
 /**
  * Optimized query hook that memoizes query key and options to prevent
  * unnecessary query subscriptions and re-renders when parent components update.
  */
 export function useOptimizedQuery<T>(
-  queryKey: unknown[],
+  queryKey: Array<unknown>,
   queryFn: () => Promise<T>,
   options?: Omit<UseQueryOptions<T>, "queryKey" | "queryFn">
 ) {
@@ -28,8 +29,8 @@ export function useOptimizedQuery<T>(
  * Create a selector hook from query data to prevent child component re-renders
  * when only unrelated data changes.
  */
-export function createQuerySelector<T, S>(
-  selectFn: (data: T | undefined) => S
+export function createQuerySelector<T, TSelected>(
+  selectFn: (data: T | undefined) => TSelected
 ) {
   return (data: T | undefined) => {
     const selected = useMemo(() => selectFn(data), [data, selectFn])

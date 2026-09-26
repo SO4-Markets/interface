@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { renderHook } from "@testing-library/react"
 import { useWorkspaceShortcuts } from "./useWorkspaceShortcuts"
 import { clearShortcutRegistry } from "@/lib/use-keyboard-shortcut"

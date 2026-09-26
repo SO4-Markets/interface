@@ -1,6 +1,7 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { fetchOracleCandles, type CandleResponse } from "../lib/oracle"
+import { useQuery } from "@tanstack/react-query"
+import { fetchOracleCandles } from "../lib/oracle"
 import { queryKeys } from "../lib/query-keys"
+import type { CandleResponse } from "../lib/oracle"
 
 export function useOracleCandles(symbol: string | undefined, period: string) {
   return useQuery<CandleResponse>({

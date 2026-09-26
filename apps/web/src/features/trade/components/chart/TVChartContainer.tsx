@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { cn } from "@workspace/ui/lib/utils"
 import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
 import { usePositions } from "../../hooks/usePositions"
@@ -24,7 +25,6 @@ import {
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OhlcBar } from "../../lib/oracle"
 import { formatUsd } from "@/shared/lib/format"
-import { cn } from "@workspace/ui/lib/utils"
 import { ENV } from "@/app/config/env"
 
 type ChartLine = {
@@ -205,6 +205,7 @@ export function TVChartContainer({ symbol, period }: Props) {
     if (symbolChanged) {
       priceLineRefs.current.forEach((pl) => seriesRef.current!.removePriceLine(pl))
       priceLineRefs.current.clear()
+      fittedRef.current = false
 
       // When switching markets, if placeholder data is not active (i.e. not same market timeframe switch),
       // clear the series immediately so old-market candles are never presented under a different market.
@@ -216,16 +217,22 @@ export function TVChartContainer({ symbol, period }: Props) {
   }, [symbol, period, isPlaceholderData, candles.length])
 
   // ── Load historical candles ────────────────────────────────────────────────
+  const fittedRef = useRef(false)
   useEffect(() => {
     if (!seriesRef.current) return
     if (candles.length === 0) {
       seriesRef.current.setData([])
       hasDataRef.current = false
+      fittedRef.current = false
       return
     }
     seriesRef.current.setData(candles.map(toChartBar))
     hasDataRef.current = true
-    chartRef.current?.timeScale().fitContent()
+    // Only fit content once per symbol/period load, not on every candle update
+    if (!fittedRef.current) {
+      chartRef.current?.timeScale().fitContent()
+      fittedRef.current = true
+    }
   }, [candles])
 
   // ── Push live bar updates ─────────────────────────────────────────────────
@@ -376,6 +383,7 @@ export function TVChartContainer({ symbol, period }: Props) {
         <div
           ref={containerRef}
           className={cn("h-full w-full transition-opacity duration-150", isStale && "opacity-60")}
+          style={{ touchAction: "none" }}
           role="img"
           aria-label={`Price chart for ${symbol}`}
           aria-describedby="chart-desc"

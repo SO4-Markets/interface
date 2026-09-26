@@ -11,9 +11,7 @@
  * - Delayed indexer state verification
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
-import { renderHook, act } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { describe, expect, it } from "vitest"
 
 /**
  * Market order journey: selection → amount entry → confirmation → execution

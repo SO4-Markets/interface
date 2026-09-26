@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 // SO4 markets: the hero sentence is the fixed "Trade [word] from your
 // wallet" — every rotating word needs to read naturally in that slot. GMX's
@@ -32,12 +32,6 @@ export function AnimatedTitle() {
   )
   const [isPageHidden, setIsPageHidden] = useState(false)
 
-  // Pre-compute the maximum width needed to fit all phrases without shifting
-  const maxWidth = useMemo(() => {
-    if (typeof window === "undefined") return "auto"
-    // This will be calculated on first render; uses the longest phrase
-    return undefined
-  }, [])
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)")

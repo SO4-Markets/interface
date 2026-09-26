@@ -4,7 +4,7 @@ type UseViewportRevealOptions = {
   /** Once per session or per page load */
   once?: boolean
   /** Threshold (0-1) when observer fires */
-  threshold?: number | number[]
+  threshold?: number | Array<number>
   /** Callback when element enters viewport */
   onReveal?: () => void
 }

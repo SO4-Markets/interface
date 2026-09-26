@@ -1,6 +1,7 @@
 import { cn } from "@workspace/ui/lib/utils"
+import {  useOrderBook } from "../../hooks/useOrderBook"
+import type {OrderBookLevel} from "../../hooks/useOrderBook";
 import { formatUsd } from "@/shared/lib/format"
-import { useOrderBook, type OrderBookLevel } from "../../hooks/useOrderBook"
 
 type Props = {
   symbol: string | undefined
@@ -23,7 +24,7 @@ function DepthRow({ level, side, compact }: RowProps) {
     <div
       role="row"
       className={cn(
-        "relative flex items-center font-mono text-[11px] select-none",
+        "relative flex items-center font-mono text-[11px] select-none", // ds-allow: dense orderbook row font size
         compact ? "h-[18px]" : "h-[22px]",
       )}
     >
@@ -82,7 +83,7 @@ function ColumnHeaders({ compact }: { compact: boolean }) {
     <div
       role="row"
       className={cn(
-        "flex items-center border-b border-border/60 font-mono text-[10px] text-muted-foreground",
+        "flex items-center border-b border-border/60 font-mono text-[10px] text-muted-foreground", // ds-allow: dense orderbook header font size
         compact ? "h-[16px]" : "h-[20px]",
       )}
     >
@@ -108,7 +109,7 @@ function SpreadRow({
     <div
       role="separator"
       aria-label="Spread"
-      className="flex items-center justify-between border-y border-border/60 bg-muted/20 px-2 py-[3px] font-mono text-[10px] text-muted-foreground"
+      className="flex items-center justify-between border-y border-border/60 bg-muted/20 px-2 py-[3px] font-mono text-[10px] text-muted-foreground" // ds-allow: dense orderbook spread font size
     >
       <span>
         Spread{" "}
@@ -151,18 +152,18 @@ export function DepthLadder({ symbol, compact = false }: Props) {
     >
       {/* ── Panel header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5 bg-muted/20">
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-mono text-[11px] text-muted-foreground">{/* ds-allow: dense header font size */}
           {symbol ?? "Market"} Depth
         </span>
         <div className="flex items-center gap-2">
           {status === "connected" && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               Live
             </span>
           )}
           {status === "connecting" && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
               Connecting…
             </span>
@@ -174,7 +175,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
             </span>
           )}
           {(status === "disconnected" || status === "error") && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
               Disconnected
             </span>
@@ -253,13 +254,13 @@ export function DepthLadder({ symbol, compact = false }: Props) {
 
       {/* One-sided: only asks ─────────────────────────────────────────── */}
       {!isEmpty && bids.length === 0 && (
-        <p className="px-3 pb-1 text-[10px] text-muted-foreground">
+        <p className="px-3 pb-1 text-[10px] text-muted-foreground">{/* ds-allow: dense footer font size */}
           No bids available.
         </p>
       )}
       {/* One-sided: only bids ─────────────────────────────────────────── */}
       {!isEmpty && asks.length === 0 && (
-        <p className="px-3 pt-1 text-[10px] text-muted-foreground">
+        <p className="px-3 pt-1 text-[10px] text-muted-foreground">{/* ds-allow: dense footer font size */}
           No asks available.
         </p>
       )}

@@ -40,7 +40,7 @@ export function AccountBalanceSummary() {
               <span className="text-sm font-medium text-foreground">{row.label}</span>
               <span className="text-xs text-muted-foreground">{row.description}</span>
             </div>
-            <Numeric value={row.value} decimals={2} prefix="$" className="font-mono" />
+            <Numeric value={row.value} format="usd" decimals={2} className="font-mono" />
           </div>
         ))}
       </div>
@@ -56,8 +56,8 @@ export function AccountBalanceSummary() {
         </div>
         <Numeric
           value={summary.availableToTrade}
+          format="usd"
           decimals={2}
-          prefix="$"
           className="font-mono text-lg font-semibold text-success"
         />
       </div>
@@ -65,7 +65,7 @@ export function AccountBalanceSummary() {
       {/* Total account value */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>Total Account Value</span>
-        <Numeric value={summary.totalAccountValue} decimals={2} prefix="$" className="font-mono" />
+        <Numeric value={summary.totalAccountValue} format="usd" decimals={2} className="font-mono" />
       </div>
     </div>
   )

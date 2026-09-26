@@ -267,7 +267,6 @@ export function validateAndSortCandles(bars: Array<OhlcBar>): Array<OhlcBar> {
   const seenTimes = new Set<number>()
 
   for (const bar of bars) {
-    if (!bar || typeof bar !== "object") continue
 
     // Timestamp validation: finite number > 0 in Unix seconds
     let time = Number(bar.time)

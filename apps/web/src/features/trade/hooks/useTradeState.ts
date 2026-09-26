@@ -8,7 +8,7 @@
 //   - TODO: migrate to a full Selector context (Redux-style) using reselect + use-context-selector
 //     once state complexity grows — see GMX's SyntheticsStateContext pattern
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useMarkets } from "./useMarkets"
 import { useTokenList } from "./useTokenList"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
@@ -115,8 +115,8 @@ function normalizeTradeState(state: TradeState): TradeState {
 
     // Clear incompatible amounts/triggers when collateral doesn't match market config
     if (
-      (isLong && collateral?.long && collateral.long !== market.longToken) ||
-      (isShort && collateral?.short && collateral.short !== market.shortToken)
+      (isLong && collateral.long && collateral.long !== market.longToken) ||
+      (isShort && collateral.short && collateral.short !== market.shortToken)
     ) {
       return {
         ...state,

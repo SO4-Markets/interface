@@ -64,7 +64,7 @@ export const PRELOAD_HINTS = {
  */
 export function generateImageSrcSet(
   basePath: string,
-  formats: string[] = ["webp"]
+  formats: Array<string> = ["webp"]
 ): string {
   return formats
     .map(

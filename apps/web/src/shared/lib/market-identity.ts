@@ -22,7 +22,7 @@ export type MarketPrecision = {
 export type SupportedAction = 'create' | 'cancel' | 'fill' | 'close' | 'collateral' | 'funding' | 'transfer'
 
 export type MarketCapabilities = {
-  supportedActions: SupportedAction[]
+  supportedActions: Array<SupportedAction>
   isDisabled: boolean
   liquidationEnabled: boolean
   fundingRateEnabled: boolean
@@ -73,7 +73,7 @@ export type MarketIdentity = {
     type: 'baseToken' | 'quoteToken' | 'both'
   }
 
-  tags?: string[]
+  tags?: Array<string>
 }
 
 /**
@@ -84,9 +84,9 @@ export type MarketIdentity = {
  */
 export function validateMarketIdentity(market: MarketIdentity): {
   valid: boolean
-  errors: string[]
+  errors: Array<string>
 } {
-  const errors: string[] = []
+  const errors: Array<string> = []
 
   // Validate precision
   if (market.precision.tick <= 0) {

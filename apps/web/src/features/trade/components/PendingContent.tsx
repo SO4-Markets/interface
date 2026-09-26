@@ -1,5 +1,5 @@
-import { ReactNode } from "react"
 import { usePendingContent } from "../hooks/usePendingContent"
+import type { ReactNode } from "react"
 
 interface PendingContentProps {
   /** Whether data is currently loading */

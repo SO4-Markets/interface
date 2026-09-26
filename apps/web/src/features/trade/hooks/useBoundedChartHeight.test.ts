@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 import { renderHook } from "@testing-library/react"
-import { useBoundedChartHeight } from "./useBoundedChartHeight"
 import { CHART_ROW_HEIGHT_MAX, CHART_ROW_HEIGHT_MIN } from "../store/layout-preferences-store"
+import { useBoundedChartHeight } from "./useBoundedChartHeight"
 
 function refWithHeight(height: number) {
   const el = document.createElement("div")
   el.getBoundingClientRect = () =>
-    ({ height, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} }) as DOMRect
+    ({ height, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} })
   return { current: el }
 }
 

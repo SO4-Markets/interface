@@ -1,4 +1,4 @@
-import { render, screen, act } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { InterruptiblePresence } from "./interruptible-presence"
 

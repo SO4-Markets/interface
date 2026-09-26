@@ -11,6 +11,7 @@ import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { GET_ACCOUNT_ORDERS } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export type UseAccountOrdersResult = {
   data: Array<Order>
@@ -28,16 +29,15 @@ export type UseAccountOrdersResult = {
 export function useAccountOrders(account: string | null): UseAccountOrdersResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.orders.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_ORDERS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_ORDERS, { account }, { signal })
       return result.orders.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
-    retry: 3,
-    staleTime: 10_000, // 10 seconds
+    ...queryPolicy("positions"),
   })
 
   if (!INDEXER_CONFIG.enabled) {

@@ -14,8 +14,9 @@ import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
 import { CircuitBreakerBanner } from "./CircuitBreakerBanner"
 import { PanelErrorBoundary } from "./PanelErrorBoundary"
-import { MobileTradeNav, mobileViewClassName, type MobileTradeView } from "./MobileTradeNav"
+import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
 import { OrderBookPanel } from "./orderbook/OrderBookPanel"
+import type {MobileTradeView} from "./MobileTradeNav";
 import { saveReferralCode } from "@/lib/contracts"
 
 const tradeRoute = getRouteApi("/trade")
@@ -29,7 +30,7 @@ export function TradePage() {
   // Pre-fill the form from a shared deeplink (e.g. /trade?market=BTC&type=long).
   const search = tradeRoute.useSearch()
   const navigate = tradeRoute.useNavigate()
-  const [activePanel, setActivePanel] = useState<"positions" | "orders" | "trades" | "claims">(
+  const [activePanel, setActivePanel] = useState<"positions" | "orders" | "history" | "trades" | "claims">(
     search.panel ?? "positions"
   )
   const appliedDeeplink = useRef(false)
@@ -50,7 +51,7 @@ export function TradePage() {
 
   useEffect(() => setActivePanel(search.panel ?? "positions"), [search.panel])
 
-  function handlePanelChange(panel: "positions" | "orders" | "trades" | "claims") {
+  function handlePanelChange(panel: "positions" | "orders" | "history" | "trades" | "claims") {
     setActivePanel(panel)
     void navigate({ search: (previous) => ({ ...previous, panel }) })
   }

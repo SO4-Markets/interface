@@ -1,5 +1,6 @@
-import { ReactNode, useEffect, useState } from "react"
+import {  useEffect, useState } from "react"
 import { cn } from "@workspace/ui/lib/utils"
+import type {ReactNode} from "react";
 import { useViewportReveal } from "@/lib/use-viewport-reveal"
 import { useReducedMotion } from "@/lib/use-reduced-motion"
 

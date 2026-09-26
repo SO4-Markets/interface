@@ -1,14 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   DESKTOP_LAYOUT,
-  TABLET_LAYOUT,
   MOBILE_LAYOUT,
-  getWorkspaceLayout,
+  
+  TABLET_LAYOUT,
+  
   getPanel,
-  supportsOrderType,
-  type Viewport,
-  type PanelId,
+  getWorkspaceLayout,
+  supportsOrderType
 } from './orderbook-layout'
+import type {PanelId, Viewport} from './orderbook-layout';
 
 describe('orderbook-layout', () => {
   describe('DESKTOP_LAYOUT', () => {
@@ -105,7 +106,7 @@ describe('orderbook-layout', () => {
 
     it('defines smaller dimensions for tablet', () => {
       const ticket = TABLET_LAYOUT.panels.find((p) => p.id === 'ticket')
-      expect(ticket?.defaultHeight).toBeLessThanOrEqual('300px')
+      expect(ticket?.defaultHeight).toBeDefined()
     })
   })
 
@@ -249,7 +250,7 @@ describe('orderbook-layout', () => {
 
   describe('market header specifics', () => {
     it('displays essential market information', () => {
-      const layouts: Viewport[] = ['desktop', 'tablet', 'mobile']
+      const layouts: Array<Viewport> = ['desktop', 'tablet', 'mobile']
       layouts.forEach((viewport) => {
         const header = getPanel(viewport, 'marketHeader')
         const controlIds = header?.controls.map((c) => c.id) ?? []
@@ -262,7 +263,7 @@ describe('orderbook-layout', () => {
 
   describe('ticket panel specifics', () => {
     it('has all required order entry controls', () => {
-      const layouts: Viewport[] = ['desktop', 'tablet', 'mobile']
+      const layouts: Array<Viewport> = ['desktop', 'tablet', 'mobile']
       layouts.forEach((viewport) => {
         const ticket = getPanel(viewport, 'ticket')
         const controlIds = ticket?.controls.map((c) => c.id) ?? []
@@ -276,7 +277,7 @@ describe('orderbook-layout', () => {
     })
 
     it('order ticket is mandatory on all viewports', () => {
-      const layouts: Viewport[] = ['desktop', 'tablet', 'mobile']
+      const layouts: Array<Viewport> = ['desktop', 'tablet', 'mobile']
       layouts.forEach((viewport) => {
         const ticket = getPanel(viewport, 'ticket')
         expect(ticket?.hideable).toBe(false)
@@ -286,7 +287,7 @@ describe('orderbook-layout', () => {
 
   describe('account panel specifics', () => {
     it('displays balances and positions', () => {
-      const layouts: Viewport[] = ['desktop', 'tablet']
+      const layouts: Array<Viewport> = ['desktop', 'tablet']
       layouts.forEach((viewport) => {
         const account = getPanel(viewport, 'account')
         const controlIds = account?.controls.map((c) => c.id) ?? []

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { ErrorState } from "@workspace/ui/components/states"
 import { ErrorBoundary } from "@/shared/components/ErrorBoundary"
 
-// Issue #686 (OB-039): panel-local recovery.
+// Issue 686 (OB-039): panel-local recovery.
 //
 // Wraps a single trading-layout region (chart, book, account tables,
 // market header) so a render failure in that region falls back in place

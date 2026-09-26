@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { useKeyboardShortcut, registerShortcut } from "@/lib/use-keyboard-shortcut"
+import { registerShortcut, useKeyboardShortcut } from "@/lib/use-keyboard-shortcut"
 
 export type WorkspaceShortcutsConfig = {
   /** Callback to focus market search (Ctrl+M or Cmd+M) */

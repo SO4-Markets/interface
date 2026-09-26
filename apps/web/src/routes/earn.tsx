@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { lazy, Suspense } from "react"
+import { Suspense, lazy } from "react"
 import { LoadingPage } from "../shared/components/LoadingPage"
 
 const EarnPage = lazy(() =>

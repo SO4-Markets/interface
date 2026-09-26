@@ -23,7 +23,7 @@ export function ApplyReferralCodePrompt({ account }: Props) {
   const [dismissed, setDismissed] = useState(false)
 
   const { data: existingCode, isLoading } = useQuery({
-    queryKey: ["referrals", "trader-code", account],
+    queryKey: queryKeys.referrals.traderCode(account),
     queryFn: () => getTraderReferralCode(account as string),
     enabled: !!account,
     staleTime: 30_000,
@@ -45,7 +45,7 @@ export function ApplyReferralCodePrompt({ account }: Props) {
       await applyReferralCode(account as string, code.toUpperCase().trim())
       markReferralPromptComplete(account as string)
       await queryClient.invalidateQueries({ queryKey: queryKeys.referrals.code(account) })
-      await queryClient.invalidateQueries({ queryKey: ["referrals", "trader-code", account] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.referrals.traderCode(account) })
       setDismissed(true)
     } catch (applyError) {
       setError(applyError instanceof Error ? applyError.message : "Failed to apply code")

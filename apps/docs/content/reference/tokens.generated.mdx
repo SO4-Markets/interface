@@ -7,7 +7,7 @@ status: stable
 
 This page is generated from [`packages/ui/src/styles/globals.css`](https://github.com/SO4-Markets/interface/blob/main/packages/ui/src/styles/globals.css) — the `@theme inline` block plus the `:root` and `.dark` values it resolves to. It cannot drift from the source: `bun run --cwd apps/docs check:tokens:generated` (wired into CI) fails the build if this file is out of date. See [Design system](/developers/design-system) for what these roles mean and when to reach for each one; see [`DESIGN.md`](https://github.com/SO4-Markets/interface/blob/main/DESIGN.md) for the full written contract.
 
-114 tokens, in both themes. A dashed swatch means one of two things, distinguished by the raw value column: the token is not defined in that theme at all (`—`), or it resolves through the excluded GMX palette (see below) and so cannot be rendered here — see [Design system](/developers/design-system#one-theme-so-far) for what that means for `surface-*` and `text-*` in light mode specifically.
+128 tokens, in both themes. A dashed swatch means one of two things, distinguished by the raw value column: the token is not defined in that theme at all (`—`), or it resolves through the excluded GMX palette (see below) and so cannot be rendered here — see [Design system](/developers/design-system#one-theme-so-far) for what that means for `surface-*` and `text-*` in light mode specifically.
 
 The `--color-gmx-*` palette and its landing-only typography/button utilities are excluded from this page. DESIGN.md documents them as source material for the GrantFox 3 landing theme, not general-purpose tokens — see [`docs/gf_3/001_theme_update.md`](https://github.com/SO4-Markets/interface/blob/main/docs/gf_3/001_theme_update.md).
 

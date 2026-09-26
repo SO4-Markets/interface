@@ -9,8 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { formatUsd } from "@/shared/lib/format"
 import { useRecentTrades } from "../../hooks/useRecentTrades"
+import { formatUsd } from "@/shared/lib/format"
 
 type Props = {
   symbol: string | undefined
@@ -24,17 +24,17 @@ export function RecentTradesTape({ symbol }: Props) {
     <div className="flex h-full w-full flex-col overflow-hidden text-xs">
       {/* ── Sub-header with venue and feed status indicator ───────────────── */}
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5 bg-muted/20">
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-mono text-[11px] text-muted-foreground">{/* ds-allow: dense orderbook font size */}
           {symbol ?? "Market"} Trades
         </span>
         <div className="flex items-center gap-2">
           {status === "connected" && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">{/* ds-allow: dense status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" /> Live
             </span>
           )}
           {status === "connecting" && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">{/* ds-allow: dense status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" /> Connecting…
             </span>
           )}
@@ -44,7 +44,7 @@ export function RecentTradesTape({ symbol }: Props) {
             </span>
           )}
           {(status === "disconnected" || status === "error") && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">{/* ds-allow: dense status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-destructive" /> Disconnected
             </span>
           )}
@@ -77,7 +77,7 @@ export function RecentTradesTape({ symbol }: Props) {
             </TableHeader>
             <TableBody>
               {trades.map((trade) => (
-                <TableRow key={trade.id} interactive={false} className="font-mono text-[11px]">
+                <TableRow key={trade.id} interactive={false} className="font-mono text-[11px]">{/* ds-allow: dense trade row font size */}
                   <TableCell className="font-medium text-foreground">
                     {formatUsd(trade.price, { decimals: 4 })}
                   </TableCell>

@@ -1,11 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  
   createDefaultFreshnessContract,
-  isDataStale,
   getEntitiesToRefresh,
   getFallbackBehavior,
-  type DataFreshnessContract,
+  isDataStale
 } from './data-freshness'
+import type {DataFreshnessContract} from './data-freshness';
 
 describe('data-freshness', () => {
   let contract: DataFreshnessContract
@@ -176,7 +177,7 @@ describe('data-freshness', () => {
     })
 
     it('has reasonable latency expectations', () => {
-      Object.entries(contract.targets).forEach(([entity, target]) => {
+      Object.entries(contract.targets).forEach(([, target]) => {
         expect(target.sourceToScreen.p99Ms).toBeLessThan(10000)
         expect(target.confirmationToRefresh.p99Ms).toBeLessThan(10000)
       })
@@ -199,13 +200,13 @@ describe('data-freshness', () => {
 
   describe('stream configurations', () => {
     it('defines staleness threshold for each stream', () => {
-      Object.entries(contract.streams).forEach(([entity, config]) => {
+      Object.entries(contract.streams).forEach(([, config]) => {
         expect(config.staleness.thresholdMs).toBeGreaterThan(0)
       })
     })
 
     it('defines stale action for each stream', () => {
-      Object.entries(contract.streams).forEach(([entity, config]) => {
+      Object.entries(contract.streams).forEach(([, config]) => {
         expect(['retry', 'notify', 'degrade']).toContain(config.staleness.onStale)
       })
     })

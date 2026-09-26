@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { deduplicateAndSortTrades, type TradeItem } from "./useRecentTrades"
+import {  deduplicateAndSortTrades } from "./useRecentTrades"
+import type {TradeItem} from "./useRecentTrades";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

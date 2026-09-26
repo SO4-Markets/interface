@@ -1,5 +1,6 @@
 import { cva } from 'class-variance-authority'
 import { cn } from '@workspace/ui/lib/utils'
+import { useNumericChangeFeedback } from '../hooks/use-numeric-change-feedback'
 import type { VariantProps } from 'class-variance-authority'
 
 const numericVariants = cva('font-mono tabular-nums', {
@@ -8,6 +9,7 @@ const numericVariants = cva('font-mono tabular-nums', {
       positive: 'text-green-500',
       negative: 'text-red-500',
       neutral: 'text-muted-foreground',
+      warning: 'text-warning',
       danger: 'text-red-500 font-bold',
       'brand-long': 'text-green-500',
       'brand-short': 'text-red-500',
@@ -150,6 +152,21 @@ function numericRoleForValue(
   return 'neutral'
 }
 
+interface NumericProps {
+  value: number | null | undefined
+  format?: 'usd' | 'token' | 'pct' | 'number' | 'small'
+  role?: LegacyNumericRole
+  decimals?: number
+  compact?: boolean
+  locale?: string
+  currency?: string
+  fallback?: string
+  threshold?: number
+  highlightOnChange?: boolean
+  coalesceMs?: number
+  className?: string
+}
+
 function Numeric({
   value,
   format = 'number',
@@ -160,8 +177,16 @@ function Numeric({
   currency,
   fallback = '\u2014',
   threshold,
+  highlightOnChange = false,
+  coalesceMs = 500,
   className,
 }: NumericProps) {
+  const { className: emphasisClassName } = useNumericChangeFeedback({
+    value,
+    coalesceMs,
+    disabled: !highlightOnChange,
+  })
+
   const display = (() => {
     if (value === null || value === undefined || Number.isNaN(value)) {
       return fallback
@@ -183,7 +208,7 @@ function Numeric({
   return (
     <span
       data-slot="numeric"
-      className={cn(numericVariants({ role }), className)}
+      className={cn(numericVariants({ role }), highlightOnChange && emphasisClassName, className)}
     >
       {display}
     </span>

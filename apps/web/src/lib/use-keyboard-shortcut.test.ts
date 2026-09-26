@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { renderHook } from "@testing-library/react"
 import {
-  useKeyboardShortcut,
-  registerShortcut,
-  getRegisteredShortcuts,
   clearShortcutRegistry,
+  getRegisteredShortcuts,
+  registerShortcut,
+  useKeyboardShortcut,
 } from "./use-keyboard-shortcut"
 
 describe("useKeyboardShortcut", () => {

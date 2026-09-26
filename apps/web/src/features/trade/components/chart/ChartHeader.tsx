@@ -2,9 +2,9 @@ import { usePriceDelta24h } from "../../hooks/usePriceDelta24h"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useMarketsInfo } from "../../hooks/useMarketsInfo"
 import { OracleStalenessIndicator } from "../OracleStalenessIndicator"
+import { MarketStatsHeader } from "../MarketStatsHeader"
 import { MarketSelector } from "./MarketSelector"
 import { formatUsd } from "@/shared/lib/format"
-import { MarketStatsHeader } from "../MarketStatsHeader"
 
 type Props = {
   symbol: string | undefined
@@ -28,8 +28,7 @@ export function ChartHeader({ symbol, onSelectToken }: Props) {
       <div className="flex min-w-0 items-center gap-4 overflow-x-auto px-3 py-2 text-sm">
       {/* Market selector */}
       <MarketSelector
-        markets={marketsInfo.map((entry) => ({ id: entry.indexTokenAddress, name: entry.name }))}
-        activeMarketId={symbol}
+        symbol={symbol}
         onSelect={onSelectToken}
       />
 
