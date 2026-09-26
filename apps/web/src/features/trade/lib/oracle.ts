@@ -28,6 +28,7 @@ export type OhlcBar = {
   high: number
   low: number
   close: number
+  volume?: number
 }
 
 export type PriceDelta24h = {
@@ -280,6 +281,7 @@ export async function fetchOracleCandles(
         high: parseFloat(c[2] as string),
         low: parseFloat(c[3] as string),
         close: parseFloat(c[4] as string),
+        volume: Number(c[5]),
       }))
     } catch {
       // Fall through to Pyth Benchmarks

@@ -14,6 +14,8 @@ import {
 } from "@workspace/ui/components/table"
 import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
+import { canIncrementallyApply, mergeBars } from "../../lib/bar-reconciliation"
+import type { LiveBarUpdate } from "../../lib/bar-reconciliation"
 import { usePositions } from "../../hooks/usePositions"
 import {
   buildCandleOptions,
@@ -99,12 +101,25 @@ export function TVChartContainer({ symbol, period }: Props) {
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null)
   const priceLineRefs = useRef<Map<string, IPriceLine>>(new Map())
+  const displayedBarsRef = useRef<Array<OhlcBar>>([])
+  const hasRenderedHistoryRef = useRef(false)
   // True only after setData() has been called for the current symbol+period.
   // Prevents series.update() from firing against an empty or stale series.
   const hasDataRef = useRef(false)
 
   const { data: candles = [], isLoading, isError } = useOracleCandles(symbol, period)
-  const liveBar = useLiveBar(symbol, period)
+  const liveValue = useLiveBar(symbol, period) as
+    | OhlcBar
+    | LiveBarUpdate
+    | null
+  // Keep the consumer tolerant of the old single-bar shape while callers
+  // migrate to the richer stream/backfill update contract.
+  const liveUpdate = liveValue && "current" in liveValue
+    ? liveValue
+    : liveValue
+      ? { current: liveValue, bars: [liveValue], source: "stream" as const }
+      : null
+  const liveBar = liveUpdate?.current ?? null
   const { data: positions = [] } = usePositions()
 
   const [showTable, setShowTable] = useState(false)
@@ -168,6 +183,8 @@ export function TVChartContainer({ symbol, period }: Props) {
       chartRef.current = null
       seriesRef.current = null
       priceLineRefs.current.clear()
+      displayedBarsRef.current = []
+      hasRenderedHistoryRef.current = false
     }
   }, []) // mount once — symbol/period changes handled by separate effects below
 
@@ -178,6 +195,8 @@ export function TVChartContainer({ symbol, period }: Props) {
     if (!seriesRef.current) return
     seriesRef.current.setData([])
     hasDataRef.current = false
+    displayedBarsRef.current = []
+    hasRenderedHistoryRef.current = false
     // Remove all price lines — they belong to the previous symbol
     priceLineRefs.current.forEach((pl) => seriesRef.current!.removePriceLine(pl))
     priceLineRefs.current.clear()
@@ -186,22 +205,57 @@ export function TVChartContainer({ symbol, period }: Props) {
   // ── Load historical candles ────────────────────────────────────────────────
   useEffect(() => {
     if (!seriesRef.current || candles.length === 0) return
-    seriesRef.current.setData(candles.map(toChartBar))
+    const timeScale = chartRef.current?.timeScale()
+    const visibleRange = hasRenderedHistoryRef.current && timeScale &&
+      typeof timeScale.getVisibleLogicalRange === "function"
+      ? timeScale.getVisibleLogicalRange()
+      : null
+
+    displayedBarsRef.current = mergeBars([], candles)
+    seriesRef.current.setData(displayedBarsRef.current.map(toChartBar))
     hasDataRef.current = true
-    chartRef.current?.timeScale().fitContent()
+    if (visibleRange && timeScale && typeof timeScale.setVisibleLogicalRange === "function") {
+      timeScale.setVisibleLogicalRange(visibleRange)
+    } else {
+      chartRef.current?.timeScale().fitContent()
+    }
+    hasRenderedHistoryRef.current = true
   }, [candles])
 
   // ── Push live bar updates ─────────────────────────────────────────────────
   // Only allowed after historical data is loaded (hasDataRef guards the race
   // where a live bar arrives before the first setData call completes).
   useEffect(() => {
-    if (!seriesRef.current || !liveBar || !hasDataRef.current) return
-    try {
-      seriesRef.current.update(toChartBar(liveBar))
-    } catch {
-      // Live bar occasionally arrives out-of-order during rapid switching — safe to ignore
+    if (!seriesRef.current || !liveUpdate || !hasDataRef.current) return
+
+    const previous = displayedBarsRef.current
+    const updates = [...liveUpdate.bars].sort((a, b) => a.time - b.time)
+
+    // lightweight-charts only accepts update() for the current or next point.
+    // Older arrivals are late corrections, and gaps indicate reconnect loss.
+    const canIncrementallyUpdate = canIncrementallyApply(previous, updates, period)
+    const merged = mergeBars(previous, updates)
+
+    if (canIncrementallyUpdate) {
+      try {
+        for (const bar of updates) seriesRef.current.update(toChartBar(bar))
+        displayedBarsRef.current = merged
+        return
+      } catch {
+        // Fall through to a preserving rehydrate if the chart rejected an edge case.
+      }
     }
-  }, [liveBar])
+
+    const timeScale = chartRef.current?.timeScale()
+    const visibleRange = timeScale && typeof timeScale.getVisibleLogicalRange === "function"
+      ? timeScale.getVisibleLogicalRange()
+      : null
+    seriesRef.current.setData(merged.map(toChartBar))
+    displayedBarsRef.current = merged
+    if (visibleRange && timeScale && typeof timeScale.setVisibleLogicalRange === "function") {
+      timeScale.setVisibleLogicalRange(visibleRange)
+    }
+  }, [liveUpdate, period])
 
   // ── Draw position entry + liquidation price lines ─────────────────────────
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import { BINANCE_PERIOD, BINANCE_SYMBOL,  fetchOracleCandles } from "../lib/oracle"
-import type {OhlcBar} from "../lib/oracle";
+import { BINANCE_PERIOD, BINANCE_SYMBOL, fetchOracleCandles } from "../lib/oracle"
+import { parseStreamBar } from "../lib/bar-reconciliation"
+import type { LiveBarUpdate } from "../lib/bar-reconciliation"
 
 type BinanceKlineMsg = {
   e: "kline"
@@ -10,6 +11,7 @@ type BinanceKlineMsg = {
     h: string
     l: string
     c: string
+    v: string
   }
 }
 
@@ -27,8 +29,8 @@ const RECONNECT_MS = 2000
  * when symbol/period changes, the old effect's callbacks are silenced immediately
  * and cannot race with the new effect instance.
  */
-export function useLiveBar(symbol: string | undefined, period: string): OhlcBar | null {
-  const [liveBar, setLiveBar] = useState<OhlcBar | null>(null)
+export function useLiveBar(symbol: string | undefined, period: string): LiveBarUpdate | null {
+  const [liveBar, setLiveBar] = useState<LiveBarUpdate | null>(null)
 
   // These refs are fine to share — they hold the *current* WS handle and poll timer
   // so cleanup can reach them from the returned teardown function.
@@ -46,6 +48,7 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
     let gotFirstWsMessage = false
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let firstMsgTimeout: ReturnType<typeof setTimeout> | null = null
+    let hasConnected = false
 
     setLiveBar(null)
 
@@ -55,16 +58,25 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
     const binancePeriod = BINANCE_PERIOD[period]
 
     // ── Polling fallback ────────────────────────────────────────────────────
-    function startPolling() {
+    function startPolling(backfill = false) {
       if (usingPoll) return
       usingPoll = true
+      let firstPoll = true
 
       async function tick() {
         if (!mounted) return
         if (!isHiddenRef.current) {
           try {
-            const bars = await fetchOracleCandles(symbol!, period, 1)
-            if (bars.length > 0) setLiveBar(bars[bars.length - 1])
+            const limit = firstPoll && backfill ? 3 : 1
+            const bars = await fetchOracleCandles(symbol!, period, limit)
+            if (bars.length > 0) {
+              setLiveBar({
+                current: bars[bars.length - 1],
+                bars,
+                source: firstPoll && backfill ? "backfill" : "poll",
+              })
+            }
+            firstPoll = false
           } catch { /* silent retry */ }
         }
         pollTimerRef.current = setTimeout(tick, POLL_MS)
@@ -80,7 +92,7 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
 
     // ── WebSocket ──────────────────────────────────────────────────────────
     function connect() {
-      if (!binanceSym || !binancePeriod || isHiddenRef.current) { startPolling(); return }
+      if (!binanceSym || !binancePeriod || isHiddenRef.current) { startPolling(true); return }
 
       const url = `${BINANCE_WS}/${binanceSym.toLowerCase()}@kline_${binancePeriod}`
       const ws = new WebSocket(url)
@@ -88,7 +100,7 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
 
       // If no message arrives within 4 s, fall back to polling permanently
       firstMsgTimeout = setTimeout(() => {
-        if (!gotFirstWsMessage && mounted) { ws.close(); startPolling() }
+        if (!gotFirstWsMessage && mounted) { ws.close(); startPolling(true) }
       }, 4000)
 
       ws.onmessage = (evt: MessageEvent) => {
@@ -101,22 +113,30 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
         if (isHiddenRef.current) return
         try {
           const msg = JSON.parse(evt.data as string) as BinanceKlineMsg
-          const k = msg.k
-          setLiveBar({
-            time: Math.floor(k.t / 1000),
-            open: parseFloat(k.o),
-            high: parseFloat(k.h),
-            low: parseFloat(k.l),
-            close: parseFloat(k.c),
-          })
+          const bar = parseStreamBar(msg.k, period)
+          if (bar) setLiveBar({ current: bar, bars: [bar], source: "stream" })
         } catch { /* malformed frame */ }
+      }
+
+      ws.onopen = () => {
+        if (!hasConnected) {
+          hasConnected = true
+          return
+        }
+        // Reconnects may miss one or more interval boundaries. Fetch a small
+        // overlap from the selected historical source before applying stream data.
+        void fetchOracleCandles(symbol!, period, 3).then((bars) => {
+          if (mounted && bars.length > 0) {
+            setLiveBar({ current: bars[bars.length - 1], bars, source: "backfill" })
+          }
+        }).catch(() => undefined)
       }
 
       ws.onclose = () => {
         if (firstMsgTimeout) { clearTimeout(firstMsgTimeout); firstMsgTimeout = null }
         if (!mounted) return
         if (!gotFirstWsMessage) {
-          startPolling()
+          startPolling(true)
         } else {
           gotFirstWsMessage = false
           if (!isHiddenRef.current) reconnectTimer = setTimeout(connect, RECONNECT_MS)
