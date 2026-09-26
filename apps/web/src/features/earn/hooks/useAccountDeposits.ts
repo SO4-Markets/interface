@@ -28,11 +28,11 @@ export type UseAccountDepositsResult = {
 export function useAccountDeposits(account: string | null): UseAccountDepositsResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.deposits.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_DEPOSITS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_DEPOSITS, { account }, { signal })
       return result.deposits.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,

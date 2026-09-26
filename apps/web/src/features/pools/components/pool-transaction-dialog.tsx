@@ -18,6 +18,7 @@ import { TokenIcon } from "@/shared/components/TokenIcon"
 import { formatSorobanAmount, toSorobanAmount } from "@/shared/lib/bignum"
 import { formatToken, formatTxHash } from "@/shared/lib/format"
 import { getTokenClient } from "@/lib/contracts"
+import { queryKeys } from "@/shared/lib/query-keys"
 
 type PoolTransactionMode = "deposit" | "withdraw"
 
@@ -65,7 +66,7 @@ export function PoolTransactionDialog({
   const [steps, setSteps] = useState<Array<TransactionStep>>([])
 
   const { data: tokenBalances } = useQuery<TokenBalances>({
-    queryKey: ["pools", "depositBalances", market.marketToken, account],
+    queryKey: queryKeys.pools.depositBalances(market.marketToken, account),
     queryFn: async () => {
       const [long, short] = await Promise.all([
         getTokenClient(market.longToken, account).balance(account),

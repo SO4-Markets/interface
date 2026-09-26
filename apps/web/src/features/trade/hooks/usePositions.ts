@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { MARKETS } from "../data/markets"
 import { useTokenPrices } from "./useTokenPrices"
 import type { PositionInfo } from "@/lib/contracts"
 import { syntheticsReaderClient } from "@/lib/contracts"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { fromSorobanAmount } from "@/shared/lib/bignum"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export type Position = {
   key: string
@@ -29,7 +30,7 @@ export type Position = {
   fundingFeeUsd: number
 }
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 const USD_DECIMALS = 30
 const TOKEN_DECIMALS = 7
 
@@ -106,7 +107,6 @@ export function usePositions() {
     queryKey: queryKeys.trade.positions(CHAIN_ID, account ?? ""),
     queryFn: () => fetchPositions(account!, getMidPrice),
     enabled: !!account,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    ...queryPolicy("positions"),
   })
 }

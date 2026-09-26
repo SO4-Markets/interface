@@ -1,5 +1,5 @@
-import type { HistoryTimeRange } from "../../lib/order-history"
 import { MARKETS } from "../../data/markets"
+import type { HistoryTimeRange } from "../../lib/order-history"
 
 type Props = {
   marketKey: string | null

@@ -28,11 +28,11 @@ export type UseAffiliateTradersResult = {
 export function useAffiliateTraders(owner: string | null): UseAffiliateTradersResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.referrals.affiliateTraders(owner ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !owner) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_AFFILIATE_TRADERS, { owner })
+      const result = await executeGraphQLQuery(GET_AFFILIATE_TRADERS, { owner }, { signal })
       return result.traderReferrals.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!owner,

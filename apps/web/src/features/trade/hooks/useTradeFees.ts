@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { fetchFeeConfig } from "../lib/data-store"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { useTokenPrices } from "./useTokenPrices"
 
 const PRICE_IMPACT_BPS = 5
@@ -14,7 +14,7 @@ export type TradeFees = {
   feesBreakdown: Array<{ label: string; valueUsd: number }>
 }
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 
 export function useTradeFees(params: {
   sizeUsd: number

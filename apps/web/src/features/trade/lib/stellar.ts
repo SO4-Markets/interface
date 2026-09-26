@@ -7,7 +7,7 @@ import {
   toDecreaseOrderParams,
   toSwapOrderParams,
 } from "./order-encoding"
-import { queryKeys } from "./query-keys"
+import { activeQueryNetwork } from "./query-keys"
 import { registerPendingOrder } from "./pending-orders"
 import {
   foldAmendReplaceOutcome,
@@ -19,7 +19,7 @@ import {
 import type { CreateOrderParams, OrderKey } from "@/lib/contracts"
 import type { OrderType } from "../hooks/useOrders"
 import { NETWORK } from "@/app/config/network"
-import { queryClient } from "@/app/providers/QueryProvider"
+import { getQueryClient } from "@/app/providers/QueryProvider"
 import { walletKit } from "@/features/wallet/lib/wallet-kit"
 import {
   buildBatchOrderTransaction,
@@ -31,8 +31,9 @@ import {
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { formatUsd } from "@/shared/lib/format"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 
 /**
  * Remember a confirmed order locally until the indexer serves it.
@@ -121,11 +122,16 @@ function isValidAccount(account: string): boolean {
   return /^G[A-Z2-7]{55}$/.test(account)
 }
 
-async function invalidateTradeQueries(account: string): Promise<void> {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.trade.positions(CHAIN_ID, account) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) }),
-  ])
+async function refreshMutation(
+  action: Parameters<typeof invalidateMutationOutcome>[1],
+  account: string,
+  marketAddress?: string,
+): Promise<void> {
+  await invalidateMutationOutcome(getQueryClient(), action, {
+    account,
+    network: CHAIN_ID,
+    marketAddress,
+  })
 }
 
 function isDecreaseOrder(
@@ -162,7 +168,7 @@ export async function createIncreaseOrder(params: IncreaseOrderParams): Promise<
           },
           hash,
         )
-        return invalidateTradeQueries(params.account)
+        return refreshMutation("create", params.account, params.marketAddress)
       },
       onError: parseSorobanError,
     },
@@ -181,12 +187,10 @@ export async function createDecreaseOrder(params: DecreaseOrderParams): Promise<
     },
     {
       loadingMessage: `Closing ${params.isLong ? "Long" : "Short"} ${params.marketAddress}...`,
-      successMessage: "Position closed successfully",
+      successMessage: "Close order submitted",
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () =>
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.positions(CHAIN_ID, params.account),
-        }),
+        refreshMutation("create", params.account, params.marketAddress),
       onError: parseSorobanError,
     },
   )
@@ -214,10 +218,7 @@ export async function createSwapOrder(params: SwapOrderParams): Promise<string> 
       successMessage: "Swap submitted",
       successDescription: (hash) =>
         `${params.amountIn} ${params.fromToken} → ${params.minAmountOut} ${params.toToken} | Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () =>
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.tokenBalances(CHAIN_ID, params.account),
-        }),
+      onSuccess: () => refreshMutation("create", params.account),
       onError: parseSorobanError,
     },
   )
@@ -237,8 +238,7 @@ export async function cancelOrder(account: string, orderKey: OrderKey): Promise<
       loadingMessage: "Cancelling order...",
       successMessage: "Order cancelled",
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) }),
+      onSuccess: () => refreshMutation("cancel", account),
       onError: parseSorobanError,
     },
   )
@@ -397,7 +397,7 @@ export async function claimFundingFees(
       successMessage: "Funding fees claimed",
       successDescription: (hash) =>
         `${marketAddresses.length} market(s) | Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () => void invalidateTradeQueries(account),
+      onSuccess: () => void refreshMutation("claim", account),
       onError: parseSorobanError,
     },
   )
@@ -438,7 +438,12 @@ export async function sendBatchOrderTxn(
       loadingMessage: `Submitting batch (${opCount} operations)...`,
       successMessage: "Batch order submitted",
       successDescription: (hash) => `${opCount} operations | Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () => void invalidateTradeQueries(account),
+      onSuccess: async () => {
+        await Promise.all([
+          refreshMutation("create", account),
+          refreshMutation("cancel", account),
+        ])
+      },
       onError: parseSorobanError,
     },
   )
@@ -506,9 +511,7 @@ export async function createSidecarOrder(params: SidecarOrderParams): Promise<st
           },
           hash,
         )
-        return queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.orders(CHAIN_ID, params.account),
-        })
+        return refreshMutation("create", params.account, params.marketAddress)
       },
       onError: parseSorobanError,
     },

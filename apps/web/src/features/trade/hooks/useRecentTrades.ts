@@ -73,6 +73,7 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
 
   useEffect(() => {
     let mounted = true
+    const controller = new AbortController()
     setTrades([])
     setIsLoading(true)
     setError(null)
@@ -90,7 +91,10 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
     // ── Fetch initial REST snapshot ─────────────────────────────────────────
     async function fetchSnapshot() {
       try {
-        const res = await fetch(`${BINANCE_REST_BASE}/api/v3/trades?symbol=${binanceSym}&limit=${MAX_TRADES}`)
+        const res = await fetch(
+          `${BINANCE_REST_BASE}/api/v3/trades?symbol=${binanceSym}&limit=${MAX_TRADES}`,
+          { signal: controller.signal },
+        )
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const raw = (await res.json()) as Array<BinanceRestTrade>
         if (!mounted) return
@@ -170,6 +174,7 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
 
     return () => {
       mounted = false
+      controller.abort()
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null

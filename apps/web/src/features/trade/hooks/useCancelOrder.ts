@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "@workspace/ui/components/toast"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork } from "../lib/query-keys"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 import type { Order } from "./useOrders"
 
 interface CancelOrderOptions {
@@ -49,11 +50,11 @@ export function useCancelOrder() {
         throw error
       }
     },
-    onSuccess: () => {
-      // Invalidate order-related queries to reflect cancellation
-      queryClient.invalidateQueries({ queryKey: queryKeys.orders() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.orderHistory() })
-      queryClient.invalidateQueries({ queryKey: queryKeys.positions() })
+    onSuccess: async (_result, variables) => {
+      await invalidateMutationOutcome(queryClient, "cancel", {
+        account: variables.account,
+        network: activeQueryNetwork(),
+      })
     },
   })
 
@@ -77,9 +78,9 @@ export function useCancelOrder() {
   }
 }
 
-async function cancelSingleOrderViaContract(
-  account: string,
-  order: Order
+function cancelSingleOrderViaContract(
+  _account: string,
+  _order: Order
 ): Promise<{ txHash: string }> {
   // This is a placeholder that assumes the contract client exists
   // In real implementation, this would call the actual contract method
@@ -88,7 +89,7 @@ async function cancelSingleOrderViaContract(
   // 2. No other orders are affected
   // 3. Transaction atomicity (all or nothing)
 
-  return {
+  return Promise.resolve({
     txHash: "", // This would be populated by actual contract call
-  }
+  })
 }

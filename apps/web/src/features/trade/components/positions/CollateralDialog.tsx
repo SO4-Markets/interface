@@ -11,7 +11,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { createDecreaseOrder, createIncreaseOrder } from "../../lib/stellar"
-import { queryKeys } from "../../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import type { Position } from "../../hooks/usePositions"
 import { formatUsd } from "@/shared/lib/format"
 import { useTokenBalances } from "@/features/wallet/hooks/useTokenBalances"
@@ -128,7 +128,7 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
       
       // Invalidate queries to refresh list
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.positions("stellar-mainnet", account),
+        queryKey: queryKeys.positions(activeQueryNetwork(), account),
       })
       onClose()
     } catch (e) {

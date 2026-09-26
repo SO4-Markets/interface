@@ -100,6 +100,7 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
     }
 
     let mounted = true
+    const controller = new AbortController()
     snapshotDone.current = false
     bufferRef.current    = []
     bookRef.current      = { bids: new Map(), asks: new Map(), lastUpdateId: 0 }
@@ -166,6 +167,7 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
       try {
         const res = await fetch(
           `${BINANCE_REST}/api/v3/depth?symbol=${binanceSym}&limit=${LEVELS * 2}`,
+          { signal: controller.signal },
         )
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json() as BinanceSnapshot
@@ -194,7 +196,7 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
         if (snapshotDone.current) {
           applyDelta(bookRef.current.bids, msg.b)
           applyDelta(bookRef.current.asks, msg.a)
-          publish()
+          schedulePublish()
         } else {
           bufferRef.current.push(msg)
         }
@@ -210,6 +212,7 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
 
     return () => {
       mounted = false
+      controller.abort()
       if (publishFrame.current !== null) {
         cancelAnimationFrame(publishFrame.current)
         publishFrame.current = null

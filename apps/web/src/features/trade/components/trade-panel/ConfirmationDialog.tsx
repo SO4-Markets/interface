@@ -17,7 +17,7 @@ import {
   toDecreaseOrderParams,
 } from "../../lib/order-encoding"
 import { fetchFeeConfig } from "../../lib/data-store"
-import { queryKeys } from "../../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { applyReferralCode } from "@/features/referrals/lib/referrals"
@@ -86,7 +86,7 @@ export function ConfirmationDialog({
 
   const { data: feeConfig } = useQuery({
     queryKey: queryKeys.trade.feeConfig(
-      "stellar-mainnet",
+      activeQueryNetwork(),
       tradeState.marketAddress
     ),
     queryFn: () => fetchFeeConfig(tradeState.marketAddress),
