@@ -31,14 +31,14 @@ export function TradeInfoRows({
 }: Props) {
   const { getMidPrice } = useTokenPrices()
   const { data: fundingRate } = useFundingRate(marketAddress)
-  const fees = useTradeFees({ sizeUsd, marketAddress, isIncrease: true, tradeType })
+  const fees = useTradeFees({ sizeUsd, marketAddress, isIncrease: true, tradeType, referencePrice: getMidPrice(toTokenAddress) })
 
   const isLong = tradeType === "Long"
   const entryPrice = getMidPrice(toTokenAddress)
   const priceImpactPct = getPriceImpactPct(sizeUsd, fees.priceImpactUsd)
   const estimatedEntryPrice = getEstimatedEntryPrice(entryPrice, priceImpactPct, isLong)
 
-  const positionEstimate = riskParams && sizeUsd > 0 && estimatedEntryPrice > 0
+  const positionEstimate = riskParams && sizeUsd > 0 && estimatedEntryPrice !== null && estimatedEntryPrice > 0
     ? estimatePositionRisk({
         entryPrice: estimatedEntryPrice,
         collateralUsd: leverage > 0 ? sizeUsd / leverage : 0,
@@ -49,16 +49,16 @@ export function TradeInfoRows({
       })
     : null
 
-  const executionFeeDisplay = fees.executionFeeXlm > 0
+  const executionFeeDisplay = typeof fees.executionFeeXlm === "number" && typeof fees.executionFeeUsd === "number"
     ? <>~{fees.executionFeeXlm.toFixed(2)} XLM (<Numeric value={fees.executionFeeUsd} format="usd" role="neutral" />)</>
-    : "-"
+    : "Unavailable"
 
   if (tradeType === "Swap") {
     return (
       <div className="min-w-0 space-y-1 overflow-x-hidden text-xs">
         <Row label="Min. receive" value="-" />
-        <Row label="Swap fee" value={<Numeric value={fees.positionFeeUsd} format="usd" role="neutral" />} />
-        <Row label="Price impact" value={<Numeric value={fees.priceImpactUsd} format="usd" role={fees.priceImpactUsd < 0 ? "negative" : "neutral"} />} />
+        <Row label="Swap fee" value={fees.positionFeeUsd !== null ? <Numeric value={fees.positionFeeUsd} format="usd" role="neutral" /> : "Unavailable"} />
+        <Row label="Price impact" value={fees.priceImpactUsd !== null ? <Numeric value={fees.priceImpactUsd} format="usd" role="neutral" /> : "Unavailable"} />
         <ExecutionFeeRow value={executionFeeDisplay} />
       </div>
     )
@@ -66,10 +66,10 @@ export function TradeInfoRows({
 
   return (
     <div className="min-w-0 space-y-1 overflow-x-hidden text-xs">
-      <Row label="Entry price estimate" value={estimatedEntryPrice > 0 ? <Numeric value={estimatedEntryPrice} format="usd" role="neutral" /> : "-"} />
-      {tradeMode === "Limit" && <Row label="Limit price" value="-" />}
-      <Row label="Notional estimate" value={positionEstimate ? <Numeric value={positionEstimate.notionalUsd} format="usd" role="neutral" /> : "-"} />
-      <Row label="Margin estimate" value={positionEstimate ? <Numeric value={positionEstimate.collateralUsd} format="usd" role="neutral" /> : "-"} />
+      <Row label="Entry price estimate" value={estimatedEntryPrice !== null && estimatedEntryPrice > 0 ? <Numeric value={estimatedEntryPrice} format="usd" role="neutral" /> : "Unavailable"} />
+      {tradeMode === "Limit" && <Row label="Limit trigger" value="Not guaranteed to fill" />}
+      <Row label="Notional estimate" value={positionEstimate ? <Numeric value={positionEstimate.notionalUsd} format="usd" role="neutral" /> : "Unavailable"} />
+      <Row label="Margin estimate" value={positionEstimate ? <Numeric value={positionEstimate.collateralUsd} format="usd" role="neutral" /> : "Unavailable"} />
       <Row
         label="Liquidation estimate"
         value={positionEstimate?.liquidationPrice && positionEstimate.liquidationPrice > 0
@@ -84,11 +84,11 @@ export function TradeInfoRows({
             : "-"
         }
       />
-      <Row label="Position fee" value={<Numeric value={fees.positionFeeUsd} format="usd" role="neutral" />} />
-      <Row label="Price impact" value={<Numeric value={priceImpactPct} format="pct" role={Math.abs(priceImpactPct) > 0.5 ? "danger" : "neutral"} />} />
+      <Row label="Position fee" value={fees.positionFeeUsd !== null ? <Numeric value={fees.positionFeeUsd} format="usd" role="neutral" /> : "Unavailable"} />
+      <Row label="Price impact" value={priceImpactPct !== null ? <Numeric value={priceImpactPct} format="pct" role={Math.abs(priceImpactPct) > 0.5 ? "danger" : "neutral"} /> : "Unavailable"} />
       <ExecutionFeeRow value={executionFeeDisplay} />
       <div className="border-t border-border pt-1">
-        <Row label="Total fees" value={<Numeric value={fees.totalFeesUsd} format="usd" role="neutral" />} bold />
+        <Row label="Total fees" value={fees.totalFeesUsd !== null ? <Numeric value={fees.totalFeesUsd} format="usd" role="neutral" /> : "Unavailable"} bold />
       </div>
     </div>
   )

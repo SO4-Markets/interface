@@ -32,6 +32,7 @@ import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { estimateFee } from "@/lib/soroban/simulate"
 import { formatAddress } from "@/shared/lib/format"
 import { clampLeverage } from "../../lib/risk"
+import { getProtectionPrice } from "../../lib/fee-preview"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 
 type Props = {
@@ -41,7 +42,7 @@ type Props = {
   sizeUsd: number
   entryPrice: number
   liquidationPrice: number | null
-  totalFeesUsd: number
+  totalFeesUsd: number | null
 }
 
 export function ConfirmationDialog({
@@ -78,6 +79,7 @@ export function ConfirmationDialog({
     marketAddress: tradeState.marketAddress,
     isIncrease: true,
     tradeType: tradeState.tradeType,
+    referencePrice: entryPrice,
   })
   const priceImpactPct = getPriceImpactPct(sizeUsd, fees.priceImpactUsd)
   const estimatedEntryPrice = getEstimatedEntryPrice(
@@ -85,10 +87,11 @@ export function ConfirmationDialog({
     priceImpactPct,
     tradeFlags.isLong
   )
-  const slippageFactor = tradeState.advanced.slippagePct / 100
-  const acceptablePrice = tradeFlags.isLong
-    ? entryPrice * (1 + slippageFactor)
-    : entryPrice * (1 - slippageFactor)
+  const acceptablePrice = getProtectionPrice({
+    referencePrice: entryPrice,
+    isLong: tradeFlags.isLong,
+    slippagePct: tradeState.advanced.slippagePct,
+  })
 
   const { data: feeConfig } = useQuery({
     queryKey: queryKeys.trade.feeConfig(
@@ -101,7 +104,7 @@ export function ConfirmationDialog({
   })
 
   const maxPositionError =
-    !tradeFlags.isSwap && feeConfig && sizeUsd > feeConfig.maxPositionSizeUsd
+    !tradeFlags.isSwap && feeConfig?.source === "verified" && sizeUsd > feeConfig.maxPositionSizeUsd
       ? `Maximum position size for ${tradeState.toTokenAddress}/USD is $${feeConfig.maxPositionSizeUsd.toLocaleString()}.`
       : null
 
@@ -115,7 +118,7 @@ export function ConfirmationDialog({
       collateralDeltaAmount: Number(fromAmount || "0") * (order.sizePct / 100),
       sizeDeltaUsd: sizeUsd * (order.sizePct / 100),
       isLong: tradeFlags.isLong,
-      acceptablePrice: estimatedEntryPrice,
+      acceptablePrice: acceptablePrice ?? entryPrice,
       triggerPrice: Number(order.triggerPrice),
       orderType: order.type === "takeProfit" ? "LimitDecrease" : "StopLoss",
       receiveToken: collateralAddress!,
@@ -129,6 +132,8 @@ export function ConfirmationDialog({
     sizeUsd,
     tradeFlags.isLong,
     estimatedEntryPrice,
+    acceptablePrice,
+    entryPrice,
   ])
 
   useEffect(() => {
@@ -145,10 +150,10 @@ export function ConfirmationDialog({
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
-          acceptablePrice,
+          acceptablePrice: acceptablePrice ?? entryPrice,
           triggerPrice: tradeFlags.isMarket
             ? undefined
-            : Number(triggerPrice) || estimatedEntryPrice,
+            : Number(triggerPrice) || estimatedEntryPrice || acceptablePrice || entryPrice,
           orderType: tradeFlags.isMarket ? "MarketIncrease" : "LimitIncrease",
           leverage: effectiveLeverage,
         }
@@ -193,6 +198,8 @@ export function ConfirmationDialog({
     triggerPrice,
     effectiveLeverage,
     estimatedEntryPrice,
+    acceptablePrice,
+    entryPrice,
     sidecarCreateOrders,
   ])
 
@@ -235,12 +242,12 @@ export function ConfirmationDialog({
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
-          acceptablePrice,
+          acceptablePrice: acceptablePrice ?? entryPrice,
           triggerPrice: tradeFlags.isMarket
             ? undefined
-            : Number(triggerPrice) || estimatedEntryPrice,
+            : Number(triggerPrice) || estimatedEntryPrice || acceptablePrice || entryPrice,
           orderType: tradeFlags.isMarket ? "MarketIncrease" : "LimitIncrease",
-          leverage,
+          leverage: effectiveLeverage,
         }
 
         await sendBatchOrderTxn(account, {
@@ -281,13 +288,16 @@ export function ConfirmationDialog({
               <Row
                 label="Entry price"
                 value={
-                  estimatedEntryPrice > 0 ? formatUsd(estimatedEntryPrice) : "-"
+                  estimatedEntryPrice !== null && estimatedEntryPrice > 0 ? formatUsd(estimatedEntryPrice) : "Unavailable"
                 }
               />
+              {!tradeFlags.isMarket && (
+                <Row label="Limit trigger" value="Not guaranteed to fill" />
+              )}
               <Row
                 label="Price impact"
-                value={`${priceImpactPct.toFixed(2)}%`}
-                highlight={Math.abs(priceImpactPct) > 0.5}
+                value={priceImpactPct !== null ? `${priceImpactPct.toFixed(2)}%` : "Unavailable"}
+                highlight={priceImpactPct !== null && Math.abs(priceImpactPct) > 0.5}
               />
               <Row
                 label="Liquidation estimate"
@@ -297,13 +307,16 @@ export function ConfirmationDialog({
                 label="Network fee"
                 value={
                   estimatingFee
-                    ? "Estimating..."
-                    : networkFee
-                      ? `~${networkFee} XLM`
-                      : "-"
+                      ? "Estimating..."
+                      : networkFee
+                        ? `~${networkFee} XLM`
+                        : "Unavailable"
                 }
               />
-              <Row label="Execution fee" value="~0.01 XLM" />
+              <Row
+                label="Execution fee estimate"
+                value={typeof fees.executionFeeXlm === "number" ? `~${fees.executionFeeXlm.toFixed(2)} XLM` : "Unavailable"}
+              />
               {estimateError && (
                 <p className="max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
                   Fee estimation warning: {estimateError}
@@ -332,7 +345,7 @@ export function ConfirmationDialog({
             value={`${fromAmount || "0"} ${formatAddress(collateralAddress!)}`}
           />
           <div className="border-t border-border pt-1.5">
-            <Row label="Total fees" value={formatUsd(fees.totalFeesUsd)} bold />
+            <Row label="Total fees" value={fees.totalFeesUsd !== null ? formatUsd(fees.totalFeesUsd) : "Unavailable"} bold />
           </div>
         </div>
 
