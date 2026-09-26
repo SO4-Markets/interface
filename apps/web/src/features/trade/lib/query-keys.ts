@@ -1,56 +1,8 @@
-// Centralized TanStack Query key factory — keeps cache invalidation consistent
-
-const keys = {
-  // Available markets list (hydrated with on-chain isDisabled flag)
-  markets: () => ["markets"] as const,
-
-  // Token prices from oracle keeper (or Stellar oracle)
-  tokenPrices: (chainId: string) => ["tokenPrices", chainId] as const,
-
-  // 24h OHLC candle for price delta display
-  priceDelta24h: (symbol: string) => ["priceDelta24h", symbol] as const,
-
-  // OHLCV candles for TradingView chart
-  oracleCandles: (symbol: string, period: string) =>
-    ["oracleCandles", symbol, period] as const,
-
-  // On-chain market state: pool amounts, OI, rates
-  marketsInfo: (chainId: string) => ["marketsInfo", chainId] as const,
-  openInterest: (marketAddress: string) => ["openInterest", marketAddress] as const,
-
-  // User open positions
-  positions: (chainId: string, account: string) =>
-    ["positions", chainId, account] as const,
-
-  // Fresh position data from contracts (PnL, liquidation price)
-  positionsFresh: (chainId: string, account: string) =>
-    ["positionsFresh", chainId, account] as const,
-
-  // User pending orders
-  orders: (chainId: string, account: string) =>
-    ["orders", chainId, account] as const,
-
-  // Fee parameters from DataStore
-  feeConfig: (chainId: string, marketAddress: string) =>
-    ["feeConfig", chainId, marketAddress] as const,
-
-  // Oracle circuit breaker flag from DataStore
-  circuitBreaker: (symbol: string) => ["circuitBreaker", symbol] as const,
-
-  // Trade history
-  tradeHistory: (chainId: string, account: string, page: number) =>
-    ["tradeHistory", chainId, account, page] as const,
-
-  // Funding rate + next epoch timestamp
-  fundingRate: (chainId: string, marketAddress: string) =>
-    ["fundingRate", chainId, marketAddress] as const,
-
-  // User token balances (invalidated after swap / deposit / withdraw)
-  tokenBalances: (chainId: string, account: string) =>
-    ["tokenBalances", chainId, account] as const,
-}
-
-export const queryKeys = {
-  ...keys,
-  trade: keys,
-}
+/**
+ * Compatibility export for trade feature imports.
+ *
+ * The canonical query-key factory lives in shared/lib/query-keys so trade,
+ * wallet, indexer, earn, pools, faucet, referrals, and landing consumers all
+ * share one network/source-aware key hierarchy.
+ */
+export { queryKeys, activeQueryNetwork, normalizeQueryNetwork } from "@/shared/lib/query-keys"

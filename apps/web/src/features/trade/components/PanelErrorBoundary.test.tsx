@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { PanelErrorBoundary } from "./PanelErrorBoundary"
 
 function Bomb({ shouldThrow }: { shouldThrow: boolean }) {
@@ -35,7 +35,7 @@ describe("PanelErrorBoundary", () => {
   it("retry remounts only this panel, without navigating away", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     const originalReload = window.location.reload
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     ;(window.location as any).reload = vi.fn()
 
     render(

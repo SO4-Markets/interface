@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { useWalletStore } from "../store/wallet-store"
 import { NETWORK } from "@/app/config/network"
+import { queryKeys } from "@/shared/lib/query-keys"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 type HorizonBalance = {
   asset_type: "native" | "credit_alphanum4" | "credit_alphanum12"
@@ -9,9 +11,10 @@ type HorizonBalance = {
 }
 
 async function fetchTokenBalances(
-  address: string
+  address: string,
+  signal?: AbortSignal,
 ): Promise<Record<string, number>> {
-  const res = await fetch(`${NETWORK.horizonUrl}/accounts/${address}`)
+  const res = await fetch(`${NETWORK.horizonUrl}/accounts/${address}`, { signal })
   if (!res.ok) throw new Error(`Horizon error ${res.status}`)
   const data = await res.json()
 
@@ -27,10 +30,9 @@ export function useTokenBalances() {
   const { address, status } = useWalletStore()
 
   return useQuery({
-    queryKey: ["tokenBalances", address],
-    queryFn: () => fetchTokenBalances(address!),
+    queryKey: queryKeys.wallet.tokenBalances(address ?? ""),
+    queryFn: ({ signal }) => fetchTokenBalances(address!, signal),
     enabled: !!address && status === "connected",
-    staleTime: 15_000,
-    refetchInterval: 15_000,
+    ...queryPolicy("balances"),
   })
 }

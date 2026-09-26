@@ -1,9 +1,10 @@
-import { useEffect, useState, type RefObject } from "react"
+import {  useEffect, useState } from "react"
 import {
-  clamp,
-  CHART_ROW_HEIGHT_MIN,
   CHART_ROW_HEIGHT_MAX,
+  CHART_ROW_HEIGHT_MIN,
+  clamp,
 } from "../store/layout-preferences-store"
+import type {RefObject} from "react";
 
 /** Minimum height left for the panel below the chart row (e.g. account tabs). */
 const MIN_BOTTOM_HEIGHT = 160
@@ -25,7 +26,7 @@ export function useBoundedChartHeight(
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0]
-      if (entry) setContainerHeight(entry.contentRect.height)
+      setContainerHeight(entry.contentRect.height)
     })
     observer.observe(el)
     setContainerHeight(el.getBoundingClientRect().height)

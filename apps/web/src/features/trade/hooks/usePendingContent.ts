@@ -23,7 +23,7 @@ export function usePendingContent(
 ) {
   const [shouldShowSkeleton, setShouldShowSkeleton] = useState(isLoading && !hasData)
   const [isFirstLoad, setIsFirstLoad] = useState(true)
-  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>()
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const hasDataPrevRef = useRef(Boolean(hasData))
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export function usePendingContent(
 
   return {
     shouldShowSkeleton,
-    shouldShowContent: hasData && !shouldShowSkeleton,
+    shouldShowContent: Boolean(hasData) && !shouldShowSkeleton,
     isFirstLoad,
     isLoading,
     hasData: Boolean(hasData),

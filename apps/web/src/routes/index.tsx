@@ -4,6 +4,7 @@ import "../styles/landing.css"
 
 import { HeaderMenu } from "../ui/landing/header-menu"
 import { HeroSection } from "../ui/landing/hero-section"
+import { OrderbookPreview } from "../ui/landing/orderbook-preview"
 import { LaunchSection } from "../ui/landing/launch-section"
 import { LiquiditySection } from "../ui/landing/liquidity-section"
 import { SponsorsSection } from "../ui/landing/sponsors-section"
@@ -26,6 +27,7 @@ function LandingPage() {
           non-main landmark. */}
       <main id="main-content" tabIndex={-1} className="scroll-mt-16">
         <HeroSection />
+        <OrderbookPreview />
         <LaunchSection />
         <LiquiditySection />
         <SponsorsSection />

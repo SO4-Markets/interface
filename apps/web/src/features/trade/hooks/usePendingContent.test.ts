@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
-import { renderHook, act, waitFor } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { act, renderHook } from "@testing-library/react"
 import { usePendingContent } from "./usePendingContent"
 
 describe("usePendingContent", () => {
@@ -26,8 +26,9 @@ describe("usePendingContent", () => {
 
   it("hides skeleton when data arrives", () => {
     const { result, rerender } = renderHook(
-      ({ isLoading, hasData }) => usePendingContent(isLoading, hasData),
-      { initialProps: { isLoading: true, hasData: null } }
+      ({ isLoading, hasData }: { isLoading: boolean; hasData: unknown }) =>
+        usePendingContent(isLoading, hasData),
+      { initialProps: { isLoading: true, hasData: null as unknown } }
     )
 
     act(() => {
@@ -44,7 +45,8 @@ describe("usePendingContent", () => {
 
   it("does not show skeleton on background refetch when data exists", () => {
     const { result, rerender } = renderHook(
-      ({ isLoading, hasData }) => usePendingContent(isLoading, hasData),
+      ({ isLoading, hasData }: { isLoading: boolean; hasData: unknown }) =>
+        usePendingContent(isLoading, hasData),
       { initialProps: { isLoading: false, hasData: { id: "1" } } }
     )
 
@@ -63,8 +65,9 @@ describe("usePendingContent", () => {
 
   it("prevents skeleton flashing on fast responses", async () => {
     const { result, rerender } = renderHook(
-      ({ isLoading, hasData }) => usePendingContent(isLoading, hasData),
-      { initialProps: { isLoading: true, hasData: null } }
+      ({ isLoading, hasData }: { isLoading: boolean; hasData: unknown }) =>
+        usePendingContent(isLoading, hasData),
+      { initialProps: { isLoading: true, hasData: null as unknown } }
     )
 
     // Data arrives before delay
@@ -106,8 +109,9 @@ describe("usePendingContent", () => {
 
   it("tracks first load correctly after data arrival", () => {
     const { result, rerender } = renderHook(
-      ({ isLoading, hasData }) => usePendingContent(isLoading, hasData),
-      { initialProps: { isLoading: true, hasData: null } }
+      ({ isLoading, hasData }: { isLoading: boolean; hasData: unknown }) =>
+        usePendingContent(isLoading, hasData),
+      { initialProps: { isLoading: true, hasData: null as unknown } }
     )
 
     expect(result.current.isFirstLoad).toBe(true)
@@ -122,14 +126,15 @@ describe("usePendingContent", () => {
 
   it("shows skeleton again when data is cleared and reloading", () => {
     const { result, rerender } = renderHook(
-      ({ isLoading, hasData }) => usePendingContent(isLoading, hasData),
+      ({ isLoading, hasData }: { isLoading: boolean; hasData: unknown }) =>
+        usePendingContent(isLoading, hasData),
       { initialProps: { isLoading: false, hasData: { id: "1" } } }
     )
 
     expect(result.current.isFirstLoad).toBe(false)
 
     // Data is cleared and reloading
-    rerender({ isLoading: true, hasData: null })
+    rerender({ isLoading: true, hasData: null as unknown as { id: string } })
 
     act(() => {
       vi.advanceTimersByTime(300)

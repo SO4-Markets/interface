@@ -15,8 +15,8 @@ export function InterruptiblePresence({ present, children, duration = 160, class
   React.useEffect(() => {
     if (present) {
       setMounted(true)
-      const frame = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(frame)
+      setVisible(true)
+      return
     }
     setVisible(false)
     const timer = window.setTimeout(() => setMounted(false), duration)

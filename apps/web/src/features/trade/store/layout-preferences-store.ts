@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-// Issue #685 (OB-038): bounded workspace panel resizing.
+// Issue 685 (OB-038): bounded workspace panel resizing.
 //
 // Layout is a pure UI preference and is persisted independently of any
 // financial/query data — this store never touches TanStack Query's cache

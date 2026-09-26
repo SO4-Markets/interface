@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 import {
-  useLayoutPreferencesStore,
-  CHART_ROW_HEIGHT_DEFAULT,
-  CHART_ROW_HEIGHT_MIN,
-  CHART_ROW_HEIGHT_MAX,
   BOOK_WIDTH_DEFAULT,
-  BOOK_WIDTH_MIN,
   BOOK_WIDTH_MAX,
+  BOOK_WIDTH_MIN,
+  CHART_ROW_HEIGHT_DEFAULT,
+  CHART_ROW_HEIGHT_MAX,
+  CHART_ROW_HEIGHT_MIN,
   TRADE_PANEL_WIDTH_DEFAULT,
-  TRADE_PANEL_WIDTH_MIN,
   TRADE_PANEL_WIDTH_MAX,
+  TRADE_PANEL_WIDTH_MIN,
+  useLayoutPreferencesStore,
 } from "./layout-preferences-store"
 
 describe("layout-preferences-store", () => {

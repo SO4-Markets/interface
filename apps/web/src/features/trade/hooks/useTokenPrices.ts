@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { fetchTokenPrices } from "../lib/oracle"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { getOracleStaleness } from "../lib/pyth"
 import { useTokenList } from "./useTokenList"
 import type { TokenPrice } from "../lib/oracle"
 import type { OracleStaleness } from "../lib/pyth"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 
 // Maps our test token symbols to base symbols that fetchTokenPrices uses as keys
 const TEST_TO_BASE: Record<string, string> = {
@@ -21,8 +22,7 @@ export function useTokenPrices() {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.tokenPrices(CHAIN_ID),
     queryFn: fetchTokenPrices,
-    staleTime: 3_000,
-    refetchInterval: 5_000,
+    ...queryPolicy("prices-depth", { fallbackPollMs: 5_000 }),
     select(prices): PricesMap {
       return Object.fromEntries(prices.map((p) => [p.symbol, p]))
     },

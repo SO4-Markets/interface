@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router"
+import { ViewportReveal } from "../viewport-reveal"
 import { PoolCard } from "./pool-card"
 import { useLandingStats } from "./use-landing-stats"
 import { cleanFormatUsd } from "./utils/formatters"
-import { ViewportReveal } from "../viewport-reveal"
 
 // Mirrors what /earn actually offers (apps/web/src/features/earn/data/pools.ts):
 // GM pools (single-market liquidity) and GLV vaults (diversified across GM

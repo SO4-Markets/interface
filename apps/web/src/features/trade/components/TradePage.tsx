@@ -14,7 +14,9 @@ import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
 import { CircuitBreakerBanner } from "./CircuitBreakerBanner"
 import { PanelErrorBoundary } from "./PanelErrorBoundary"
-import { MobileTradeNav, mobileViewClassName, type MobileTradeView } from "./MobileTradeNav"
+import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
+import { OrderBookPanel } from "./orderbook/OrderBookPanel"
+import type {MobileTradeView} from "./MobileTradeNav";
 import { saveReferralCode } from "@/lib/contracts"
 
 const tradeRoute = getRouteApi("/trade")
@@ -28,7 +30,7 @@ export function TradePage() {
   // Pre-fill the form from a shared deeplink (e.g. /trade?market=BTC&type=long).
   const search = tradeRoute.useSearch()
   const navigate = tradeRoute.useNavigate()
-  const [activePanel, setActivePanel] = useState<"positions" | "orders" | "trades" | "claims">(
+  const [activePanel, setActivePanel] = useState<"positions" | "orders" | "history" | "trades" | "claims">(
     search.panel ?? "positions"
   )
   const appliedDeeplink = useRef(false)
@@ -49,7 +51,7 @@ export function TradePage() {
 
   useEffect(() => setActivePanel(search.panel ?? "positions"), [search.panel])
 
-  function handlePanelChange(panel: "positions" | "orders" | "trades" | "claims") {
+  function handlePanelChange(panel: "positions" | "orders" | "history" | "trades" | "claims") {
     setActivePanel(panel)
     void navigate({ search: (previous) => ({ ...previous, panel }) })
   }
@@ -107,9 +109,10 @@ export function TradePage() {
               className="hidden md:block"
             />
 
-            {/* Market depth / order book (reference data only — see PR scope note) */}
+            {/* Market depth / order book panel — tabs: Order Book + Trades tape */}
             <aside
               id="mobile-trade-view-book"
+              aria-label="Order book depth"
               className={cn(
                 "min-h-40 w-full flex-col overflow-hidden border-t border-border md:min-h-0 md:w-[var(--book-width)] md:border-t-0 md:border-inline-start lg:min-h-0 lg:w-[var(--book-width)] lg:border-t-0 lg:border-inline-start",
                 mobileViewClassName("book", mobileView)
@@ -117,13 +120,7 @@ export function TradePage() {
               style={{ ["--book-width" as string]: `${bookWidth}px` }}
             >
               <PanelErrorBoundary panel="market depth">
-                <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                  <h2 className="text-xs font-semibold uppercase tracking-wide">Market depth</h2>
-                  <span className="text-xs text-muted-foreground">Reference data</span>
-                </div>
-                <div className="flex flex-1 items-center justify-center p-4 text-center text-xs text-muted-foreground">
-                  Executable order-book depth is unavailable until a verified matching source is connected.
-                </div>
+                <OrderBookPanel symbol={trade.toTokenAddress} />
               </PanelErrorBoundary>
             </aside>
           </div>

@@ -1,5 +1,6 @@
 import { CandlestickSeries, LineStyle, createChart } from "lightweight-charts"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
+import { cn } from "@workspace/ui/lib/utils"
 import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
 import { usePositions } from "../../hooks/usePositions"
@@ -25,6 +27,7 @@ import {
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OhlcBar } from "../../lib/oracle"
 import { formatUsd } from "@/shared/lib/format"
+import { ENV } from "@/app/config/env"
 
 type ChartLine = {
   id: string
@@ -95,6 +98,8 @@ function toChartBar(bar: OhlcBar): CandlestickData<UTCTimestamp> {
   }
 }
 
+
+
 export function TVChartContainer({ symbol, period }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -104,13 +109,21 @@ export function TVChartContainer({ symbol, period }: Props) {
   // Prevents series.update() from firing against an empty or stale series.
   const hasDataRef = useRef(false)
 
+  const queryClient = useQueryClient()
+
   const {
-    data: candles = [],
+    data: candleData,
     isLoading: isQueryLoading = false,
     isError = false,
     isPlaceholderData = false,
     isFetching = false,
+    refetch,
   } = useOracleCandles(symbol, period)
+
+  const candles = candleData?.candles ?? []
+  const venueName = candleData?.venueName ?? "Oracle Reference"
+  const sourceType = candleData?.sourceType ?? "oracle_reference"
+  const network = candleData?.network ?? ENV.NETWORK
 
   const liveBar = useLiveBar(symbol, period)
   const { data: positions = [] } = usePositions()
@@ -125,6 +138,8 @@ export function TVChartContainer({ symbol, period }: Props) {
   const hasData = candles.length > 0
   const isLoading = isQueryLoading || (!hasData && isFetching)
   const isStale = isPlaceholderData || (isFetching && hasData)
+  const isNoHistory = !isLoading && !hasData && !isError && !isStale
+  const isFailed = isError && !hasData
   const isIdle = !isLoading && !hasData && !isError
 
   const summary = useMemo(() => getChartSummary(candles, liveBar, symbol, period), [candles, liveBar, symbol, period])
@@ -197,27 +212,34 @@ export function TVChartContainer({ symbol, period }: Props) {
     if (symbolChanged) {
       priceLineRefs.current.forEach((pl) => seriesRef.current!.removePriceLine(pl))
       priceLineRefs.current.clear()
+      fittedRef.current = false
 
       // When switching markets, if placeholder data is not active (i.e. not same market timeframe switch),
       // clear the series immediately so old-market candles are never presented under a different market.
       if (!isPlaceholderData && candles.length === 0) {
         seriesRef.current.setData([])
-        hasDataRef.current.current = false
+        hasDataRef.current = false
       }
     }
   }, [symbol, period, isPlaceholderData, candles.length])
 
   // ── Load historical candles ────────────────────────────────────────────────
+  const fittedRef = useRef(false)
   useEffect(() => {
     if (!seriesRef.current) return
     if (candles.length === 0) {
       seriesRef.current.setData([])
-      hasDataRef.current.current = false
+      hasDataRef.current = false
+      fittedRef.current = false
       return
     }
     seriesRef.current.setData(candles.map(toChartBar))
-    hasDataRef.current.current = true
-    chartRef.current?.timeScale().fitContent()
+    hasDataRef.current = true
+    // Only fit content once per symbol/period load, not on every candle update
+    if (!fittedRef.current) {
+      chartRef.current?.timeScale().fitContent()
+      fittedRef.current = true
+    }
   }, [candles])
 
   // ── Push live bar updates ─────────────────────────────────────────────────
@@ -305,6 +327,19 @@ export function TVChartContainer({ symbol, period }: Props) {
 
   return (
     <div className="relative flex h-full w-full flex-col">
+      {/* ═══ Venue & Data Source Metadata Badge ═══════════════════════════════ */}
+      <div className="flex items-center justify-between border-b border-border bg-muted/20 px-3 py-1 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+          <span className="text-muted-foreground/70">Data Source:</span>
+          <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
+            {sourceType === "oracle_reference" ? `Reference Price (${venueName})` : `Execution Fills (${venueName})`}
+          </span>
+        </div>
+        <span className="font-mono text-[10px] uppercase text-muted-foreground/60">
+          {network}
+        </span>
+      </div>
+
       {/* ═══ Chart area ═══════════════════════════════════════════════════════ */}
       <div className="relative min-h-0 flex-1">
         {/* Accessible summary for screen readers */}
@@ -337,17 +372,53 @@ export function TVChartContainer({ symbol, period }: Props) {
           </div>
         )}
 
-        {/* Empty state */}
-        {isIdle && (
-          <div role="status" className="flex h-full items-center justify-center text-xs text-muted-foreground">
-            No trading data available for {symbol}
+        {/* No history state: market has no data yet */}
+        {isNoHistory && (
+          <div role="status" className="flex h-full flex-col items-center justify-center gap-3 text-center px-4 py-8">
+            <p className="text-xs text-muted-foreground">
+              No trading history available for {symbol}
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              This market may be new. Check back once trading begins.
+            </p>
           </div>
         )}
 
-        {/* Error state */}
-        {isError && !hasData && (
-          <div role="alert" className="flex h-full items-center justify-center text-xs text-destructive">
-            Unable to load chart data for {symbol}
+        {/* Failed load state: fetch error, no fallback data */}
+        {isFailed && (
+          <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 text-center px-4 py-8">
+            <p className="text-xs text-destructive">
+              Unable to load {period} chart data
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              {venueName} data source is unavailable. Please try again.
+            </p>
+            <button
+              onClick={() => void refetch()}
+              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
+              aria-label={`Retry loading chart for ${symbol}`}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Stale data state: live feed stopped updating */}
+        {isStale && hasData && !isLoading && (
+          <div role="alert" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/60 backdrop-blur-sm pointer-events-auto">
+            <p className="text-xs text-destructive font-medium">
+              Live data unavailable for {period}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Showing last known data. Waiting for connection to recover…
+            </p>
+            <button
+              onClick={() => void refetch()}
+              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors pointer-events-auto"
+              aria-label={`Retry updating chart for ${symbol}`}
+            >
+              Refresh Now
+            </button>
           </div>
         )}
 
@@ -355,10 +426,11 @@ export function TVChartContainer({ symbol, period }: Props) {
         <div
           ref={containerRef}
           className={cn("h-full w-full transition-opacity duration-150", isStale && "opacity-60")}
+          style={{ touchAction: "none" }}
           role="img"
           aria-label={`Price chart for ${symbol}`}
           aria-describedby="chart-desc"
-          aria-hidden={isIdle || (isError && !hasData)}
+          aria-hidden={isNoHistory || isFailed}
         />
       </div>
 

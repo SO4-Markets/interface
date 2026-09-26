@@ -40,7 +40,7 @@ export type DataStreamConfig = {
  * Refresh target after a transaction.
  * Maps actions to the entities that must be refreshed.
  */
-export type RefreshMatrix = Record<TransactionAction, DataEntity[]>
+export type RefreshMatrix = Record<TransactionAction, Array<DataEntity>>
 
 /**
  * Source-to-screen and confirmation-to-refresh targets.
@@ -246,8 +246,6 @@ export function isDataStale(
   contract: DataFreshnessContract,
 ): boolean {
   const config = contract.streams[entity]
-  if (!config) return true
-
   const ageMs = Date.now() - lastUpdateMs
   return ageMs > config.staleness.thresholdMs
 }
@@ -258,8 +256,8 @@ export function isDataStale(
 export function getEntitiesToRefresh(
   action: TransactionAction,
   contract: DataFreshnessContract,
-): DataEntity[] {
-  return contract.refreshMatrix[action] ?? []
+): Array<DataEntity> {
+  return contract.refreshMatrix[action]
 }
 
 /**
@@ -269,5 +267,5 @@ export function getFallbackBehavior(
   entity: DataEntity,
   contract: DataFreshnessContract,
 ): 'skeleton' | 'staleIndicator' | 'spinner' | 'none' {
-  return contract.targets[entity]?.fallbackBehavior ?? 'none'
+  return contract.targets[entity].fallbackBehavior
 }

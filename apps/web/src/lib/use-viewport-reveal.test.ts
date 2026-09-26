@@ -1,13 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { renderHook } from "@testing-library/react"
 import { useViewportReveal } from "./use-viewport-reveal"
 
 describe("useViewportReveal", () => {
   let observerCallback: IntersectionObserverCallback
-  let observerInstance: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    observerInstance = vi.fn()
     global.IntersectionObserver = vi.fn((callback) => {
       observerCallback = callback
       return {
@@ -34,7 +32,7 @@ describe("useViewportReveal", () => {
     const mockEntry = {
       isIntersecting: true,
       target: document.createElement("div"),
-    } as IntersectionObserverEntry
+    } as unknown as IntersectionObserverEntry
 
     observerCallback([mockEntry], {} as IntersectionObserver)
     expect(onReveal).toHaveBeenCalledOnce()
@@ -47,7 +45,7 @@ describe("useViewportReveal", () => {
     const mockEntry = {
       isIntersecting: true,
       target: document.createElement("div"),
-    } as IntersectionObserverEntry
+    } as unknown as IntersectionObserverEntry
 
     observerCallback([mockEntry], {} as IntersectionObserver)
     observerCallback([mockEntry], {} as IntersectionObserver)
@@ -62,7 +60,7 @@ describe("useViewportReveal", () => {
     const mockEntry = {
       isIntersecting: true,
       target: document.createElement("div"),
-    } as IntersectionObserverEntry
+    } as unknown as IntersectionObserverEntry
 
     observerCallback([mockEntry], {} as IntersectionObserver)
     observerCallback([mockEntry], {} as IntersectionObserver)
@@ -77,7 +75,7 @@ describe("useViewportReveal", () => {
     const mockEntry = {
       isIntersecting: false,
       target: document.createElement("div"),
-    } as IntersectionObserverEntry
+    } as unknown as IntersectionObserverEntry
 
     observerCallback([mockEntry], {} as IntersectionObserver)
     expect(onReveal).not.toHaveBeenCalled()

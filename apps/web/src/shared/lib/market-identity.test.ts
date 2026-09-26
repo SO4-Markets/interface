@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  validateMarketIdentity,
+  
   canPerformAction,
   getMarketCollisionKey,
-  type MarketIdentity,
+  validateMarketIdentity
 } from './market-identity'
+import type {MarketIdentity} from './market-identity';
 
 describe('market-identity', () => {
   const validMarket: MarketIdentity = {
@@ -162,8 +163,8 @@ describe('market-identity', () => {
 
   describe('getMarketCollisionKey', () => {
     it('generates unique key per network', () => {
-      const mainnet = { ...validMarket, network: 'mainnet' }
-      const testnet = { ...validMarket, network: 'testnet' }
+      const mainnet: MarketIdentity = { ...validMarket, network: 'mainnet' }
+      const testnet: MarketIdentity = { ...validMarket, network: 'testnet' }
 
       const keyMainnet = getMarketCollisionKey(mainnet)
       const keyTestnet = getMarketCollisionKey(testnet)
@@ -172,8 +173,8 @@ describe('market-identity', () => {
     })
 
     it('generates unique key per venue', () => {
-      const soroban = { ...validMarket, venue: 'soroban' }
-      const classic = { ...validMarket, venue: 'classic' }
+      const soroban: MarketIdentity = { ...validMarket, venue: 'soroban' }
+      const classic: MarketIdentity = { ...validMarket, venue: 'classic' }
 
       const keySoroban = getMarketCollisionKey(soroban)
       const keyClassic = getMarketCollisionKey(classic)
@@ -227,7 +228,7 @@ describe('market-identity', () => {
     })
 
     it('handles market with missing optional capabilities', () => {
-      const minimal = {
+      const minimal: MarketIdentity = {
         ...validMarket,
         capabilities: {
           supportedActions: ['create'],

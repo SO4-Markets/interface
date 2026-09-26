@@ -250,6 +250,63 @@ export async function fetchTokenPrices(): Promise<Array<TokenPrice>> {
   }
 }
 
+export type CandleSeriesType = "execution" | "oracle_reference"
+
+export type CandleResponse = {
+  candles: Array<OhlcBar>
+  sourceType: CandleSeriesType
+  venueName: string
+  symbol: string
+  period: string
+  network: string
+}
+
+export function validateAndSortCandles(bars: Array<OhlcBar>): Array<OhlcBar> {
+  if (!Array.isArray(bars)) return []
+  const valid: Array<OhlcBar> = []
+  const seenTimes = new Set<number>()
+
+  for (const bar of bars) {
+
+    // Timestamp validation: finite number > 0 in Unix seconds
+    let time = Number(bar.time)
+    if (!Number.isFinite(time) || time <= 0) continue
+
+    // If timestamp is accidentally in milliseconds (> 10^11), convert to seconds
+    if (time > 1e11) {
+      time = Math.floor(time / 1000)
+    }
+
+    const open = Number(bar.open)
+    const high = Number(bar.high)
+    const low = Number(bar.low)
+    const close = Number(bar.close)
+
+    // Price precision & sanity checks: positive numbers, finite, high/low bounds
+    if (
+      !Number.isFinite(open) || open <= 0 ||
+      !Number.isFinite(high) || high <= 0 ||
+      !Number.isFinite(low) || low <= 0 ||
+      !Number.isFinite(close) || close <= 0
+    ) {
+      continue
+    }
+
+    // High must be highest, Low must be lowest
+    if (high < low || high < open || high < close || low > open || low > close) {
+      continue
+    }
+
+    if (seenTimes.has(time)) continue
+    seenTimes.add(time)
+
+    valid.push({ time, open, high, low, close })
+  }
+
+  // Sort chronologically ascending without interpolating gaps
+  return valid.sort((a, b) => a.time - b.time)
+}
+
 // ─── fetchOracleCandles ──────────────────────────────────────────────────────
 
 export async function fetchOracleCandles(
@@ -257,8 +314,17 @@ export async function fetchOracleCandles(
   period: string,
   limit = 500,
   signal?: AbortSignal,
-): Promise<Array<OhlcBar>> {
-  if (signal?.aborted) return []
+): Promise<CandleResponse> {
+  const emptyResponse = (venue: string): CandleResponse => ({
+    candles: [],
+    sourceType: "oracle_reference",
+    venueName: venue,
+    symbol,
+    period,
+    network: ENV.NETWORK,
+  })
+
+  if (signal?.aborted) return emptyResponse("Unknown")
   // Resolve contract address / test symbol → base symbol (BTC, ETH, XLM, USDC)
   const base = resolveBaseSymbol(symbol)
 
@@ -275,26 +341,43 @@ export async function fetchOracleCandles(
       const res = await fetch(`${BINANCE_BASE}/api/v3/klines?${params}`, { signal })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const raw = (await res.json()) as Array<Array<string | number>>
-      if (signal?.aborted) return []
-      // Binance klines: [openTime_ms, open, high, low, close, vol, ...] oldest-first
-      return raw.map((c) => ({
+      if (signal?.aborted) return emptyResponse("Binance Reference")
+
+      const rawBars: Array<OhlcBar> = raw.map((c) => ({
         time: Math.floor(Number(c[0]) / 1000),
         open: parseFloat(c[1] as string),
         high: parseFloat(c[2] as string),
         low: parseFloat(c[3] as string),
         close: parseFloat(c[4] as string),
       }))
+
+      return {
+        candles: validateAndSortCandles(rawBars),
+        sourceType: "oracle_reference",
+        venueName: "Binance Reference",
+        symbol: base,
+        period,
+        network: ENV.NETWORK,
+      }
     } catch {
-      if (signal?.aborted) return []
+      if (signal?.aborted) return emptyResponse("Binance Reference")
       // Fall through to Pyth Benchmarks
     }
   }
 
   // Fallback: Pyth Benchmarks (reliable, no geo-blocking)
   try {
-    return await fetchPythBenchmarkCandles(base, period, limit, signal)
+    const pythBars = await fetchPythBenchmarkCandles(base, period, limit, signal)
+    return {
+      candles: validateAndSortCandles(pythBars),
+      sourceType: "oracle_reference",
+      venueName: "Pyth Hermes Reference",
+      symbol: base,
+      period,
+      network: ENV.NETWORK,
+    }
   } catch {
-    if (signal?.aborted) return []
+    if (signal?.aborted) return emptyResponse("Pyth Hermes Reference")
     // Fall through to GMX
   }
 
@@ -308,13 +391,22 @@ export async function fetchOracleCandles(
     const res = await fetch(`${GMX_BASE}/prices/candles?${params}`, { signal })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = (await res.json()) as { candles: Array<Array<number>> }
-    if (signal?.aborted) return []
-    // Reverse to get oldest-first
-    return json.candles
+    if (signal?.aborted) return emptyResponse("SO4 Oracle Reference")
+
+    const rawBars: Array<OhlcBar> = json.candles
       .map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
       .reverse()
+
+    return {
+      candles: validateAndSortCandles(rawBars),
+      sourceType: "oracle_reference",
+      venueName: "SO4 Oracle Reference",
+      symbol: base,
+      period,
+      network: ENV.NETWORK,
+    }
   } catch {
-    return []
+    return emptyResponse("SO4 Oracle Reference")
   }
 }
 

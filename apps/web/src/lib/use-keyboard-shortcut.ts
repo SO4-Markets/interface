@@ -31,7 +31,7 @@ function parseCombo(combo: string): {
     cmd: parts.includes("cmd") || parts.includes("meta"),
     shift: parts.includes("shift"),
     alt: parts.includes("alt"),
-    key: parts[parts.length - 1]!,
+    key: parts[parts.length - 1],
   }
 
   return parsed
@@ -74,8 +74,9 @@ export function useKeyboardShortcut(config: KeyboardShortcutConfig) {
       if (!allowInEditableMode) {
         const target = event.target as HTMLElement
         if (
-          target?.contentEditable === "true" ||
-          (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA"))
+          target.contentEditable === "true" ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA"
         ) {
           return
         }
@@ -100,9 +101,9 @@ const shortcutRegistry = new Map<string, Omit<KeyboardShortcutConfig, "onTrigger
 
 export function registerShortcut(
   combo: string,
-  config: Omit<KeyboardShortcutConfig, "onTrigger">
+  config: Omit<KeyboardShortcutConfig, "onTrigger" | "combo">
 ) {
-  shortcutRegistry.set(combo, config)
+  shortcutRegistry.set(combo, { combo, ...config })
 }
 
 export function getRegisteredShortcuts() {

@@ -27,8 +27,6 @@ export async function submitTx(
           return response.hash
         })()
 
-    await options.onSuccess?.(hash)
-
     const description = options.successDescription?.(hash)
 
     toast.success(options.successMessage, {
@@ -47,6 +45,19 @@ export async function submitTx(
         </div>
       ),
     })
+
+    // Execute onSuccess as a side effect after transaction confirmation,
+    // but don't let its errors overwrite transaction success state
+    try {
+      await options.onSuccess?.(hash)
+    } catch (sideEffectError) {
+      // Log the error but don't rewrite transaction truth
+      console.error("onSuccess side effect failed:", sideEffectError)
+      // Show a secondary toast for the refresh/indexing failure
+      toast.info("Updating account data...", {
+        description: "Your transaction succeeded. Refreshing account information.",
+      })
+    }
 
     return hash
   } catch (error) {

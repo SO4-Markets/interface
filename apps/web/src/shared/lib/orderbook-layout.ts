@@ -60,7 +60,7 @@ export type PanelControl = {
 export type WorkspacePanel = {
   id: PanelId
   title: string
-  controls: PanelControl[]
+  controls: Array<PanelControl>
   // Minimum width/height for readability
   minWidth?: string
   minHeight?: string
@@ -76,7 +76,7 @@ export type WorkspacePanel = {
     skeletonHeight: string
   }
   // Supported order types for this panel
-  supportedOrderTypes: OrderType[]
+  supportedOrderTypes: Array<OrderType>
 }
 
 /**
@@ -84,7 +84,7 @@ export type WorkspacePanel = {
  */
 export type WorkspaceLayout = {
   viewport: Viewport
-  panels: WorkspacePanel[]
+  panels: Array<WorkspacePanel>
   // Panel arrangement (grid, flex, absolute)
   arrangement: 'grid' | 'flex' | 'absolute'
   // How panels can be resized
@@ -94,7 +94,7 @@ export type WorkspaceLayout = {
   // Whether pro mode customization applies
   proModeEnabled: boolean
   // Default panel visibility order
-  panelOrder: PanelId[]
+  panelOrder: Array<PanelId>
 }
 
 export type OrderType = 'limit' | 'market' | 'stop-loss' | 'take-profit'

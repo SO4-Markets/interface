@@ -1,4 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { EarnPage } from "../features/earn/components/earn-page"
+import { Suspense, lazy } from "react"
+import { LoadingPage } from "../shared/components/LoadingPage"
 
-export const Route = createFileRoute("/earn")({ component: EarnPage })
+const EarnPage = lazy(() =>
+  import("../features/earn/components/earn-page").then((m) => ({
+    default: m.EarnPage,
+  }))
+)
+
+export const Route = createFileRoute("/earn")({
+  component: () => (
+    <Suspense fallback={<LoadingPage />}>
+      <EarnPage />
+    </Suspense>
+  ),
+})
