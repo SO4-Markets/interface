@@ -82,7 +82,7 @@ export function ReferralsPage() {
                   <TradersTab
                     onCodeApplied={() => {
                       void queryClient.invalidateQueries({
-                        queryKey: ["referrals", "trader-stats"],
+                        queryKey: queryKeys.referrals.traderStatsAll(),
                       })
                       void queryClient.invalidateQueries({
                         queryKey: queryKeys.referrals.tier(null),

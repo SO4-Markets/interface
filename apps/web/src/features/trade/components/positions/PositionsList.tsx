@@ -1,24 +1,26 @@
 import { useEffect, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@workspace/ui/components/toast"
 import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
 import { Numeric } from "@workspace/ui/components/numeric"
+import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import { usePositionsWithIndexer } from "../../hooks/usePositionsWithIndexer"
 import { useFundingRate } from "../../hooks/useFundingRate"
 import { claimFundingFees } from "../../lib/stellar"
+import { useTokenPrices } from "../../hooks/useTokenPrices"
+import { usePositionActions } from "../../hooks/usePositionActions"
+import {
+  RISK_SOURCE_LABEL,
+  describePositionRisk,
+  riskSeverity,
+} from "../../lib/position-risk"
 import { CollateralDialog } from "./CollateralDialog"
 import type { Column } from "@workspace/ui/components/data-table"
 import type { Position } from "../../hooks/usePositions"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { TokenIcon } from "@/shared/components/TokenIcon"
-import { useTokenPrices } from "../../hooks/useTokenPrices"
-import { usePositionActions } from "../../hooks/usePositionActions"
-import {
-  describePositionRisk,
-  RISK_SOURCE_LABEL,
-  riskSeverity,
-} from "../../lib/position-risk"
 
 type Props = {
   onSelectPosition?: (position: Position) => void
@@ -60,6 +62,7 @@ export function PositionsList({ onSelectPosition }: Props) {
   const { getStaleness } = useTokenPrices()
   const countdown = useFundingCountdown((fundingRate as any)?.nextEpochTs)
   const account = useWalletStore((state) => state.address)
+  const queryClient = useQueryClient()
   const { submitClose, submitCollateral, isBusy } = usePositionActions()
   const [closing, setClosing] = useState<string | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
@@ -86,7 +89,7 @@ export function PositionsList({ onSelectPosition }: Props) {
       await claimFundingFees(position.account, [position.marketAddress], [position.collateralToken])
       if (account) {
         await queryClient.invalidateQueries({
-          queryKey: queryKeys.positions("stellar-mainnet", account),
+          queryKey: queryKeys.positions(activeQueryNetwork(), account),
         })
       }
     } finally {

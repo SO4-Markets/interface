@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { syntheticsReaderClient } from "@/lib/contracts"
 
 const FUNDING_INTERVAL_MS = 8 * 60 * 60 * 1000 // 8-hour epochs
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 const DEFAULT_MARKET_ADDRESS = "all"
 const SECONDS_PER_HOUR = 3600n
 const FACTOR_PRECISION = 10n ** 30n

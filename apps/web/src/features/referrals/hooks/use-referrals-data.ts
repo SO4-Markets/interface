@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { getAffiliateCode, getTraderDiscountBps, getTraderReferralCode, referralStorageClient } from "@/lib/contracts"
+import { queryKeys } from "@/shared/lib/query-keys"
 
 export type TimePeriod = "24h" | "7d" | "30d" | "90d" | "total"
 
@@ -43,7 +44,7 @@ export function useTraderStats(period: TimePeriod = "total") {
   const address = useWalletStore((state) => state.address)
 
   return useQuery<TraderStats>({
-    queryKey: ["referrals", "trader-stats", address, period],
+    queryKey: queryKeys.referrals.traderStats(address, period),
     queryFn: async (): Promise<TraderStats> => {
       if (!address) {
         return {
@@ -83,7 +84,7 @@ export function useAffiliateStats(_period: TimePeriod = "total") {
   const address = useWalletStore((state) => state.address)
 
   return useQuery<AffiliateStats>({
-    queryKey: ["referrals", "affiliate-stats", address],
+    queryKey: queryKeys.referrals.affiliateStats(address),
     queryFn: async (): Promise<AffiliateStats> => {
       if (!address) {
         return { code: null, referralCount: 0, tradingVolumeUsd: 0, commissionUsd: 0, tier: 1, lastUpdated: null }
@@ -116,7 +117,7 @@ export function useAffiliateReferrals() {
   const address = useWalletStore((state) => state.address)
 
   return useQuery<Array<AffiliateReferral>>({
-    queryKey: ["referrals", "affiliate-referrals", address],
+    queryKey: queryKeys.referrals.affiliateReferrals(address),
     // Per-referral volume and commission data require an off-chain event indexer.
     // There is no on-chain bulk query for this. Return empty until an indexer exists.
     queryFn: (): Array<AffiliateReferral> => [],
@@ -129,7 +130,7 @@ export function useDistributions() {
   const address = useWalletStore((state) => state.address)
 
   return useQuery<Array<DistributionEntry>>({
-    queryKey: ["referrals", "distributions", address],
+    queryKey: queryKeys.referrals.distributions(address),
     // Distribution history requires querying Stellar event logs for DistributionClaimed
     // events — no on-chain bulk read exists. Return empty until an indexer is wired.
     queryFn: (): Array<DistributionEntry> => [],

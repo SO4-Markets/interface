@@ -1,24 +1,21 @@
-import { useEffect, useRef, useState } from "react"
-import { BINANCE_SYMBOL } from "../lib/oracle"
-import { deriveSourceHealth } from "./useSourceHealth"
-import type { SourceHealth } from "./useSourceHealth"
+import { useEffect, useState } from "react"
+import { marketSubscriptionManager } from "../lib/market-data-stream"
 
 export type OrderBookLevel = {
   price: number
   size: number
-  total: number   // cumulative depth from top of side
-  depth: number   // fraction 0–1 relative to max total on that side
+  total: number // cumulative depth from top of side
+  depth: number // fraction 0–1 relative to max total on that side
 }
 
 export type OrderBookState = {
-  bids: Array<OrderBookLevel>  // descending by price (best bid first)
-  asks: Array<OrderBookLevel>  // ascending by price (best ask first)
+  bids: Array<OrderBookLevel> // descending by price (best bid first)
+  asks: Array<OrderBookLevel> // ascending by price (best ask first)
   spread: number | null
   spreadPct: number | null
   midPrice: number | null
-  status: "connecting" | "connected" | "disconnected" | "error"
+  status: "connecting" | "connected" | "disconnected" | "error" | "polling"
   isLoading: boolean
-  sourceHealth: SourceHealth    // OB-058: comprehensive health tracking
 }
 
 const BINANCE_REST = "https://api.binance.com"
@@ -77,14 +74,6 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
     midPrice: null,
     status: "connecting",
     isLoading: true,
-    sourceHealth: {
-      status: "initial-load",
-      lastUpdateTime: null,
-      staleDuration: null,
-      reconnectAttempt: 0,
-      isExecutable: false,
-      message: "Connecting to market data feed…",
-    },
   })
 
   // stable ref so WS handler can push without capturing stale closures
@@ -103,36 +92,22 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
   // message — nothing is dropped — this only bounds how often that
   // accumulated state is committed to React state.
   const publishFrame = useRef<number | null>(null)
-  // OB-058: track reconnect attempts and last data timestamp for health
-  const reconnectAttemptRef = useRef(0)
-  const lastDataTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!symbol) {
-      const emptyHealth = deriveSourceHealth(
-        { status: "disconnected", hasData: false, lastDataTime: null },
-        Date.now(),
-        0
-      )
-      setState(s => ({ ...s, status: "disconnected", isLoading: false, sourceHealth: emptyHealth }))
+      setState(s => ({ ...s, status: "disconnected", isLoading: false }))
       return
     }
 
     let mounted = true
+    const controller = new AbortController()
     snapshotDone.current = false
     bufferRef.current    = []
     bookRef.current      = { bids: new Map(), asks: new Map(), lastUpdateId: 0 }
-    reconnectAttemptRef.current += 1  // OB-058: track reconnect attempts
 
-    const initialHealth = deriveSourceHealth(
-      { status: "connecting", hasData: false, lastDataTime: lastDataTimeRef.current },
-      Date.now(),
-      reconnectAttemptRef.current
-    )
     setState({
       bids: [], asks: [], spread: null, spreadPct: null,
       midPrice: null, status: "connecting", isLoading: true,
-      sourceHealth: initialHealth,
     })
 
     const binanceSym = BINANCE_SYMBOL[symbol] ?? (symbol.toUpperCase() + "USDT")
@@ -149,10 +124,10 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
         applyDelta(book.bids, msg.b)
         applyDelta(book.asks, msg.a)
       }
-      bufferRef.current = []
-      snapshotDone.current = true
-      publish()
     }
+    const shared = marketSubscriptionManager.getOrCreate(symbol)
+    return shared.getBookState()
+  })
 
     // OB-119: schedules a coalesced publish — at most one per animation
     // frame — instead of committing on every single WS message. Under a
@@ -177,28 +152,16 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
       const spread = bestBid !== null && bestAsk !== null ? bestAsk - bestBid : null
       const mid    = bestBid !== null && bestAsk !== null ? (bestBid + bestAsk) / 2 : null
       const pct    = spread !== null && mid !== null && mid > 0 ? (spread / mid) * 100 : null
-      
-      // OB-058: Update last data timestamp and derive source health
-      lastDataTimeRef.current = Date.now()
-      const hasData = bids.length > 0 || asks.length > 0
-      const health = deriveSourceHealth(
-        { status: "connected", hasData, lastDataTime: lastDataTimeRef.current },
-        Date.now(),
-        reconnectAttemptRef.current
-      )
-      
       setState({
-        bids, asks,
-        spread,
-        spreadPct: pct,
-        midPrice: mid,
-        status: "connected",
+        bids: [],
+        asks: [],
+        spread: null,
+        spreadPct: null,
+        midPrice: null,
+        status: "disconnected",
         isLoading: false,
-        sourceHealth: health,
       })
-      
-      // Reset reconnect counter on successful publish
-      reconnectAttemptRef.current = 0
+      return
     }
 
     // ── REST snapshot ──────────────────────────────────────────────────────
@@ -206,6 +169,7 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
       try {
         const res = await fetch(
           `${BINANCE_REST}/api/v3/depth?symbol=${binanceSym}&limit=${LEVELS * 2}`,
+          { signal: controller.signal },
         )
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json() as BinanceSnapshot
@@ -215,14 +179,9 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
         book.bids = new Map(data.bids)
         book.asks = new Map(data.asks)
         flush()
-      } catch (err) {
+      } catch {
         if (!mounted) return
-        const health = deriveSourceHealth(
-          { status: "error", hasData: false, lastDataTime: lastDataTimeRef.current },
-          Date.now(),
-          reconnectAttemptRef.current
-        )
-        setState(s => ({ ...s, isLoading: false, status: "error", sourceHealth: health }))
+        setState(s => ({ ...s, isLoading: false, status: "error" }))
       }
     }
 
@@ -239,8 +198,6 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
         if (snapshotDone.current) {
           applyDelta(bookRef.current.bids, msg.b)
           applyDelta(bookRef.current.asks, msg.a)
-          // OB-119: use schedulePublish instead of immediate publish to coalesce
-          // bursty updates into at most one render per animation frame
           schedulePublish()
         } else {
           bufferRef.current.push(msg)
@@ -249,30 +206,15 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
     }
 
     ws.onerror = () => {
-      if (mounted) {
-        const hasData = bookRef.current.bids.size > 0 || bookRef.current.asks.size > 0
-        const health = deriveSourceHealth(
-          { status: "error", hasData, lastDataTime: lastDataTimeRef.current },
-          Date.now(),
-          reconnectAttemptRef.current
-        )
-        setState(s => ({ ...s, status: "error", isLoading: false, sourceHealth: health }))
-      }
+      if (mounted) setState(s => ({ ...s, status: "error", isLoading: false }))
     }
     ws.onclose = () => {
-      if (mounted) {
-        const hasData = bookRef.current.bids.size > 0 || bookRef.current.asks.size > 0
-        const health = deriveSourceHealth(
-          { status: "disconnected", hasData, lastDataTime: lastDataTimeRef.current },
-          Date.now(),
-          reconnectAttemptRef.current
-        )
-        setState(s => ({ ...s, status: "disconnected", sourceHealth: health }))
-      }
+      if (mounted) setState(s => ({ ...s, status: "disconnected" }))
     }
 
     return () => {
       mounted = false
+      controller.abort()
       if (publishFrame.current !== null) {
         cancelAnimationFrame(publishFrame.current)
         publishFrame.current = null

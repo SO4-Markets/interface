@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest"
 import {
+  
+  
   buildOrderHistoryRow,
   dedupeById,
   filterFills,
-  type FillRecord,
-  type OrderHistorySource,
+  mergePagesByStableId,
+  nextRetainedPrefixSize,
 } from "./order-history"
 import { deriveOrderLifecycleStage } from "./order-lifecycle"
+import type { FillRecord, OrderHistorySource } from "./order-history"
 
 const order: OrderHistorySource = {
   key: "order-1",
@@ -52,7 +55,12 @@ describe("order history", () => {
   })
 
   it("deduplicates overlapping page records before totals are calculated", () => {
-    const rows = dedupeById([fill("fill-1", 30, 1), fill("fill-1", 30, 1), fill("fill-2", 30, 2)])
+    const rows = dedupeById([
+      fill("fill-1", 30, 1),
+      fill("fill-1", 30, 1),
+      fill("fill-2", 30, 2),
+    ])
+
     expect(rows).toHaveLength(2)
     expect(rows.reduce((total, item) => total + item.sizeUsd, 0)).toBe(60)
   })
@@ -60,12 +68,62 @@ describe("order history", () => {
   it("keeps filters deterministic for market, side, and time range", () => {
     const rows = [
       fill("long", 10, 900),
-      { ...fill("short", 10, 1_000), isLong: false, marketKey: "market-eth" },
+      {
+        ...fill("short", 10, 1_000),
+        isLong: false,
+        marketKey: "market-eth",
+      },
     ]
 
-    expect(filterFills(rows, { marketKey: "market-btc", side: "long", range: "all" }, 1_000)).toHaveLength(1)
-    expect(filterFills(rows, { marketKey: null, side: "short", range: "all" }, 1_000)).toHaveLength(1)
-    expect(filterFills(rows, { marketKey: null, side: "all", range: "24h" }, 86_400_000 + 1_000)).toHaveLength(1)
+    expect(
+      filterFills(
+        rows,
+        { marketKey: "market-btc", side: "long", range: "all" },
+        1_000,
+      ),
+    ).toHaveLength(1)
+    expect(
+      filterFills(
+        rows,
+        { marketKey: null, side: "short", range: "all" },
+        1_000,
+      ),
+    ).toHaveLength(1)
+    expect(
+      filterFills(
+        rows,
+        { marketKey: null, side: "all", range: "24h" },
+        86_400_000 + 1_000,
+      ),
+    ).toHaveLength(1)
+  })
+
+  it("merges refreshed and retained pages by stable source id", () => {
+    const initial = [
+      { id: "a", timestamp: 100 },
+      { id: "b", timestamp: 100 },
+      { id: "c", timestamp: 90 },
+    ]
+    const refreshedPrefix = [
+      { id: "new", timestamp: 100 },
+      { id: "a", timestamp: 100 },
+      { id: "b", timestamp: 100 },
+      { id: "c", timestamp: 90 },
+    ]
+
+    const merged = mergePagesByStableId(
+      [initial, refreshedPrefix],
+      (row) => row.id,
+    )
+
+    expect(merged.map((row) => row.id)).toEqual(["new", "a", "b", "c"])
+    expect(new Set(merged.map((row) => row.id)).size).toBe(merged.length)
+  })
+
+  it("grows a retained prefix only while the previous prefix is full", () => {
+    expect(nextRetainedPrefixSize(25, 25, 25)).toBe(50)
+    expect(nextRetainedPrefixSize(50, 50, 25)).toBe(75)
+    expect(nextRetainedPrefixSize(48, 50, 25)).toBeUndefined()
   })
 })
 

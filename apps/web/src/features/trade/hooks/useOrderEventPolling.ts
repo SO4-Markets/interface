@@ -1,27 +1,42 @@
 import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
+import { normalizeQueryNetwork } from "../lib/query-keys"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 import { CONTRACTS } from "@/app/config/contracts"
-import { sorobanRpc } from "@/lib/soroban/client"
+import { queryContractEvents } from "@/lib/soroban/events"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import {
+  decodeOrderEvent,
+  applyOrderEventRefreshMatrix,
+} from "../lib/order-event-decoder"
 
-const CHAIN_ID = "stellar-mainnet"
 const POLL_INTERVAL_MS = 5000
-const TARGET_EVENTS = ["OrderExecuted", "OrderCancelled"]
+const PAGE_LIMIT = 50
+const MAX_PAGES_PER_POLL = 10
 
-function extractEventText(event: unknown): string {
+function getCursorStorageKey(account: string): string {
+  return `so4:order-events:cursor:${account}`
+}
+
+export function loadPersistedCursor(account: string): string | null {
   try {
-    return JSON.stringify(event)
+    return localStorage.getItem(getCursorStorageKey(account))
   } catch {
-    return String(event)
+    return null
   }
+}
+
+export function savePersistedCursor(account: string, cursor: string) {
+  try {
+    localStorage.setItem(getCursorStorageKey(account), cursor)
+  } catch {}
 }
 
 export function useOrderEventPolling() {
   const account = useWalletStore((state) => state.address)
   const network = useWalletStore((state) => state.network)
   const queryClient = useQueryClient()
-  const lastCursor = useRef<string | null>(null)
+  const cursorRef = useRef<string | null>(null)
   const timer = useRef<number | null>(null)
   // OB-117: identifies which account+network subscription an in-flight poll
   // belongs to. Effect cleanup bumps this so a poll that was already
@@ -41,16 +56,11 @@ export function useOrderEventPolling() {
 
     const poll = async () => {
       try {
-        const params: Record<string, unknown> = {
-          type: "contract",
-          contractId: CONTRACTS.exchangeRouter,
-          limit: 50,
-          order: "asc",
-        }
+        let pagesProcessed = 0
+        let hasMore = true
 
-        if (lastCursor.current) {
-          params.cursor = lastCursor.current
-        }
+        while (hasMore && !cancelled && pagesProcessed < MAX_PAGES_PER_POLL) {
+          const currentCursor = cursorRef.current ?? undefined
 
         const response = await sorobanRpc.getEvents(params as any)
 
@@ -60,32 +70,56 @@ export function useOrderEventPolling() {
         // wrong identity.
         if (!isCurrent()) return
 
-        const events = (response as any)?.records ?? response ?? []
+        const events = response.events
 
-        const matching = (Array.isArray(events) ? events : []).filter((event) => {
+        const matching = events.filter((event) => {
           const text = extractEventText(event).toLowerCase()
-          const name = String(event?.data?.event_name ?? event?.data?.type ?? event?.type ?? "").toLowerCase()
-          const isOrderEvent = TARGET_EVENTS.some((target) => name.includes(target.toLowerCase()) || text.includes(target.toLowerCase()))
+          const isOrderEvent = TARGET_EVENTS.some((target) =>
+            text.includes(target.toLowerCase()),
+          )
           const isForAccount = account ? text.includes(account.toLowerCase()) : false
           return isOrderEvent && isForAccount
         })
 
         if (matching.length > 0) {
+          const queryNetwork = normalizeQueryNetwork(network)
+          const hasExecution = matching.some((event) =>
+            extractEventText(event).toLowerCase().includes("orderexecuted"),
+          )
+          const hasCancellation = matching.some((event) =>
+            extractEventText(event).toLowerCase().includes("ordercancelled"),
+          )
+
           await Promise.all([
-            queryClient.invalidateQueries({ queryKey: queryKeys.trade.positions(CHAIN_ID, account) }),
-            queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) }),
+            ...(hasExecution
+              ? [
+                  invalidateMutationOutcome(queryClient, "fill", {
+                    account,
+                    network: queryNetwork,
+                  }),
+                ]
+              : []),
+            ...(hasCancellation
+              ? [
+                  invalidateMutationOutcome(queryClient, "cancel", {
+                    account,
+                    network: queryNetwork,
+                  }),
+                ]
+              : []),
           ])
         }
 
         if (!isCurrent()) return
 
-        const lastEvent = (Array.isArray(events) ? events : []).slice(-1)[0]
-        if (lastEvent?.paging_token) {
-          lastCursor.current = lastEvent.paging_token
-        } else if (lastEvent?.id) {
-          lastCursor.current = lastEvent.id
+        if (response.cursor) {
+          lastCursor.current = response.cursor
+        } else {
+          const lastEvent = events.at(-1)
+          if (lastEvent?.id) lastCursor.current = lastEvent.id
         }
       } catch (error) {
+        // Do NOT advance cursor on error — failure before cursor advancement ensures no event is skipped
         if (import.meta.env.DEV) console.warn("Order event polling failed", error)
       } finally {
         if (isCurrent()) {

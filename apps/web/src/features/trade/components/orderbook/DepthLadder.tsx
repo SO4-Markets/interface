@@ -1,7 +1,5 @@
-import { memo } from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import {  useOrderBook } from "../../hooks/useOrderBook"
-import { SourceHealthBadge } from "./SourceHealthBadge"
 import type {OrderBookLevel} from "../../hooks/useOrderBook";
 import { formatUsd } from "@/shared/lib/format"
 
@@ -18,9 +16,7 @@ type RowProps = {
   compact: boolean
 }
 
-// OB-119: Memoized row component to prevent unnecessary re-renders when other
-// levels update. Price is stable key since it uniquely identifies the level.
-const DepthRow = memo(function DepthRow({ level, side, compact }: RowProps) {
+function DepthRow({ level, side, compact }: RowProps) {
   const isBid = side === "bid"
   const depthPct = `${(level.depth * 100).toFixed(1)}%`
 
@@ -78,15 +74,7 @@ const DepthRow = memo(function DepthRow({ level, side, compact }: RowProps) {
       </span>
     </div>
   )
-}, (prevProps, nextProps) => {
-  // OB-119: Custom equality check — only re-render if this specific level changed
-  return (
-    prevProps.level.price === nextProps.level.price &&
-    prevProps.level.size === nextProps.level.size &&
-    prevProps.level.depth === nextProps.level.depth &&
-    prevProps.compact === nextProps.compact
-  )
-})
+}
 
 // ── column headers ────────────────────────────────────────────────────────────
 
@@ -151,26 +139,48 @@ function SpreadRow({
 // ── main component ────────────────────────────────────────────────────────────
 
 export function DepthLadder({ symbol, compact = false }: Props) {
-  const { bids, asks, spread, spreadPct, midPrice, status, isLoading, sourceHealth } =
+  const { bids, asks, spread, spreadPct, midPrice, status, isLoading } =
     useOrderBook(symbol)
 
   const isEmpty = bids.length === 0 && asks.length === 0
-  const showStaleOverlay = sourceHealth.status === "stale" || 
-                           sourceHealth.status === "reconnecting" ||
-                           sourceHealth.status === "revision-gap"
 
   return (
     <div
       role="table"
       aria-label={`${symbol ?? "Market"} order-book depth ladder`}
-      className="flex h-full w-full flex-col overflow-hidden text-xs relative"
+      className="flex h-full w-full flex-col overflow-hidden text-xs"
     >
       {/* ── Panel header ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5 bg-muted/20">
         <span className="font-mono text-[11px] text-muted-foreground">{/* ds-allow: dense header font size */}
           {symbol ?? "Market"} Depth
         </span>
-        <SourceHealthBadge health={sourceHealth} />
+        <div className="flex items-center gap-2">
+          {status === "connected" && (
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">{/* ds-allow: status font size */}
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              Live
+            </span>
+          )}
+          {status === "connecting" && (
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">{/* ds-allow: status font size */}
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Connecting…
+            </span>
+          )}
+          {status === "polling" && (
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Polling (Fallback)
+            </span>
+          )}
+          {(status === "disconnected" || status === "error") && (
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">{/* ds-allow: status font size */}
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+              Disconnected
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Loading skeleton ───────────────────────────────────────────── */}
@@ -201,23 +211,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
 
       {/* ── Ladder ─────────────────────────────────────────────────────── */}
       {!isEmpty && (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden relative">
-          {/* OB-058: Stale data overlay */}
-          {showStaleOverlay && (
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-none">
-              <div className="bg-card border border-border rounded-lg px-4 py-3 shadow-lg text-center max-w-[200px]">
-                <p className="text-xs font-medium text-foreground mb-1">
-                  {sourceHealth.status === "stale" && "Data Stale"}
-                  {sourceHealth.status === "reconnecting" && "Reconnecting"}
-                  {sourceHealth.status === "revision-gap" && "Resyncing"}
-                </p>
-                <p className="text-[10px] text-muted-foreground"> {/* ds-allow: overlay secondary text */}
-                  {sourceHealth.message}
-                </p>
-              </div>
-            </div>
-          )}
-          
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* Asks (sells) — ascending price, reversed for display top→bottom */}
           <div
             role="rowgroup"

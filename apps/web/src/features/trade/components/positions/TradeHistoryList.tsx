@@ -3,17 +3,18 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { Numeric } from "@workspace/ui/components/numeric"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useAccountFillPages } from "../../hooks/useAccountFillPages"
 import {
   DEFAULT_FILL_FILTERS,
+  
+  
   HISTORY_TIME_RANGE_LABEL,
-  filterFills,
-  type FillFilters,
-  type FillRecord,
+  filterFills
 } from "../../lib/order-history"
 import { HistoryFilters } from "./HistoryFilters"
+import type {FillFilters, FillRecord} from "../../lib/order-history";
 import type { Column } from "@workspace/ui/components/data-table"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 function formatTimestamp(timestamp: number): string {
   return new Date(timestamp).toLocaleString()
@@ -65,7 +66,10 @@ export function TradeHistoryList() {
     },
   ]
 
-  const setFilter = <K extends keyof FillFilters>(key: K, value: FillFilters[K]) => {
+  const setFilter = <TKey extends keyof FillFilters>(
+    key: TKey,
+    value: FillFilters[TKey],
+  ) => {
     setFilters((current) => ({ ...current, [key]: value }))
   }
 
