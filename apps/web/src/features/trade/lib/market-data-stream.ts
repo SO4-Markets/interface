@@ -1,7 +1,20 @@
 import { BINANCE_PERIOD, BINANCE_SYMBOL, fetchOracleCandles, type OhlcBar } from "./oracle"
+import {
+  DEFAULT_FRESHNESS_POLICY,
+  createTelemetry,
+  deriveFreshness,
+  recordMalformed,
+  recordMessage,
+  recordSnapshot,
+  recordValidUpdate,
+  resetSnapshot,
+  toSourceHealth,
+} from "./source-freshness"
+import type { FeedTelemetry, FeedTransport, FreshnessResult } from "./source-freshness"
 import type { OrderBookLevel, OrderBookState } from "../hooks/useOrderBook"
 import type { TradeItem, UseRecentTradesResult } from "../hooks/useRecentTrades"
 import { deduplicateAndSortTrades } from "../hooks/useRecentTrades"
+import type { SourceHealth } from "../hooks/useSourceHealth"
 
 export type StreamStatus = "connecting" | "connected" | "polling" | "disconnected" | "error"
 
@@ -25,6 +38,13 @@ type RawBook = {
   bids: Map<string, string>
   asks: Map<string, string>
   lastUpdateId: number
+}
+
+/** A depth frame must carry both sides as arrays and a numeric revision to be applied. */
+export function isValidDepthMsg(data: unknown): boolean {
+  if (typeof data !== "object" || data === null) return false
+  const m = data as { b?: unknown; a?: unknown; u?: unknown }
+  return Array.isArray(m.b) && Array.isArray(m.a) && typeof m.u === "number" && Number.isFinite(m.u)
 }
 
 export function applyDelta(map: Map<string, string>, entries: Array<[string, string]>) {
@@ -57,6 +77,8 @@ export function buildLevels(map: Map<string, string>, ascending: boolean): Array
 
 type BinanceDiffMsg = {
   e?: string
+  /** Provider event time (ms since epoch), when present. */
+  E?: number
   u: number
   b: Array<[string, string]>
   a: Array<[string, string]>
@@ -134,6 +156,10 @@ class SharedMarketSubscription {
     isLoading: true,
   }
 
+  // OB-049: connection health, last message, last valid revision and provider
+  // timestamps, tracked separately so a quiet market is never read as a dead feed.
+  private telemetry: FeedTelemetry = createTelemetry()
+
   // Trades state
   private currentTradesResult: UseRecentTradesResult = {
     trades: [],
@@ -169,6 +195,34 @@ class SharedMarketSubscription {
 
   public getLiveBar(period: string): OhlcBar | null {
     return this.liveBars.get(period) ?? null
+  }
+
+  /** OB-049: Transport state, derived from the stream status so there is one source of truth. */
+  private feedTransport(): FeedTransport {
+    switch (this.status) {
+      case "connected":
+      case "polling": // polling refreshes `lastMessageAt` with every successful fetch
+        return "open"
+      case "disconnected":
+        return "closed"
+      case "error":
+        return "error"
+      case "connecting":
+        return "connecting"
+    }
+  }
+
+  /** OB-049: Fresh / stale / reconnecting / unavailable for the book, with the reason. */
+  public getFreshness(now: number = Date.now()): FreshnessResult {
+    this.telemetry.transport = this.feedTransport()
+    this.telemetry.reconnectAttempt = this.reconnectAttempt
+    return deriveFreshness(this.telemetry, now, DEFAULT_FRESHNESS_POLICY)
+  }
+
+  /** OB-049: The freshness result in the shape the source health badge renders. */
+  public getSourceHealth(now: number = Date.now()): { health: SourceHealth; freshness: FreshnessResult } {
+    const freshness = this.getFreshness(now)
+    return { health: toSourceHealth(freshness, this.telemetry, now), freshness }
   }
 
   /** OB-113: Exposed for testing — number of WS reconnect attempts made. */
@@ -377,6 +431,7 @@ class SharedMarketSubscription {
         // snapshot's lastUpdateId is known.
         if (this.bookSubscribers.size > 0) {
           this.snapshotLoaded = false
+          resetSnapshot(this.telemetry)
           this.bookBuffer = []
           void this.fetchDepthSnapshot()
         }
@@ -386,6 +441,7 @@ class SharedMarketSubscription {
         if (this.isDestroyed) return
         // OB-113: Any arriving message proves the connection is alive.
         this.resetHeartbeat()
+        recordMessage(this.telemetry, Date.now())
         this.handleWsMessage(evt.data)
       }
 
@@ -440,10 +496,17 @@ class SharedMarketSubscription {
   private handleWsMessage(raw: unknown) {
     try {
       const data = typeof raw === "string" ? JSON.parse(raw) : raw
-      if (!data) return
+      if (!data || typeof data !== "object") {
+        recordMalformed(this.telemetry, Date.now())
+        return
+      }
 
       // Depth event
       if (data.e === "depthUpdate" || (data.b && data.a && data.u)) {
+        if (!isValidDepthMsg(data)) {
+          recordMalformed(this.telemetry, Date.now())
+          return
+        }
         this.handleDepthUpdate(data as BinanceDiffMsg)
       }
       // Trade event
@@ -455,11 +518,18 @@ class SharedMarketSubscription {
         this.handleKlineUpdate(data as BinanceKlineMsg)
       }
     } catch {
-      // Ignore malformed payloads
+      // Malformed payloads never reach the book; they are counted so a feed
+      // that only sends garbage is reported as degraded.
+      recordMalformed(this.telemetry, Date.now())
     }
   }
 
   private handleDepthUpdate(msg: BinanceDiffMsg) {
+    recordValidUpdate(this.telemetry, DEFAULT_FRESHNESS_POLICY, {
+      receivedAt: Date.now(),
+      revision: msg.u,
+      providerTimestamp: typeof msg.E === "number" ? msg.E : null,
+    })
     if (this.snapshotLoaded) {
       applyDelta(this.book.bids, msg.b)
       applyDelta(this.book.asks, msg.a)
@@ -585,8 +655,14 @@ class SharedMarketSubscription {
         applyDelta(this.book.bids, msg.b)
         applyDelta(this.book.asks, msg.a)
       }
+      // The book is at the newest revision seen, including buffered updates.
+      const newestRevision = this.bookBuffer.reduce(
+        (max, msg) => Math.max(max, msg.u),
+        this.book.lastUpdateId,
+      )
       this.bookBuffer = []
       this.snapshotLoaded = true
+      recordSnapshot(this.telemetry, Date.now(), newestRevision)
       this.publishBook()
     } catch {
       if (this.isDestroyed) return

@@ -22,6 +22,12 @@ vi.mock("../../hooks/useOrderBook", () => ({
   },
 }))
 
+let mockSource: unknown = null
+
+vi.mock("../../hooks/useSourceFreshness", () => ({
+  useSourceFreshness: () => mockSource,
+}))
+
 vi.mock("../../../settings/store/preferences-store", () => ({
   usePreferencesStore: () => ({ slippageTolerance: 0.5 }),
 }))
@@ -208,5 +214,55 @@ describe("OrderBookPanel", () => {
 
     expect(container).toBeInTheDocument()
     expect(screen.getByText("Reference Data")).toBeInTheDocument()
+  })
+
+  describe("source health (OB-049)", () => {
+    beforeEach(() => {
+      mockSource = null
+    })
+
+    afterEach(() => {
+      mockSource = null
+    })
+
+    it("shows no health badge until a state is available", () => {
+      render(<OrderBookPanel symbol="BTC" />)
+      expect(screen.getByText("Reference Data")).toBeInTheDocument()
+      expect(screen.queryByText("Live")).not.toBeInTheDocument()
+      expect(screen.queryByText("Stale")).not.toBeInTheDocument()
+    })
+
+    it("shows Live for a fresh feed", () => {
+      mockSource = {
+        health: {
+          status: "connected",
+          lastUpdateTime: 1,
+          staleDuration: null,
+          reconnectAttempt: 0,
+          isExecutable: true,
+          message: "Live market data",
+        },
+      }
+      render(<OrderBookPanel symbol="BTC" />)
+      expect(screen.getByText("Live")).toBeInTheDocument()
+    })
+
+    it("labels a silent feed Stale and explains why", () => {
+      mockSource = {
+        health: {
+          status: "stale",
+          lastUpdateTime: 1,
+          staleDuration: 30_000,
+          reconnectAttempt: 0,
+          isExecutable: false,
+          message: "No data received — connection may be dead",
+        },
+      }
+      render(<OrderBookPanel symbol="BTC" />)
+      const badge = screen.getByText("Stale")
+      expect(badge).toBeInTheDocument()
+      expect(badge.closest("[title]")?.getAttribute("title")).toMatch(/connection may be dead/)
+      expect(screen.getByText("(30s ago)")).toBeInTheDocument()
+    })
   })
 })

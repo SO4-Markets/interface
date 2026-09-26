@@ -1,5 +1,7 @@
 import { useOrderBook } from "../../hooks/useOrderBook"
+import { useSourceFreshness } from "../../hooks/useSourceFreshness"
 import { useChartPreferencesStore } from "../../store/chart-preferences-store"
+import { SourceHealthBadge } from "./SourceHealthBadge"
 import { RecentTradesTape } from "./RecentTradesTape"
 import { DepthChart } from "./DepthChart"
 
@@ -11,6 +13,7 @@ export function OrderBookPanel({ symbol }: Props) {
   const orderbookView = useChartPreferencesStore((s) => s.orderbookView)
   const setOrderbookView = useChartPreferencesStore((s) => s.setOrderbookView)
   const { bids, asks, status, isLoading } = useOrderBook(symbol)
+  const source = useSourceFreshness(symbol)
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
@@ -57,7 +60,10 @@ export function OrderBookPanel({ symbol }: Props) {
             Depth Chart
           </button>
         </div>
-        <span className="text-xs text-muted-foreground">Reference Data</span>
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          Reference Data
+          {source ? <SourceHealthBadge health={source.health} /> : null}
+        </span>
       </div>
 
       {/* ── Tab Content ──────────────────────────────────────────────────── */}
