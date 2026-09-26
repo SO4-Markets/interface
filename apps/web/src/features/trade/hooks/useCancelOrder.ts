@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "@workspace/ui/components/toast"
-import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
-import { indexerQueryKeys } from "@/lib/graphql/query-keys"
+import { activeQueryNetwork } from "../lib/query-keys"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 import type { Order } from "./useOrders"
 
 interface CancelOrderOptions {
@@ -51,33 +51,10 @@ export function useCancelOrder() {
       }
     },
     onSuccess: async (_result, variables) => {
-      const network = activeQueryNetwork()
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.orders(network, variables.account),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.positions(network, variables.account),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: indexerQueryKeys.orders.byAccount(
-            variables.account,
-            network,
-          ),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: indexerQueryKeys.orders.historyAll(
-            variables.account,
-            network,
-          ),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: indexerQueryKeys.positions.byAccount(
-            variables.account,
-            network,
-          ),
-        }),
-      ])
+      await invalidateMutationOutcome(queryClient, "cancel", {
+        account: variables.account,
+        network: activeQueryNetwork(),
+      })
     },
   })
 

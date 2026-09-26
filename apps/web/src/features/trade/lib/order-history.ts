@@ -549,12 +549,41 @@ export function hasMorePages(
   return lastPageLength >= pageSize
 }
 
-/** Next offset for `useInfiniteQuery`. */
-export function nextOffset(
-  pages: ReadonlyArray<ReadonlyArray<unknown>>,
+/**
+ * Merge retained-prefix pages by stable source ID.
+ *
+ * The newest fetched prefix wins for IDs it contains; older retained pages only
+ * contribute IDs that fell beyond the refreshed prefix. This avoids duplicate
+ * rows and offset skips when new records arrive with equal timestamps.
+ */
+export function mergePagesByStableId<T>(
+  pages: ReadonlyArray<ReadonlyArray<T>>,
+  getId: (row: T) => string,
+): Array<T> {
+  const seen = new Set<string>()
+  const merged: Array<T> = []
+
+  for (let pageIndex = pages.length - 1; pageIndex >= 0; pageIndex -= 1) {
+    for (const row of pages[pageIndex] ?? []) {
+      const id = getId(row)
+      if (seen.has(id)) continue
+      seen.add(id)
+      merged.push(row)
+    }
+  }
+
+  return merged
+}
+
+export function nextRetainedPrefixSize(
+  lastPageLength: number,
+  requestedSize: number,
   pageSize: number,
-): number {
-  return pages.length * pageSize
+): number | undefined {
+  if (pageSize <= 0 || requestedSize <= 0) return undefined
+  return lastPageLength >= requestedSize
+    ? requestedSize + pageSize
+    : undefined
 }
 
 

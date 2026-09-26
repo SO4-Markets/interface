@@ -11,6 +11,7 @@ import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { GET_ACCOUNT_POSITION_CHANGES } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export type UseAccountTradeHistoryResult = {
   data: Array<PositionChange>
@@ -43,8 +44,7 @@ export function useAccountTradeHistory(account: string | null): UseAccountTradeH
       return result.positionChanges.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
-    retry: 3,
-    staleTime: 30_000,
+    ...queryPolicy("history"),
   })
 
   if (!INDEXER_CONFIG.enabled) {

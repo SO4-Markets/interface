@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { normalizeQueryNetwork, queryKeys } from "../lib/query-keys"
+import { normalizeQueryNetwork } from "../lib/query-keys"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 import { CONTRACTS } from "@/app/config/contracts"
 import { sorobanRpc } from "@/lib/soroban/client"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
@@ -72,13 +73,30 @@ export function useOrderEventPolling() {
 
         if (matching.length > 0) {
           const queryNetwork = normalizeQueryNetwork(network)
+          const hasExecution = matching.some((event) =>
+            extractEventText(event).toLowerCase().includes("orderexecuted"),
+          )
+          const hasCancellation = matching.some((event) =>
+            extractEventText(event).toLowerCase().includes("ordercancelled"),
+          )
+
           await Promise.all([
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.trade.positions(queryNetwork, account),
-            }),
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.trade.orders(queryNetwork, account),
-            }),
+            ...(hasExecution
+              ? [
+                  invalidateMutationOutcome(queryClient, "fill", {
+                    account,
+                    network: queryNetwork,
+                  }),
+                ]
+              : []),
+            ...(hasCancellation
+              ? [
+                  invalidateMutationOutcome(queryClient, "cancel", {
+                    account,
+                    network: queryNetwork,
+                  }),
+                ]
+              : []),
           ])
         }
 

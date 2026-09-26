@@ -4,6 +4,7 @@ import { act, render, screen } from "@testing-library/react"
 import {
   MAX_RETAINED_TOASTS,
   MAX_VISIBLE_TOASTS,
+  TOAST_EXIT_MS,
   ToastProvider,
   getInFlightToasts,
   resetToastStore,
@@ -135,6 +136,12 @@ describe("toast deduplication", () => {
     act(() => {
       vi.advanceTimersByTime(1000)
     })
+    // The dismiss timer fired; the 150ms exit transition (OB-092) still has
+    // to play before the row unmounts.
+    expect(statuses()).toHaveLength(1)
+    act(() => {
+      vi.advanceTimersByTime(TOAST_EXIT_MS)
+    })
     expect(statuses()).toHaveLength(0)
   })
 })
@@ -234,5 +241,167 @@ describe("dismissed progress", () => {
 
     expect(statuses()).toHaveLength(1)
     expect(statuses()[0]).toHaveAttribute("aria-label", "Transaction in progress: Submitting")
+  })
+})
+
+/**
+ * OB-091 (sole implementation) + OB-092 (motion) coverage for the merged
+ * store. Upstream OB-098 owns queue bounds/dedup above; these suites own the
+ * single-provider lifecycle and the presence-aware interruptible transitions.
+ */
+
+// jsdom lacks a stable requestAnimationFrame under fake timers; the toast
+// entrance uses rAF, so provide a deterministic shim for these suites.
+function stubRaf() {
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+    return setTimeout(() => cb(performance.now()), 0) as unknown as number
+  })
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id))
+}
+
+describe("sole notification implementation (OB-091)", () => {
+  beforeEach(() => {
+    stubRaf()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("delivers every supported call to the single mounted provider", () => {
+    renderProvider()
+    act(() => {
+      toast.success("Saved")
+      toast.error("Failed")
+      toast.info("Note")
+      toast.warning("Careful")
+      toast.loading("Confirming…", { id: "confirm-1" })
+    })
+    // Five retained, three visible behind the overflow control (OB-098).
+    // The in-progress toast is among the visible three, so no suffix.
+    expect(screen.getByRole("button", { name: "Show 2 more" })).toBeInTheDocument()
+    act(() => {
+      screen.getByRole("button", { name: "Show 2 more" }).click()
+    })
+    expect(screen.getByText("Saved")).toBeInTheDocument()
+    expect(screen.getByText("Failed")).toBeInTheDocument()
+    expect(screen.getByText("Note")).toBeInTheDocument()
+    expect(screen.getByText("Careful")).toBeInTheDocument()
+    expect(screen.getByText("Confirming…")).toBeInTheDocument()
+    // Exactly one stack container across routes (OB-091).
+    expect(document.querySelectorAll("[aria-live='polite'][aria-atomic='false']")).toHaveLength(1)
+  })
+
+  it("upserts by id and dismisses by id (provider lifecycle)", () => {
+    renderProvider()
+    act(() => {
+      toast.show({ id: "tx-1", message: "Submitting…", variant: "transaction-progress", duration: 0, persistent: true })
+    })
+    expect(screen.getByText("Submitting…")).toBeInTheDocument()
+    act(() => {
+      toast.show({ id: "tx-1", message: "Confirmed", variant: "success" })
+    })
+    expect(screen.queryByText("Submitting…")).toBeNull()
+    expect(screen.getByText("Confirmed")).toBeInTheDocument()
+    act(() => {
+      toast.dismiss("tx-1")
+    })
+    expect(screen.queryByText("Confirmed")).toBeNull()
+  })
+})
+
+describe("toast motion — entrance, updates, stacking, exit (OB-092)", () => {
+  beforeEach(() => {
+    stubRaf()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function flushEntrance() {
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+  }
+
+  it("updates content in place without replaying the entrance", () => {
+    renderProvider()
+    act(() => {
+      toast.show({ id: "up-1", message: "Waiting…", variant: "transaction-progress", duration: 0, persistent: true })
+    })
+    flushEntrance()
+    expect(screen.getByText("Waiting…").closest("[data-slot='toast']")).toHaveAttribute("data-state", "open")
+    act(() => {
+      toast.show({ id: "up-1", message: "Confirmed", variant: "success" })
+    })
+    const row = screen.getByText("Confirmed").closest("[data-slot='toast']")
+    expect(row).not.toBeNull()
+    expect(row?.getAttribute("data-variant")).toBe("success")
+    // Same row identity: stable key, no remount, no duplicate.
+    expect(document.querySelectorAll("[data-slot='toast']")).toHaveLength(1)
+    act(() => {
+      toast.dismiss("up-1")
+    })
+  })
+
+  it("plays a symmetric exit on explicit dismiss with no interactive leftovers", () => {
+    renderProvider()
+    act(() => {
+      toast.info("Goodbye", { duration: 0 })
+    })
+    flushEntrance()
+    expect(screen.getByText("Goodbye").closest("[data-slot='toast']")).toHaveAttribute("data-state", "open")
+
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).click()
+    })
+    // Exit row stays mounted through the transition, inert and non-interactive.
+    const exiting = screen.getByText("Goodbye").closest("[data-slot='toast']")
+    expect(exiting).toHaveAttribute("data-state", "closed")
+    expect(exiting).toHaveAttribute("aria-hidden", "true")
+    expect(exiting).toHaveAttribute("inert")
+    act(() => {
+      vi.advanceTimersByTime(TOAST_EXIT_MS)
+    })
+    expect(screen.queryByText("Goodbye")).toBeNull()
+  })
+
+  it("reverses an exit when the same toast updates mid-flight (rapid reversal)", () => {
+    renderProvider()
+    act(() => {
+      toast.show({ id: "flip-1", message: "Working…", variant: "transaction-progress", duration: 0, persistent: true })
+    })
+    flushEntrance()
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).click()
+    })
+    expect(screen.getByText("Working…").closest("[data-slot='toast']")).toHaveAttribute("data-state", "closed")
+    act(() => {
+      toast.show({ id: "flip-1", message: "Working… done", variant: "transaction-progress", duration: 0, persistent: true })
+    })
+    flushEntrance()
+    // Exactly one row, open again on the symmetric return path.
+    expect(screen.getAllByText("Working… done")).toHaveLength(1)
+    expect(screen.getByText("Working… done").closest("[data-slot='toast']")).toHaveAttribute("data-state", "open")
+    act(() => {
+      toast.dismiss("flip-1")
+    })
+  })
+
+  it("uses semantic token surfaces and interruptible motion classes", () => {
+    renderProvider()
+    let id = ""
+    act(() => {
+      id = toast.error("Boom", { duration: 0 })
+    })
+    const node = screen.getByText("Boom").closest("[data-slot='toast']")
+    expect(node?.className).toMatch("bg-danger-subtle")
+    expect(node?.className).toMatch("transition-\\[opacity,transform\\]")
+    expect(node?.className).toMatch("motion-reduce:transition-none")
+    act(() => {
+      toast.dismiss(id)
+    })
+    expect(screen.queryByText("Boom")).toBeNull()
   })
 })

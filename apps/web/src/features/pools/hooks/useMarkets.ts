@@ -11,6 +11,7 @@ import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { GET_MARKETS } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export type UseMarketsResult = {
   data: Array<Market>
@@ -34,8 +35,7 @@ export function useMarkets(): UseMarketsResult {
       return result.markets.nodes
     },
     enabled: INDEXER_CONFIG.enabled,
-    retry: 3,
-    staleTime: 30_000, // 30 seconds
+    ...queryPolicy("metadata"), // 30 seconds
   })
 
   if (!INDEXER_CONFIG.enabled) {

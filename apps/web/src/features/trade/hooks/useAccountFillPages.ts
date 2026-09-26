@@ -9,13 +9,11 @@
  * refresh, which is exactly what the acceptance criteria forbid.
  */
 
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import {
-  dedupeById,
   filterFills,
-  flattenPages,
-  hasMorePages,
-  nextOffset,
+  mergePagesByStableId,
+  nextRetainedPrefixSize,
   normaliseFillFilters,
   toFillRecords,
 } from "../lib/order-history"
@@ -24,6 +22,7 @@ import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { getAccountPositionChangesPagedDocument } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export const FILLS_PAGE_SIZE = 25
 
@@ -60,25 +59,25 @@ export function useAccountFillPages(
         document,
         {
           account,
-          first: FILLS_PAGE_SIZE,
-          offset: pageParam,
+          first: pageParam,
+          offset: 0,
           ...(normal.marketKey ? { marketKey: normal.marketKey } : {}),
         },
         { signal },
       )
       return result.positionChanges.nodes
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      hasMorePages(lastPage.length, FILLS_PAGE_SIZE)
-        ? nextOffset(allPages, FILLS_PAGE_SIZE)
-        : undefined,
+    initialPageParam: FILLS_PAGE_SIZE,
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      nextRetainedPrefixSize(
+        lastPage.length,
+        lastPageParam,
+        FILLS_PAGE_SIZE,
+      ),
     enabled,
     // Keep the previous filter's rows on screen while the new filter loads, so
     // switching filters does not collapse the table to an empty state.
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
-    retry: 3,
+    ...queryPolicy("history"),
   })
 
   if (!INDEXER_CONFIG.enabled) {
@@ -94,8 +93,11 @@ export function useAccountFillPages(
     }
   }
 
-  const changes = flattenPages(query.data?.pages ?? [])
-  const fills = filterFills(dedupeById(toFillRecords(changes)), normal)
+  const changes = mergePagesByStableId(
+    query.data?.pages ?? [],
+    (change) => change.id,
+  )
+  const fills = filterFills(toFillRecords(changes), normal)
 
   return {
     data: fills,

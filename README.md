@@ -68,7 +68,7 @@ SO4 Market is the front-end interface for the SO4 perpetuals protocol. It connec
 | Styling | [Tailwind CSS v4](https://tailwindcss.com) |
 | UI components | [shadcn/ui](https://ui.shadcn.com) (via `packages/ui` workspace) |
 | Charts | [lightweight-charts v5](https://tradingview.github.io/lightweight-charts/) |
-| Notifications | [Sonner](https://sonner.emilkowal.ski) |
+| Notifications | Custom toast in `packages/ui` (`@workspace/ui/components/toast`) |
 | Blockchain | [Stellar](https://stellar.org) / [Soroban](https://soroban.stellar.org) |
 | Oracle | SO4 oracle (primary) · Pyth · Binance REST · GMX oracle (fallback) |
 | Type safety | TypeScript 5.9 |

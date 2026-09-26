@@ -5,6 +5,7 @@ import { getOracleStaleness } from "../lib/pyth"
 import { useTokenList } from "./useTokenList"
 import type { TokenPrice } from "../lib/oracle"
 import type { OracleStaleness } from "../lib/pyth"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 const CHAIN_ID = activeQueryNetwork()
 
@@ -21,8 +22,7 @@ export function useTokenPrices() {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.tokenPrices(CHAIN_ID),
     queryFn: fetchTokenPrices,
-    staleTime: 3_000,
-    refetchInterval: 5_000,
+    ...queryPolicy("prices-depth", { fallbackPollMs: 5_000 }),
     select(prices): PricesMap {
       return Object.fromEntries(prices.map((p) => [p.symbol, p]))
     },

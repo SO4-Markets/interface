@@ -24,10 +24,6 @@ import { useCallback, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@workspace/ui/components/toast"
 import {
-  
-  invalidatePositionActionTargets
-} from "../lib/position-refresh"
-import {
   classifyTransactionFailure,
   partialSizeToRaw,
   toConstraintState,
@@ -36,8 +32,9 @@ import {
 } from "../lib/position-constraints"
 import { deriveMarkPriceUsd } from "../lib/position-risk"
 import { createDecreaseOrder, createIncreaseOrder } from "../lib/stellar"
+import { activeQueryNetwork } from "../lib/query-keys"
 import { freshPositionKey } from "./usePositionState"
-import type {PositionActionKind} from "../lib/position-refresh";
+import type { PositionActionKind } from "../lib/position-refresh"
 import type { CloseConstraintPayload, PositionConstraintState } from "../lib/position-constraints"
 import type { Position } from "./usePositions"
 import type { PositionInfo } from "@/lib/contracts"
@@ -45,6 +42,7 @@ import { syntheticsReaderClient } from "@/lib/contracts"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useTokenBalances } from "@/features/wallet/hooks/useTokenBalances"
 import { fromSorobanAmount } from "@/shared/lib/bignum"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 
 const USD_DECIMALS = 30
 const TOKEN_DECIMALS = 7
@@ -177,10 +175,20 @@ export function usePositionActions(): UsePositionActionsResult {
   }, [])
 
   const applyConfirmed = useCallback(
-    async (submittedFor: string, positionKey: string, kind: PositionActionKind, hash: string) => {
+    async (
+      submittedFor: string,
+      positionKey: string,
+      kind: PositionActionKind,
+      hash: string,
+      marketAddress: string,
+    ) => {
       if (useWalletStore.getState().address === submittedFor) {
-        // Only refresh when the result still belongs to the visible account.
-        await invalidatePositionActionTargets(queryClient, submittedFor, kind)
+        const action = kind === "close" ? "close" : "collateral"
+        await invalidateMutationOutcome(queryClient, action, {
+          account: submittedFor,
+          network: activeQueryNetwork(),
+          marketAddress,
+        })
       }
       setAction(positionKey, {
         kind,
@@ -267,7 +275,13 @@ export function usePositionActions(): UsePositionActionsResult {
           orderType: "MarketDecrease",
           receiveToken: position.collateralToken,
         })
-        await applyConfirmed(submittedFor, position.key, "close", hash)
+        await applyConfirmed(
+          submittedFor,
+          position.key,
+          "close",
+          hash,
+          position.marketAddress,
+        )
         return hash
       } catch (error) {
         applyFailure(submittedFor, position.key, "close", error)
@@ -361,7 +375,13 @@ export function usePositionActions(): UsePositionActionsResult {
                 receiveToken: position.collateralToken,
               })
 
-        await applyConfirmed(submittedFor, position.key, kind, hash)
+        await applyConfirmed(
+          submittedFor,
+          position.key,
+          kind,
+          hash,
+          position.marketAddress,
+        )
         return hash
       } catch (error) {
         applyFailure(submittedFor, position.key, kind, error)

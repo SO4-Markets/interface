@@ -4,6 +4,7 @@ import { MARKETS } from "../data/markets"
 import { queryKeys } from "../lib/query-keys"
 import { useTokenList } from "./useTokenList"
 import type { Market } from "../data/markets"
+import { queryPolicy } from "@/shared/lib/query-policies"
 import { syntheticsReaderClient } from "@/lib/contracts"
 
 async function fetchMarkets(): Promise<Array<Market>> {
@@ -26,8 +27,7 @@ export function useMarkets() {
   const { data: markets = MARKETS } = useQuery<Array<Market>>({
     queryKey: queryKeys.trade.markets(),
     queryFn: fetchMarkets,
-    staleTime: 60_000,
-    retry: false,
+    ...queryPolicy("metadata"),
   })
 
   const getMarket = useMemo(

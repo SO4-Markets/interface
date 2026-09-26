@@ -46,6 +46,7 @@ vi.mock("@/features/trade/lib/stellar", () => ({
   claimFundingFees: vi.fn(),
   sendBatchOrderTxn: vi.fn(),
   createSidecarOrder: vi.fn(),
+  amendOrderViaReplace: vi.fn(),
 }))
 
 vi.mock("@/features/trade/hooks/useTokenPrices", () => ({

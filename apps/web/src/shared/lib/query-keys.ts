@@ -278,6 +278,17 @@ export const indexerQueryKeys = {
       [...indexerRoot(network), "fees"] as const,
     byAccount: (account: string, network: string = indexerNetwork()) =>
       [...indexerRoot(network), "fees", account] as const,
+    pagesAll: (account: string, network: string = indexerNetwork()) =>
+      [...indexerRoot(network), "fees", "pages", account] as const,
+    pages: (
+      account: string,
+      feeType?: string | null,
+      network: string = indexerNetwork(),
+    ) =>
+      [
+        ...indexerQueryKeys.fees.pagesAll(account, network),
+        nullable(feeType),
+      ] as const,
   },
 }
 

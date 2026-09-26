@@ -1,4 +1,4 @@
-import { queryClient } from "@/app/providers/QueryProvider"
+import { getQueryClient } from "@/app/providers/QueryProvider"
 import { NETWORK } from "@/app/config/network"
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import {
@@ -20,12 +20,12 @@ function isValidAccount(account: string): boolean {
 
 async function invalidateReferralQueries(account: string, code?: string | null): Promise<void> {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.referrals.code(account) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.referrals.tier(account) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.referrals.traderStatsAll() }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.referrals.distributionsAll() }),
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.referrals.code(account) }),
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.referrals.tier(account) }),
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.referrals.traderStatsAll() }),
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.referrals.distributionsAll() }),
     ...(code
-      ? [queryClient.invalidateQueries({ queryKey: queryKeys.referrals.stats(code) })]
+      ? [getQueryClient().invalidateQueries({ queryKey: queryKeys.referrals.stats(code) })]
       : []),
   ])
 }
@@ -113,7 +113,7 @@ export async function claimRebates(account: string, epochIds: Array<string>): Pr
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: async () => {
         await invalidateReferralQueries(account)
-        await queryClient.invalidateQueries({ queryKey: queryKeys.referrals.statsAll() })
+        await getQueryClient().invalidateQueries({ queryKey: queryKeys.referrals.statsAll() })
       },
       onError: (error) => mapContractError(error) || parseSorobanError(error),
     },

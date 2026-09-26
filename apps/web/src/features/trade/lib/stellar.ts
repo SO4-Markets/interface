@@ -7,12 +7,19 @@ import {
   toDecreaseOrderParams,
   toSwapOrderParams,
 } from "./order-encoding"
-import { activeQueryNetwork, queryKeys } from "./query-keys"
+import { activeQueryNetwork } from "./query-keys"
 import { registerPendingOrder } from "./pending-orders"
+import {
+  foldAmendReplaceOutcome,
+  resolveAmendReplaceSteps,
+  validateAmendPayload,
+  type AmendPayload,
+  type AmendReplaceOutcome,
+} from "./order-amendment"
 import type { CreateOrderParams, OrderKey } from "@/lib/contracts"
 import type { OrderType } from "../hooks/useOrders"
 import { NETWORK } from "@/app/config/network"
-import { queryClient } from "@/app/providers/QueryProvider"
+import { getQueryClient } from "@/app/providers/QueryProvider"
 import { walletKit } from "@/features/wallet/lib/wallet-kit"
 import {
   buildBatchOrderTransaction,
@@ -24,6 +31,7 @@ import {
 import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { formatUsd } from "@/shared/lib/format"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 
 const CHAIN_ID = activeQueryNetwork()
 
@@ -114,11 +122,16 @@ function isValidAccount(account: string): boolean {
   return /^G[A-Z2-7]{55}$/.test(account)
 }
 
-async function invalidateTradeQueries(account: string): Promise<void> {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.trade.positions(CHAIN_ID, account) }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) }),
-  ])
+async function refreshMutation(
+  action: Parameters<typeof invalidateMutationOutcome>[1],
+  account: string,
+  marketAddress?: string,
+): Promise<void> {
+  await invalidateMutationOutcome(getQueryClient(), action, {
+    account,
+    network: CHAIN_ID,
+    marketAddress,
+  })
 }
 
 function isDecreaseOrder(
@@ -155,7 +168,7 @@ export async function createIncreaseOrder(params: IncreaseOrderParams): Promise<
           },
           hash,
         )
-        return invalidateTradeQueries(params.account)
+        return refreshMutation("create", params.account, params.marketAddress)
       },
       onError: parseSorobanError,
     },
@@ -174,12 +187,10 @@ export async function createDecreaseOrder(params: DecreaseOrderParams): Promise<
     },
     {
       loadingMessage: `Closing ${params.isLong ? "Long" : "Short"} ${params.marketAddress}...`,
-      successMessage: "Position closed successfully",
+      successMessage: "Close order submitted",
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
       onSuccess: () =>
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.positions(CHAIN_ID, params.account),
-        }),
+        refreshMutation("create", params.account, params.marketAddress),
       onError: parseSorobanError,
     },
   )
@@ -207,10 +218,7 @@ export async function createSwapOrder(params: SwapOrderParams): Promise<string> 
       successMessage: "Swap submitted",
       successDescription: (hash) =>
         `${params.amountIn} ${params.fromToken} → ${params.minAmountOut} ${params.toToken} | Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () =>
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.wallet.tokenBalances(params.account, CHAIN_ID),
-        }),
+      onSuccess: () => refreshMutation("create", params.account),
       onError: parseSorobanError,
     },
   )
@@ -230,11 +238,143 @@ export async function cancelOrder(account: string, orderKey: OrderKey): Promise<
       loadingMessage: "Cancelling order...",
       successMessage: "Order cancelled",
       successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) }),
+      onSuccess: () => refreshMutation("cancel", account),
       onError: parseSorobanError,
     },
   )
+}
+
+export type AmendOrderTarget = {
+  orderKey: OrderKey
+  marketAddress: string
+  collateralToken: string
+  orderType: OrderType
+  isLong: boolean
+  acceptablePrice: number
+  triggerPrice: number
+  positionKey: string | null
+  /** Current remaining (unfilled) size in USD — re-read immediately before submitting. */
+  remainingSizeUsd: number
+  filledSizeUsd: number
+  stage: "accepted" | "partially-filled" | "pending" | "frozen" | "pending-cancellation" | "filled" | "cancelled"
+  awaitingIndex?: boolean
+}
+
+/**
+ * Amend an order via cancel-and-replace as two separate consequential steps
+ * (OB-084). The venue has no in-place update, so the replacement loses queue
+ * priority. If cancellation succeeds but the replacement fails, the outcome is
+ * `replace-failed` with `originalGone: true` — callers must never present the
+ * original order as still live in that case.
+ */
+export async function amendOrderViaReplace(
+  account: string,
+  original: AmendOrderTarget,
+  payload: AmendPayload,
+): Promise<AmendReplaceOutcome> {
+  if (!isValidAccount(account)) {
+    throw new Error("Connect your wallet before amending an order.")
+  }
+
+  const validationError = validateAmendPayload(payload, {
+    orderType: original.orderType,
+    stage: original.stage,
+    awaitingIndex: original.awaitingIndex,
+    currentTriggerPrice: original.triggerPrice,
+    remainingSizeUsd: original.remainingSizeUsd,
+  })
+  if (validationError) throw new Error(validationError)
+
+  const [cancelStep, createStep] = resolveAmendReplaceSteps(
+    {
+      orderKey: original.orderKey,
+      account,
+      marketAddress: original.marketAddress,
+      collateralToken: original.collateralToken,
+      orderType: original.orderType,
+      isLong: original.isLong,
+      acceptablePrice: original.acceptablePrice,
+      originalTriggerPrice: original.triggerPrice,
+      positionKey: original.positionKey,
+      payload,
+    },
+    original.remainingSizeUsd,
+  )
+
+  if (cancelStep.kind !== "cancel" || createStep.kind !== "create") {
+    throw new Error("Amendment failed to resolve cancel-and-replace steps.")
+  }
+
+  let cancelTxHash: string
+  try {
+    cancelTxHash = await submitTx(
+      async () => {
+        const tx = await buildCancelOrderTransaction(account, cancelStep.orderKey)
+        return prepareAndSign(tx, walletKit, NETWORK.networkPassphrase)
+      },
+      {
+        loadingMessage: "Cancelling order for replacement...",
+        successMessage: "Original order cancelled — creating replacement...",
+        successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
+        onError: parseSorobanError,
+      },
+    )
+  } catch (error) {
+    return foldAmendReplaceOutcome({
+      cancelError: error instanceof Error ? error.message : "Cancellation failed",
+    })
+  }
+
+  try {
+    const createTxHash = await submitTx(
+      async () => {
+        const tx = await buildCreateOrderTransaction(account, {
+          receiver: account,
+          market: createStep.marketAddress,
+          initialCollateralToken: original.collateralToken,
+          swapPath: [],
+          sizeDeltaUsd: encodeUsdAmount(createStep.sizeUsd),
+          collateralDeltaAmount: 0n,
+          triggerPrice:
+            createStep.triggerPrice !== undefined ? encodeOraclePrice(createStep.triggerPrice) : 0n,
+          acceptablePrice: encodeOraclePrice(createStep.acceptablePrice),
+          executionFee: encodeExecutionFeeXlm(),
+          minOutputAmount: 0n,
+          orderType: createStep.orderType,
+          isLong: createStep.isLong,
+        })
+        return prepareAndSign(tx, walletKit, NETWORK.networkPassphrase)
+      },
+      {
+        loadingMessage: "Creating replacement order...",
+        successMessage: "Replacement order submitted (back of queue)",
+        successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
+        onSuccess: (hash) => {
+          trackPendingOrder(
+            account,
+            {
+              marketAddress: createStep.marketAddress,
+              orderType: createStep.orderType,
+              isLong: createStep.isLong,
+              sizeUsd: createStep.sizeUsd,
+              triggerPrice: createStep.triggerPrice,
+            },
+            hash,
+          )
+          return invalidateTradeQueries(account)
+        },
+        onError: parseSorobanError,
+      },
+    )
+    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    return foldAmendReplaceOutcome({ cancelTxHash, createTxHash })
+  } catch (error) {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    return foldAmendReplaceOutcome({
+      cancelTxHash,
+      createError: error instanceof Error ? error.message : "Replacement order failed",
+    })
+  }
 }
 
 export async function claimFundingFees(
@@ -257,7 +397,7 @@ export async function claimFundingFees(
       successMessage: "Funding fees claimed",
       successDescription: (hash) =>
         `${marketAddresses.length} market(s) | Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () => void invalidateTradeQueries(account),
+      onSuccess: () => void refreshMutation("claim", account),
       onError: parseSorobanError,
     },
   )
@@ -298,7 +438,12 @@ export async function sendBatchOrderTxn(
       loadingMessage: `Submitting batch (${opCount} operations)...`,
       successMessage: "Batch order submitted",
       successDescription: (hash) => `${opCount} operations | Tx: ${hash.slice(0, 8)}...`,
-      onSuccess: () => void invalidateTradeQueries(account),
+      onSuccess: async () => {
+        await Promise.all([
+          refreshMutation("create", account),
+          refreshMutation("cancel", account),
+        ])
+      },
       onError: parseSorobanError,
     },
   )
@@ -366,9 +511,7 @@ export async function createSidecarOrder(params: SidecarOrderParams): Promise<st
           },
           hash,
         )
-        return queryClient.invalidateQueries({
-          queryKey: queryKeys.trade.orders(CHAIN_ID, params.account),
-        })
+        return refreshMutation("create", params.account, params.marketAddress)
       },
       onError: parseSorobanError,
     },

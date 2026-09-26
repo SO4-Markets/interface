@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useWalletStore } from "../store/wallet-store"
 import { NETWORK } from "@/app/config/network"
 import { queryKeys } from "@/shared/lib/query-keys"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 type HorizonBalance = {
   asset_type: "native" | "credit_alphanum4" | "credit_alphanum12"
@@ -32,7 +33,6 @@ export function useTokenBalances() {
     queryKey: queryKeys.wallet.tokenBalances(address ?? ""),
     queryFn: ({ signal }) => fetchTokenBalances(address!, signal),
     enabled: !!address && status === "connected",
-    staleTime: 15_000,
-    refetchInterval: 15_000,
+    ...queryPolicy("balances"),
   })
 }

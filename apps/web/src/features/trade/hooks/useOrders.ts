@@ -4,6 +4,7 @@ import { MARKETS } from "../data/markets"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { syntheticsReaderClient } from "@/lib/contracts"
 import { fromSorobanAmount } from "@/shared/lib/bignum"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 const USD_DECIMALS = 30
 const CHAIN_ID = activeQueryNetwork()
@@ -71,7 +72,6 @@ export function useOrders() {
     queryKey: queryKeys.trade.orders(CHAIN_ID, account ?? ""),
     queryFn: () => fetchOrders(account!),
     enabled: !!account,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    ...queryPolicy("positions"),
   })
 }
