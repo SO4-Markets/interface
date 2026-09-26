@@ -58,9 +58,9 @@ describe("MarketSelector", () => {
     const user = userEvent.setup()
     setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
-    expect(screen.getByRole("button", { name: "BTC/USD" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "ETH/USD" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "XLM/USD" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "BTC/USD" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "ETH/USD" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "XLM/USD" })).toBeInTheDocument()
   })
 
   // ── Search / filtering ────────────────────────────────────────────────────
@@ -70,9 +70,9 @@ describe("MarketSelector", () => {
     setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
     await user.type(screen.getByRole("textbox"), "BTC")
-    expect(screen.getByRole("button", { name: "BTC/USD" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "ETH/USD" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "XLM/USD" })).not.toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "BTC/USD" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "ETH/USD" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "XLM/USD" })).not.toBeInTheDocument()
   })
 
   it("is case-insensitive when filtering", async () => {
@@ -80,8 +80,8 @@ describe("MarketSelector", () => {
     setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
     await user.type(screen.getByRole("textbox"), "eth")
-    expect(screen.getByRole("button", { name: "ETH/USD" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "BTC/USD" })).not.toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "ETH/USD" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "BTC/USD" })).not.toBeInTheDocument()
   })
 
   it("shows 'No markets found' when the query has no match", async () => {
@@ -98,7 +98,7 @@ describe("MarketSelector", () => {
     const user = userEvent.setup()
     const { onSelect } = setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
-    await user.click(screen.getByRole("button", { name: "ETH/USD" }))
+    await user.click(screen.getByRole("option", { name: "ETH/USD" }))
     expect(onSelect).toHaveBeenCalledOnce()
     expect(onSelect).toHaveBeenCalledWith("addr-eth")
   })
@@ -107,7 +107,7 @@ describe("MarketSelector", () => {
     const user = userEvent.setup()
     const { onSelect } = setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
-    await user.click(screen.getByRole("button", { name: "BTC/USD" }))
+    await user.click(screen.getByRole("option", { name: "BTC/USD" }))
     expect(onSelect).toHaveBeenCalledWith("addr-btc")
   })
 
@@ -115,7 +115,7 @@ describe("MarketSelector", () => {
     const user = userEvent.setup()
     setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
-    await user.click(screen.getByRole("button", { name: "BTC/USD" }))
+    await user.click(screen.getByRole("option", { name: "BTC/USD" }))
     expect(screen.queryByPlaceholderText("Search markets...")).not.toBeInTheDocument()
   })
 
@@ -129,6 +129,16 @@ describe("MarketSelector", () => {
     expect(screen.queryByPlaceholderText("Search markets...")).not.toBeInTheDocument()
   })
 
+  it("returns focus to the trigger after Escape closes the listbox", async () => {
+    const user = userEvent.setup()
+    setup("addr-btc")
+    const trigger = screen.getByRole("button", { name: "BTC/USD" })
+    await user.click(trigger)
+    expect(screen.getByRole("listbox", { name: "Markets" })).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    expect(trigger).toHaveFocus()
+  })
+
   // ── Disabled markets ──────────────────────────────────────────────────────
 
   it("filters out disabled markets from the list", async () => {
@@ -140,10 +150,10 @@ describe("MarketSelector", () => {
     ]
     setup(undefined, disabledMarkets)
     await user.click(screen.getByRole("button", { name: "Select Market" }))
-    expect(screen.getByRole("button", { name: "BTC/USD" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "XLM/USD" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "BTC/USD" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "XLM/USD" })).toBeInTheDocument()
     // ETH is disabled, so it shouldn't appear in the list
-    expect(screen.queryByRole("button", { name: "ETH/USD" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "ETH/USD" })).not.toBeInTheDocument()
   })
 
   it("searches by name and address", async () => {
@@ -151,8 +161,8 @@ describe("MarketSelector", () => {
     setup()
     await user.click(screen.getByRole("button", { name: "Select Market" }))
     await user.type(screen.getByRole("textbox"), "addr-btc")
-    expect(screen.getByRole("button", { name: "BTC/USD" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "XLM/USD" })).not.toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "BTC/USD" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "XLM/USD" })).not.toBeInTheDocument()
   })
 
   it("handles empty markets array gracefully", () => {
