@@ -99,7 +99,7 @@ describe("FaucetPage — claim one success flow (#215)", () => {
      
     } as any)
 
-    // Spy on toast so we can assert calls without needing <Toaster /> rendered
+    // Spy on toast so we can assert calls without needing <ToastProvider /> rendered
      
     vi.spyOn(toast, "loading").mockReturnValue("mock-toast-id")
     vi.spyOn(toast, "success")
