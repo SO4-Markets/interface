@@ -29,7 +29,12 @@ export class OrderVaultClient implements OrderVaultBinding {
     ])
   }
 
-  private async invoke(_method: string, _args: Array<xdr.ScVal>): Promise<xdr.ScVal> {
-    return xdr.ScVal.scvVoid()
+  private async invoke(method: string, _args: Array<xdr.ScVal>): Promise<xdr.ScVal> {
+    // OB-089: The OrderVault stub must never produce a successful deposit or
+    // withdrawal response. Collateral transfers require an executable path through
+    // ExchangeRouter with simulation, signature, and confirmation evidence.
+    throw new Error(
+      `OrderVault.${method} cannot be invoked directly. Direct OrderVault transfers are not supported; collateral transfers must be routed through ExchangeRouter with verified simulation and confirmation evidence.`,
+    )
   }
 }

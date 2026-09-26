@@ -129,6 +129,23 @@ statements, **65%** functions. Coverage reports land in each package's
 `coverage/` directory. If your change drops coverage below the gate, add tests —
 do not lower the threshold.
 
+### Motion, toast, and query contracts
+
+Season order-book work must keep these contracts intact:
+
+- **Motion.** Follow `docs/ob_1/001_motion_specification.md`. Prefer existing
+  `--duration-*` / `--ease-*` tokens, honour `prefers-reduced-motion`, and keep
+  Escape/focus behaviour synchronous. Maintainer-local Emil Kowalski skill files
+  (`.agents/skills/animate`, `.agents/skills/review-animations`) apply when
+  present; until they ship on `main`, treat the motion specification and this
+  checklist as the required workflow.
+- **Toast.** Extend `@workspace/ui/components/toast` only. Do not install Sonner
+  or a second toaster.
+- **Queries.** Use TanStack Query with scoped invalidation after confirmed
+  transactions. Invalidation marks data stale; it does not prove indexer
+  catch-up. Cache `staleTime` and `gcTime` by data class (see
+  `apps/web/src/features/trade/lib/cache-retention-long-session.md`).
+
 ---
 
 ## Development workflow

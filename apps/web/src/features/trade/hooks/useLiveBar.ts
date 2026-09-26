@@ -163,6 +163,9 @@ export function useLiveBar(symbol: string | undefined, period: string): OhlcBar 
         usingPoll = false; gotFirstWsMessage = false
         connect()
       }
+    if (!symbol) {
+      setLiveBar(null)
+      return
     }
 
     const shared = marketSubscriptionManager.getOrCreate(symbol)

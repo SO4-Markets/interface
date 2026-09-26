@@ -1,13 +1,27 @@
 ---
 title: Trading
 description: Panel-by-panel guide to the SO4 trade page: market selector, charts, order forms, leverage controls, and transaction confirmation.
-updated: 2026-08-31
+updated: 2026-09-26
 status: stable
 ---
 
 The SO4 trade page at `/trade` provides the interface to open leveraged perpetual positions or execute spot token swaps across supported markets. Every order created through the interface is sequenced on Stellar via Soroban smart contracts and executed by off-chain keepers.
 
 The interface is divided into three primary panels: the market header and chart on the left, the trade execution panel on the right, and the positions and order management tabs along the bottom.
+
+## Pending, accepted, filled, and stale data
+
+Keep these states separate when reading the UI. A wallet confirmation is not a fill.
+
+| What you see | What it means | What it is not |
+| --- | --- | --- |
+| Wallet approval / pending spinner | You signed or are waiting for ledger inclusion | Order acceptance or a fill |
+| Order listed as created / active | Protocol accepted a resting request (`ord_crt` / `ord_upd`) | Executable level-2 book depth |
+| Order executed / position open | Keeper fill evidence (`ord_exe`) plus position update | Guaranteed by the transaction hash alone |
+| Yellow/red oracle staleness | Mark/index feeds are aging or paused | Permission to trade on a frozen price |
+| Syncing / empty account tables | Indexer catch-up after a confirmed transaction | Proof the indexer has finished |
+
+Pool liquidity, oracle marks, and account orders are **not** substitutes for an executable order book. See [Order-book execution model](https://github.com/SO4-Markets/interface/blob/main/docs/order-book-execution-model.md) for the verified capability matrix.
 
 ## Market selector and statistics
 

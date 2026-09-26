@@ -84,9 +84,16 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   const [search, setSearch] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const comboboxId = useId()
   const listboxId = `${comboboxId}-listbox`
+
+  function closeAndRestoreFocus() {
+    setOpen(false)
+    setSearch("")
+    queueMicrotask(() => triggerRef.current?.focus())
+  }
 
   const { markets } = useMarkets()
 
@@ -116,13 +123,14 @@ export function MarketSelector({ symbol, onSelect }: Props) {
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
-        setOpen(false)
+        closeAndRestoreFocus()
       }
     }
 
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpen(false)
+        e.preventDefault()
+        closeAndRestoreFocus()
       }
     }
 
@@ -136,8 +144,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
 
   const selectMarket = (market: Market) => {
     onSelect(market.indexTokenAddress)
-    setOpen(false)
-    setSearch("")
+    closeAndRestoreFocus()
   }
 
   const moveActive = (delta: number) => {
@@ -200,6 +207,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   return (
     <div ref={containerRef} className="relative inline-flex items-center gap-2">
       <button
+        ref={triggerRef}
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
