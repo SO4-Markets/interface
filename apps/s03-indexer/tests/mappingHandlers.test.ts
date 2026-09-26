@@ -231,6 +231,7 @@ describe("SO4 event dispatch", () => {
       market: marketToken,
       creator: account,
       name: "TETH/TUSDC",
+      max_leverage: "25",
     });
 
     await dispatchEvent(event);
@@ -241,6 +242,8 @@ describe("SO4 event dispatch", () => {
     expect(market.marketTokenId).toBe(marketToken);
     expect(market.status).toBe("ACTIVE");
     expect(market.createdBy).toBeDefined();
+    const [snapshot] = records("MarketConfigSnapshot");
+    expect(snapshot.maxLeverage).toBe("25");
   });
 
   test("indexes market creation with deterministic entity IDs", async () => {

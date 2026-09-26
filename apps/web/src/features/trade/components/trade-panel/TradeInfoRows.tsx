@@ -3,17 +3,20 @@ import { Numeric } from "@workspace/ui/components/numeric"
 import { useTradeFees } from "../../hooks/useTradeFees"
 import { useFundingRate } from "../../hooks/useFundingRate"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
-import { estimateLiquidationPrice } from "../../lib/trade-math"
 import { getEstimatedEntryPrice, getPriceImpactPct } from "../../lib/pricing"
+import { estimatePositionRisk } from "../../lib/risk"
 import { FundingRate } from "../FundingRate"
 import type { ReactNode } from "react"
 import type { TradeState } from "../../hooks/useTradeState"
+import type { ExistingExposure, MarketRiskParams } from "../../lib/risk"
 
 type Props = Pick<
   TradeState,
   "tradeType" | "toTokenAddress" | "marketAddress" | "leverage" | "fromAmount" | "tradeMode"
 > & {
   sizeUsd: number
+  riskParams: MarketRiskParams | null
+  existingExposure?: ExistingExposure
 }
 
 export function TradeInfoRows({
@@ -23,6 +26,8 @@ export function TradeInfoRows({
   leverage,
   sizeUsd,
   tradeMode,
+  riskParams,
+  existingExposure,
 }: Props) {
   const { getMidPrice } = useTokenPrices()
   const { data: fundingRate } = useFundingRate(marketAddress)
@@ -33,15 +38,16 @@ export function TradeInfoRows({
   const priceImpactPct = getPriceImpactPct(sizeUsd, fees.priceImpactUsd)
   const estimatedEntryPrice = getEstimatedEntryPrice(entryPrice, priceImpactPct, isLong)
 
-  const liquidationPrice =
-    sizeUsd > 0 && estimatedEntryPrice > 0
-      ? estimateLiquidationPrice({
-          entryPrice: estimatedEntryPrice,
-          collateralUsd: sizeUsd / leverage,
-          sizeUsd,
-          isLong,
-        })
-      : 0
+  const positionEstimate = riskParams && sizeUsd > 0 && estimatedEntryPrice > 0
+    ? estimatePositionRisk({
+        entryPrice: estimatedEntryPrice,
+        collateralUsd: leverage > 0 ? sizeUsd / leverage : 0,
+        leverage,
+        isLong,
+        risk: riskParams,
+        existing: existingExposure,
+      })
+    : null
 
   const executionFeeDisplay = fees.executionFeeXlm > 0
     ? <>~{fees.executionFeeXlm.toFixed(2)} XLM (<Numeric value={fees.executionFeeUsd} format="usd" role="neutral" />)</>
@@ -60,9 +66,16 @@ export function TradeInfoRows({
 
   return (
     <div className="min-w-0 space-y-1 overflow-x-hidden text-xs">
-      <Row label="Entry price" value={estimatedEntryPrice > 0 ? <Numeric value={estimatedEntryPrice} format="usd" role="neutral" /> : "-"} />
+      <Row label="Entry price estimate" value={estimatedEntryPrice > 0 ? <Numeric value={estimatedEntryPrice} format="usd" role="neutral" /> : "-"} />
       {tradeMode === "Limit" && <Row label="Limit price" value="-" />}
-      <Row label="Liq. price" value={liquidationPrice > 0 ? <Numeric value={liquidationPrice} format="usd" role="danger" /> : "-"} />
+      <Row label="Notional estimate" value={positionEstimate ? <Numeric value={positionEstimate.notionalUsd} format="usd" role="neutral" /> : "-"} />
+      <Row label="Margin estimate" value={positionEstimate ? <Numeric value={positionEstimate.collateralUsd} format="usd" role="neutral" /> : "-"} />
+      <Row
+        label="Liquidation estimate"
+        value={positionEstimate?.liquidationPrice && positionEstimate.liquidationPrice > 0
+          ? <Numeric value={positionEstimate.liquidationPrice} format="usd" role="danger" />
+          : "Unavailable"}
+      />
       <Row
         label="Funding"
         value={

@@ -50,6 +50,14 @@ vi.mock("../../hooks/useTradeFees", () => ({
     feesBreakdown: [],
   }),
 }))
+vi.mock("../../hooks/useMarketRiskParams", () => ({
+  useMarketRiskParams: () => ({
+    params: { maxLeverage: 50, maintenanceMarginRateBps: null, updatedAt: Date.now() },
+    state: "available",
+    isLoading: false,
+    isError: false,
+  }),
+}))
 
 // ── Wallet balances: USDC balance of 500 (the default collateral token) ──────
 // Hoisted because the `vi.mock` factory below closes over it.

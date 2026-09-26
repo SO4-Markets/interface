@@ -48,7 +48,7 @@ export type TradeState = {
   // Input amounts (raw string so user can type freely)
   fromAmount: string
   toAmount: string               // size input for Long/Short, receive amount for Swap
-  // Leverage (1x – 50x for Long/Short)
+  // Leverage is clamped to the selected market's source risk parameters.
   leverage: number
   // Trigger price (Limit / Stop-Loss orders)
   triggerPrice: string

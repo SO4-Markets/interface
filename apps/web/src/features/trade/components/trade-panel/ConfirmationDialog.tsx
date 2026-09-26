@@ -31,6 +31,8 @@ import {
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { estimateFee } from "@/lib/soroban/simulate"
 import { formatAddress } from "@/shared/lib/format"
+import { clampLeverage } from "../../lib/risk"
+import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 
 type Props = {
   open: boolean
@@ -38,7 +40,7 @@ type Props = {
   tradeState: ReturnType<typeof useTradeState>
   sizeUsd: number
   entryPrice: number
-  liquidationPrice: number
+  liquidationPrice: number | null
   totalFeesUsd: number
 }
 
@@ -66,6 +68,10 @@ export function ConfirmationDialog({
     sidecarOrders,
     clearSidecarOrders,
   } = tradeState
+  const marketRisk = useMarketRiskParams(tradeState.marketAddress)
+  const effectiveLeverage = marketRisk.params
+    ? clampLeverage(leverage, marketRisk.params.maxLeverage)
+    : 0
 
   const fees = useTradeFees({
     sizeUsd,
@@ -144,7 +150,7 @@ export function ConfirmationDialog({
             ? undefined
             : Number(triggerPrice) || estimatedEntryPrice,
           orderType: tradeFlags.isMarket ? "MarketIncrease" : "LimitIncrease",
-          leverage,
+          leverage: effectiveLeverage,
         }
 
         const tx = sidecarCreateOrders.length
@@ -185,7 +191,7 @@ export function ConfirmationDialog({
     tradeFlags.isLong,
     tradeFlags.isMarket,
     triggerPrice,
-    leverage,
+    effectiveLeverage,
     estimatedEntryPrice,
     sidecarCreateOrders,
   ])
@@ -205,6 +211,9 @@ export function ConfirmationDialog({
       } else {
         if (!account) {
           throw new Error("Connect your wallet before placing an order.")
+        }
+        if (marketRisk.state !== "available" || effectiveLeverage <= 0) {
+          throw new Error("Market risk parameters are unavailable or stale.")
         }
 
         const storedReferralCode = readStoredReferralCode()
@@ -268,7 +277,7 @@ export function ConfirmationDialog({
               {maxPositionError && (
                 <p className="break-words text-xs text-red-500">{maxPositionError}</p>
               )}
-              <Row label="Leverage" value={`${leverage}x`} />
+              <Row label="Leverage" value={`${effectiveLeverage}x`} />
               <Row
                 label="Entry price"
                 value={
@@ -281,8 +290,8 @@ export function ConfirmationDialog({
                 highlight={Math.abs(priceImpactPct) > 0.5}
               />
               <Row
-                label="Liq. price"
-                value={liquidationPrice > 0 ? formatUsd(liquidationPrice) : "-"}
+                label="Liquidation estimate"
+                value={liquidationPrice !== null && liquidationPrice > 0 ? formatUsd(liquidationPrice) : "Unavailable"}
               />
               <Row
                 label="Network fee"

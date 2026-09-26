@@ -13,7 +13,7 @@ export type MarketInfo = Market & {
   availableLiquidityShort: number
   borrowingRatePerHour: number
   fundingRatePerHour: number
-  maxLeverage: number
+  maxLeverage: number | null
   isDisabled: boolean
 }
 
@@ -74,7 +74,7 @@ async function fetchMarketsInfo(markets: Array<Market>): Promise<Array<MarketInf
         availableLiquidityShort: availShort,
         borrowingRatePerHour: 0.0001, // DataStore read — added in a follow-up
         fundingRatePerHour,
-        maxLeverage: 50,              // DataStore read — added in a follow-up
+        maxLeverage: null,
         isDisabled: false,
       }
     }),
@@ -93,7 +93,7 @@ async function fetchMarketsInfo(markets: Array<Market>): Promise<Array<MarketInf
       availableLiquidityShort: 0,
       borrowingRatePerHour: 0,
       fundingRatePerHour: 0,
-      maxLeverage: 50,
+      maxLeverage: null,
       isDisabled: false,
     }
   })

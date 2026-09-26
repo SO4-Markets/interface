@@ -39,6 +39,7 @@ export const indexerQueryKeys = {
   markets: {
     all: () => [...indexerQueryKeys.all(), "markets"] as const,
     byKey: (key: string) => [...indexerQueryKeys.markets.all(), key] as const,
+    risk: (key: string) => [...indexerQueryKeys.markets.byKey(key), "risk"] as const,
   },
 
   /** Pool queries */
