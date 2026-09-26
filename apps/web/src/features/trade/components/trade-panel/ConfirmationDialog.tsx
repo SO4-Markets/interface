@@ -31,6 +31,10 @@ import {
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { estimateFee } from "@/lib/soroban/simulate"
 import { formatAddress } from "@/shared/lib/format"
+import { clampLeverage } from "../../lib/risk"
+import { getProtectionPrice } from "../../lib/fee-preview"
+import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
+import { validateExecutionRequest } from "../../lib/execution-support"
 
 type Props = {
   open: boolean
@@ -38,8 +42,8 @@ type Props = {
   tradeState: ReturnType<typeof useTradeState>
   sizeUsd: number
   entryPrice: number
-  liquidationPrice: number
-  totalFeesUsd: number
+  liquidationPrice: number | null
+  totalFeesUsd: number | null
 }
 
 export function ConfirmationDialog({
@@ -66,12 +70,17 @@ export function ConfirmationDialog({
     sidecarOrders,
     clearSidecarOrders,
   } = tradeState
+  const marketRisk = useMarketRiskParams(tradeState.marketAddress)
+  const effectiveLeverage = marketRisk.params
+    ? clampLeverage(leverage, marketRisk.params.maxLeverage)
+    : 0
 
   const fees = useTradeFees({
     sizeUsd,
     marketAddress: tradeState.marketAddress,
     isIncrease: true,
     tradeType: tradeState.tradeType,
+    referencePrice: entryPrice,
   })
   const priceImpactPct = getPriceImpactPct(sizeUsd, fees.priceImpactUsd)
   const estimatedEntryPrice = getEstimatedEntryPrice(
@@ -79,10 +88,11 @@ export function ConfirmationDialog({
     priceImpactPct,
     tradeFlags.isLong
   )
-  const slippageFactor = tradeState.advanced.slippagePct / 100
-  const acceptablePrice = tradeFlags.isLong
-    ? entryPrice * (1 + slippageFactor)
-    : entryPrice * (1 - slippageFactor)
+  const acceptablePrice = getProtectionPrice({
+    referencePrice: entryPrice,
+    isLong: tradeFlags.isLong,
+    slippagePct: tradeState.advanced.slippagePct,
+  })
 
   const { data: feeConfig } = useQuery({
     queryKey: queryKeys.trade.feeConfig(
@@ -95,9 +105,10 @@ export function ConfirmationDialog({
   })
 
   const maxPositionError =
-    !tradeFlags.isSwap && feeConfig && sizeUsd > feeConfig.maxPositionSizeUsd
+    !tradeFlags.isSwap && feeConfig?.source === "verified" && sizeUsd > feeConfig.maxPositionSizeUsd
       ? `Maximum position size for ${tradeState.toTokenAddress}/USD is $${feeConfig.maxPositionSizeUsd.toLocaleString()}.`
       : null
+  const executionValidation = validateExecutionRequest({ attachedOrders: sidecarOrders })
 
   const sidecarCreateOrders = useMemo((): Array<DecreaseOrderParams> => {
     if (!account || sidecarOrders.length === 0) return []
@@ -109,7 +120,7 @@ export function ConfirmationDialog({
       collateralDeltaAmount: Number(fromAmount || "0") * (order.sizePct / 100),
       sizeDeltaUsd: sizeUsd * (order.sizePct / 100),
       isLong: tradeFlags.isLong,
-      acceptablePrice: estimatedEntryPrice,
+      acceptablePrice: acceptablePrice ?? entryPrice,
       triggerPrice: Number(order.triggerPrice),
       orderType: order.type === "takeProfit" ? "LimitDecrease" : "StopLoss",
       receiveToken: collateralAddress!,
@@ -123,6 +134,8 @@ export function ConfirmationDialog({
     sizeUsd,
     tradeFlags.isLong,
     estimatedEntryPrice,
+    acceptablePrice,
+    entryPrice,
   ])
 
   useEffect(() => {
@@ -139,12 +152,12 @@ export function ConfirmationDialog({
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
-          acceptablePrice,
+          acceptablePrice: acceptablePrice ?? entryPrice,
           triggerPrice: tradeFlags.isMarket
             ? undefined
-            : Number(triggerPrice) || estimatedEntryPrice,
+            : Number(triggerPrice) || estimatedEntryPrice || acceptablePrice || entryPrice,
           orderType: tradeFlags.isMarket ? "MarketIncrease" : "LimitIncrease",
-          leverage,
+          leverage: effectiveLeverage,
         }
 
         const tx = sidecarCreateOrders.length
@@ -185,14 +198,19 @@ export function ConfirmationDialog({
     tradeFlags.isLong,
     tradeFlags.isMarket,
     triggerPrice,
-    leverage,
+    effectiveLeverage,
     estimatedEntryPrice,
+    acceptablePrice,
+    entryPrice,
     sidecarCreateOrders,
   ])
 
   async function handleConfirm() {
     setIsSubmitting(true)
     try {
+      if (!executionValidation.valid) {
+        throw new Error(executionValidation.reason)
+      }
       if (tradeFlags.isSwap) {
         await createSwapOrder({
           account: account ?? "GDUMMY...STELLAR",
@@ -205,6 +223,9 @@ export function ConfirmationDialog({
       } else {
         if (!account) {
           throw new Error("Connect your wallet before placing an order.")
+        }
+        if (marketRisk.state !== "available" || effectiveLeverage <= 0) {
+          throw new Error("Market risk parameters are unavailable or stale.")
         }
 
         const storedReferralCode = readStoredReferralCode()
@@ -226,12 +247,12 @@ export function ConfirmationDialog({
           collateralAmount: Number(fromAmount),
           sizeDeltaUsd: sizeUsd,
           isLong: tradeFlags.isLong,
-          acceptablePrice,
+          acceptablePrice: acceptablePrice ?? entryPrice,
           triggerPrice: tradeFlags.isMarket
             ? undefined
-            : Number(triggerPrice) || estimatedEntryPrice,
+            : Number(triggerPrice) || estimatedEntryPrice || acceptablePrice || entryPrice,
           orderType: tradeFlags.isMarket ? "MarketIncrease" : "LimitIncrease",
-          leverage,
+          leverage: effectiveLeverage,
         }
 
         await sendBatchOrderTxn(account, {
@@ -268,33 +289,39 @@ export function ConfirmationDialog({
               {maxPositionError && (
                 <p className="break-words text-xs text-red-500">{maxPositionError}</p>
               )}
-              <Row label="Leverage" value={`${leverage}x`} />
+              <Row label="Leverage" value={`${effectiveLeverage}x`} />
               <Row
                 label="Entry price"
                 value={
-                  estimatedEntryPrice > 0 ? formatUsd(estimatedEntryPrice) : "-"
+                  estimatedEntryPrice !== null && estimatedEntryPrice > 0 ? formatUsd(estimatedEntryPrice) : "Unavailable"
                 }
               />
+              {!tradeFlags.isMarket && (
+                <Row label="Limit trigger" value="Not guaranteed to fill" />
+              )}
               <Row
                 label="Price impact"
-                value={`${priceImpactPct.toFixed(2)}%`}
-                highlight={Math.abs(priceImpactPct) > 0.5}
+                value={priceImpactPct !== null ? `${priceImpactPct.toFixed(2)}%` : "Unavailable"}
+                highlight={priceImpactPct !== null && Math.abs(priceImpactPct) > 0.5}
               />
               <Row
-                label="Liq. price"
-                value={liquidationPrice > 0 ? formatUsd(liquidationPrice) : "-"}
+                label="Liquidation estimate"
+                value={liquidationPrice !== null && liquidationPrice > 0 ? formatUsd(liquidationPrice) : "Unavailable"}
               />
               <Row
                 label="Network fee"
                 value={
                   estimatingFee
-                    ? "Estimating..."
-                    : networkFee
-                      ? `~${networkFee} XLM`
-                      : "-"
+                      ? "Estimating..."
+                      : networkFee
+                        ? `~${networkFee} XLM`
+                        : "Unavailable"
                 }
               />
-              <Row label="Execution fee" value="~0.01 XLM" />
+              <Row
+                label="Execution fee estimate"
+                value={typeof fees.executionFeeXlm === "number" ? `~${fees.executionFeeXlm.toFixed(2)} XLM` : "Unavailable"}
+              />
               {estimateError && (
                 <p className="max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
                   Fee estimation warning: {estimateError}
@@ -314,6 +341,11 @@ export function ConfirmationDialog({
                       {order.triggerPrice} ({order.sizePct}%)
                     </p>
                   ))}
+                  {!executionValidation.valid && (
+                    <p role="alert" className="mt-2 text-xs text-amber-500">
+                      {executionValidation.reason}
+                    </p>
+                  )}
                 </div>
               )}
             </>
@@ -323,7 +355,7 @@ export function ConfirmationDialog({
             value={`${fromAmount || "0"} ${formatAddress(collateralAddress!)}`}
           />
           <div className="border-t border-border pt-1.5">
-            <Row label="Total fees" value={formatUsd(fees.totalFeesUsd)} bold />
+            <Row label="Total fees" value={fees.totalFeesUsd !== null ? formatUsd(fees.totalFeesUsd) : "Unavailable"} bold />
           </div>
         </div>
 
@@ -336,7 +368,8 @@ export function ConfirmationDialog({
             disabled={
               isSubmitting ||
               sizeUsd <= 0 ||
-              !!maxPositionError
+              !!maxPositionError ||
+              !executionValidation.valid
             }
             className={
               tradeFlags.isLong

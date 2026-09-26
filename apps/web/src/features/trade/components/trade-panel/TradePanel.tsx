@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react"
 import { useMemo, useState, useEffect } from "react"
 import {
   Tabs,
@@ -12,13 +13,12 @@ import { Numeric } from "@workspace/ui/components/numeric"
 import { toast } from "@workspace/ui/components/toast"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useTradeFees } from "../../hooks/useTradeFees"
+import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
+import { usePositions } from "../../hooks/usePositions"
 import { useTokenBalances } from "../../../wallet/hooks/useTokenBalances"
 // NB: useTokenBalances is also consumed here (not only in TradeInputs) to
 // validate the entered amount against the wallet balance before submit.
-import {
-  estimateLiquidationPrice,
-  sizeFromCollateralAndLeverage,
-} from "../../lib/trade-math"
+import { sizeFromCollateralAndLeverage } from "../../lib/trade-math"
 import { getToken } from "../../data/tokens"
 import { TradeInfoRows } from "./TradeInfoRows"
 import { ConfirmationDialog } from "./ConfirmationDialog"
@@ -29,11 +29,13 @@ import { NumberInput } from "@/shared/components/NumberInput"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { TokenIcon } from "@/shared/components/TokenIcon"
 import { formatAddress } from "@/shared/lib/format"
+import { clampLeverage, estimatePositionRisk } from "../../lib/risk"
 import {
   validateAmount,
   validatePrice,
   validateBalance,
 } from "@/lib/input-validation"
+import { EXECUTION_SUPPORT } from "../../lib/execution-support"
 
 type TradeController = ReturnType<typeof useTradeState>
 
@@ -65,6 +67,22 @@ export function TradePanel({ trade }: TradePanelProps) {
     advanced,
   } = trade
 
+  const marketRisk = useMarketRiskParams(marketAddress)
+  const { data: positions = [] } = usePositions()
+  const existingExposure = positions.find(
+    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong,
+  )
+  const maxLeverage = marketRisk.params?.maxLeverage ?? 1
+  const boundedLeverage = marketRisk.params
+    ? clampLeverage(leverage, maxLeverage)
+    : 0
+
+  useEffect(() => {
+    if (marketRisk.state === "available" && leverage > maxLeverage) {
+      setLeverage(maxLeverage)
+    }
+  }, [leverage, maxLeverage, marketRisk.state, setLeverage])
+
   const entryPrice = getMidPrice(toTokenAddress)
   // Collateral is configured per market and side, so it can be unset; an
   // unknown key prices at 0, which is the right "no collateral selected" value.
@@ -72,7 +90,7 @@ export function TradePanel({ trade }: TradePanelProps) {
     parseFloat(fromAmount || "0") * getMidPrice(collateralAddress ?? "")
   const sizeUsd = tradeFlags.isSwap
     ? collateralUsd
-    : sizeFromCollateralAndLeverage(collateralUsd, leverage)
+    : sizeFromCollateralAndLeverage(collateralUsd, boundedLeverage)
 
   const fees = useTradeFees({
     sizeUsd,
@@ -81,19 +99,22 @@ export function TradePanel({ trade }: TradePanelProps) {
     tradeType,
   })
 
-  const liquidationPrice = useMemo(() => {
-    if (!tradeFlags.isPosition || sizeUsd <= 0 || entryPrice <= 0) return 0
-    return estimateLiquidationPrice({
-      entryPrice,
+  const positionEstimate = useMemo(() => {
+    if (!tradeFlags.isPosition || !marketRisk.params) return null
+    return estimatePositionRisk({
       collateralUsd,
-      sizeUsd,
+      leverage: boundedLeverage,
+      entryPrice,
       isLong: tradeFlags.isLong,
+      risk: marketRisk.params,
+      existing: existingExposure,
     })
-  }, [tradeFlags, sizeUsd, entryPrice, collateralUsd])
+  }, [boundedLeverage, collateralUsd, entryPrice, existingExposure, marketRisk.params, tradeFlags])
 
   const priceStale = isStale(toTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
-  const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale
+  const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale &&
+    (tradeFlags.isSwap || marketRisk.state === "available")
 
   // Detect mode changes and notify user about discarded fields
   useEffect(() => {
@@ -203,6 +224,17 @@ export function TradePanel({ trade }: TradePanelProps) {
 
       {/* ── Leverage slider (positions only) ─────────────────────── */}
       {tradeFlags.isPosition && (
+        marketRisk.state === "available" ? (
+          <LeverageSlider
+            value={boundedLeverage}
+            max={maxLeverage}
+            onChange={setLeverage}
+          />
+        ) : (
+          <p role="status" className="text-xs text-muted-foreground">
+            Leverage unavailable until current market risk parameters are available.
+          </p>
+        )
         <div className="animate-in fade-in duration-base">
           <LeverageSlider value={leverage} onChange={setLeverage} />
         </div>
@@ -211,7 +243,7 @@ export function TradePanel({ trade }: TradePanelProps) {
       {/* ── Size summary ─────────────────────────────────────────── */}
       {tradeFlags.isPosition && sizeUsd > 0 && (
         <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Position size</span>
+          <span className="text-muted-foreground">Position size estimate</span>
           <Numeric value={sizeUsd} format="usd" role="neutral" className="font-medium" />
         </div>
       )}
@@ -227,6 +259,8 @@ export function TradePanel({ trade }: TradePanelProps) {
         leverage={leverage}
         fromAmount={fromAmount}
         sizeUsd={sizeUsd}
+        riskParams={marketRisk.params}
+        existingExposure={existingExposure}
       />
 
       {/* ── Advanced options ──────────────────────────────────────── */}
@@ -261,6 +295,11 @@ export function TradePanel({ trade }: TradePanelProps) {
             <p className="text-xs text-muted-foreground">
               This sets the maximum allowable slippage for the order. Orders will revert if the fill price exceeds this threshold.
             </p>
+            {!EXECUTION_SUPPORT.attachedTriggers && (
+              <p role="status" className="text-xs text-muted-foreground">
+                Take-profit and stop-loss attachments are unavailable for this execution venue.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -300,7 +339,7 @@ export function TradePanel({ trade }: TradePanelProps) {
         tradeState={trade}
         sizeUsd={sizeUsd}
         entryPrice={entryPrice}
-        liquidationPrice={liquidationPrice}
+        liquidationPrice={positionEstimate?.liquidationPrice ?? null}
         totalFeesUsd={fees.totalFeesUsd}
       />
 

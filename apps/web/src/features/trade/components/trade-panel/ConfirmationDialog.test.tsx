@@ -49,6 +49,15 @@ vi.mock("../../hooks/useTradeFees", () => ({
   }),
 }))
 
+vi.mock("../../hooks/useMarketRiskParams", () => ({
+  useMarketRiskParams: () => ({
+    params: { maxLeverage: 50, maintenanceMarginRateBps: null, updatedAt: Date.now() },
+    state: "available",
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 // ── Transaction layer: mocked so no real transaction is ever submitted ───────
 vi.mock("../../lib/stellar", () => ({ createSwapOrder, sendBatchOrderTxn }))
 

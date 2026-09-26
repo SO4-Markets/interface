@@ -11,6 +11,8 @@ export type FeeConfig = {
   borrowingRatePerHour: number
   minExecutionFeeXlm: number
   maxPositionSizeUsd: number
+  source: "verified" | "unavailable"
+  updatedAt: number
 }
 
 export const DEFAULT_FEE_CONFIG: FeeConfig = {
@@ -19,6 +21,8 @@ export const DEFAULT_FEE_CONFIG: FeeConfig = {
   borrowingRatePerHour: 0.0001,
   minExecutionFeeXlm: 0.3,
   maxPositionSizeUsd: 5_000_000,
+  source: "unavailable",
+  updatedAt: Number.NaN,
 }
 
 export type CircuitBreakerStatus = {

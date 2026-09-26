@@ -15,6 +15,7 @@ import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { CONTRACTS } from "@/app/config/contracts"
 import { POOL_MARKETS } from "@/features/pools/data/markets"
 import { ENV } from "@/app/config/env"
+import { EXECUTION_SUPPORT } from "../lib/execution-support"
 
 export type TradeType = "Long" | "Short" | "Swap"
 export type TradeMode = "Market" | "Limit" | "Trigger"
@@ -50,7 +51,7 @@ export type TradeState = {
   // Input amounts (raw string so user can type freely)
   fromAmount: string
   toAmount: string               // size input for Long/Short, receive amount for Swap
-  // Leverage (1x – 50x for Long/Short)
+  // Leverage is clamped to the selected market's source risk parameters.
   leverage: number
   // Trigger price (Limit / Stop-Loss orders)
   triggerPrice: string
@@ -142,6 +143,11 @@ function normalizeTradeState(state: TradeState): TradeState {
           short: market.shortToken,
         },
       },
+      sidecarOrders: EXECUTION_SUPPORT.attachedTriggers ? state.sidecarOrders : [],
+      advanced: {
+        ...state.advanced,
+        limitOrTPSL: EXECUTION_SUPPORT.attachedTriggers && state.advanced.limitOrTPSL,
+      },
     }
   }
 
@@ -155,6 +161,10 @@ function normalizeTradeState(state: TradeState): TradeState {
     fromAmount: "",
     triggerPrice: "",
     sidecarOrders: [],
+    advanced: {
+      ...state.advanced,
+      limitOrTPSL: false,
+    },
   }
 }
 
@@ -313,7 +323,10 @@ export function useTradeState() {
   // TP/SL sidecar order setters
   // TODO: wire into createIncreaseOrder — pass sidecarOrders as attached decrease orders
   const addSidecarOrder = useCallback(
-    (order: SidecarOrder) => update({ sidecarOrders: [...state.sidecarOrders, order] }),
+    (order: SidecarOrder) => {
+      if (!EXECUTION_SUPPORT.attachedTriggers) return
+      update({ sidecarOrders: [...state.sidecarOrders, order] })
+    },
     [state.sidecarOrders, update],
   )
   const removeSidecarOrder = useCallback(
@@ -344,7 +357,15 @@ export function useTradeState() {
     setLeverage: (leverage: number) => update({ leverage }),
     setTriggerPrice: (triggerPrice: string) => update({ triggerPrice }),
     setAdvanced: (advanced: Partial<AdvancedOptions>) =>
-      update({ advanced: { ...state.advanced, ...advanced } }),
+      update({
+        advanced: {
+          ...state.advanced,
+          ...advanced,
+          limitOrTPSL: EXECUTION_SUPPORT.attachedTriggers
+            ? (advanced.limitOrTPSL ?? state.advanced.limitOrTPSL)
+            : false,
+        },
+      }),
     setSlippagePct: (slippagePct: number) =>
       update({ advanced: { ...state.advanced, slippagePct } }),
     switchTokens,

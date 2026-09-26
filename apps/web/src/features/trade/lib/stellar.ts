@@ -32,6 +32,7 @@ import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { formatUsd } from "@/shared/lib/format"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
+import { validateExecutionRequest } from "./execution-support"
 
 const CHAIN_ID = activeQueryNetwork()
 
@@ -450,17 +451,22 @@ export async function sendBatchOrderTxn(
 }
 
 /**
- * Create a TP/SL sidecar order as a real decrease order with a trigger price.
- *
- * takeProfit → LimitDecrease  (executes when price moves favourably)
- * stopLoss   → StopLossDecrease (executes to cap downside)
- *
- * sizePct% of parentSizeUsd is closed. For full close pass sizePct=100.
+ * Kept as a defensive boundary for callers that still hold an old sidecar
+ * draft. The current gateway does not verify attached TP/SL semantics.
  */
 export async function createSidecarOrder(params: SidecarOrderParams): Promise<string> {
   if (!isValidAccount(params.account)) {
     throw new Error("Connect your wallet before placing a TP/SL order.")
   }
+
+  const support = validateExecutionRequest({
+    attachedOrders: [{
+      type: params.type,
+      triggerPrice: String(params.triggerPrice),
+      sizePct: params.sizePct,
+    }],
+  })
+  if (!support.valid) throw new Error(support.reason)
 
   const sizeDeltaUsd = params.parentSizeUsd * (params.sizePct / 100)
   const orderType: CreateOrderParams["orderType"] =

@@ -10,6 +10,7 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
+import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 import { createDecreaseOrder, createIncreaseOrder } from "../../lib/stellar"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import type { Position } from "../../hooks/usePositions"
@@ -34,6 +35,7 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
   const account = useWalletStore((state) => state.address)
   const { data: balances } = useTokenBalances()
   const { getMidPrice } = useTokenPrices()
+  const marketRisk = useMarketRiskParams(position?.marketAddress ?? "")
   const queryClient = useQueryClient()
 
   // OB-089: Check whether the OrderVault is a real deployed contract.
@@ -87,10 +89,17 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
       if (amountNum >= position.collateralAmount) {
         isValid = false
         validationError = "Cannot remove all collateral (Close position instead)"
-      } else if (newLeverage > 50) {
+      } else if (marketRisk.state !== "available") {
         isValid = false
-        validationError = "New leverage exceeds maximum allowed (50x)"
+        validationError = "Risk parameters unavailable; try again when the market risk data is fresh"
+      } else if (newLeverage > (marketRisk.params?.maxLeverage ?? 0)) {
+        isValid = false
+        validationError = `New leverage exceeds maximum allowed (${marketRisk.params?.maxLeverage}x)`
       }
+    }
+    if (isValid && marketRisk.state !== "available") {
+      isValid = false
+      validationError = "Risk parameters unavailable; try again when the market risk data is fresh"
     }
   }
 
@@ -247,6 +256,11 @@ export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Pr
                 )}
               </div>
             </div>
+            {marketRisk.state !== "available" && (
+              <p role="status" className="text-xs text-muted-foreground">
+                Source risk parameters are unavailable or stale.
+              </p>
+            )}
           </div>
 
           {/* Validation & Error Messages */}
