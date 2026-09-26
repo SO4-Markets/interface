@@ -34,6 +34,7 @@ import { formatAddress } from "@/shared/lib/format"
 import { clampLeverage } from "../../lib/risk"
 import { getProtectionPrice } from "../../lib/fee-preview"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
+import { validateExecutionRequest } from "../../lib/execution-support"
 
 type Props = {
   open: boolean
@@ -107,6 +108,7 @@ export function ConfirmationDialog({
     !tradeFlags.isSwap && feeConfig?.source === "verified" && sizeUsd > feeConfig.maxPositionSizeUsd
       ? `Maximum position size for ${tradeState.toTokenAddress}/USD is $${feeConfig.maxPositionSizeUsd.toLocaleString()}.`
       : null
+  const executionValidation = validateExecutionRequest({ attachedOrders: sidecarOrders })
 
   const sidecarCreateOrders = useMemo((): Array<DecreaseOrderParams> => {
     if (!account || sidecarOrders.length === 0) return []
@@ -206,6 +208,9 @@ export function ConfirmationDialog({
   async function handleConfirm() {
     setIsSubmitting(true)
     try {
+      if (!executionValidation.valid) {
+        throw new Error(executionValidation.reason)
+      }
       if (tradeFlags.isSwap) {
         await createSwapOrder({
           account: account ?? "GDUMMY...STELLAR",
@@ -336,6 +341,11 @@ export function ConfirmationDialog({
                       {order.triggerPrice} ({order.sizePct}%)
                     </p>
                   ))}
+                  {!executionValidation.valid && (
+                    <p role="alert" className="mt-2 text-xs text-amber-500">
+                      {executionValidation.reason}
+                    </p>
+                  )}
                 </div>
               )}
             </>
@@ -358,7 +368,8 @@ export function ConfirmationDialog({
             disabled={
               isSubmitting ||
               sizeUsd <= 0 ||
-              !!maxPositionError
+              !!maxPositionError ||
+              !executionValidation.valid
             }
             className={
               tradeFlags.isLong

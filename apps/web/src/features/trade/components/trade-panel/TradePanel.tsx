@@ -35,6 +35,7 @@ import {
   validatePrice,
   validateBalance,
 } from "@/lib/input-validation"
+import { EXECUTION_SUPPORT } from "../../lib/execution-support"
 
 type TradeController = ReturnType<typeof useTradeState>
 
@@ -294,6 +295,11 @@ export function TradePanel({ trade }: TradePanelProps) {
             <p className="text-xs text-muted-foreground">
               This sets the maximum allowable slippage for the order. Orders will revert if the fill price exceeds this threshold.
             </p>
+            {!EXECUTION_SUPPORT.attachedTriggers && (
+              <p role="status" className="text-xs text-muted-foreground">
+                Take-profit and stop-loss attachments are unavailable for this execution venue.
+              </p>
+            )}
           </div>
         )}
       </div>
