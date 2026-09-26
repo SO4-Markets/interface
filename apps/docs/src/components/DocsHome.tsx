@@ -1,6 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { KeyboardShortcut } from "@workspace/ui/components/keyboard-shortcut"
 import { docsPages, getPager } from "../lib/docs-pages"
+import { Callout } from "@workspace/ui/components/callout"
+import {
+  CodeBlock,
+  ContractAddress,
+  Mermaid,
+  ParamTable,
+  Steps,
+  TabItem,
+  Tabs,
+} from "../mdx/components"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@workspace/ui/components/table"
 import {
   docsShortcuts,
   getPlatform,
@@ -188,11 +206,12 @@ function Article({
         <h2 id="details" className="text-2xl font-semibold text-foreground">
           Details
         </h2>
+        {page.kind === "kitchen-sink" ? <KitchenSinkContent /> : null}
         {page.kind === "long" ? <LongPageContent /> : null}
         {page.kind === "tabs" ? (
           <TabsContent activeTab={activeTab} onTabChange={onTabChange} />
         ) : null}
-        {page.kind !== "long" && page.kind !== "tabs" ? (
+        {page.kind !== "long" && page.kind !== "tabs" && page.kind !== "kitchen-sink" ? (
           <p className="mt-3 text-text-secondary">
             This placeholder route keeps the docs build emitting real HTML.
           </p>
@@ -207,6 +226,92 @@ function Article({
         </p>
       </section>
     </article>
+  )
+}
+
+function KitchenSinkContent() {
+  return (
+    <div className="mt-4 space-y-6 text-text-secondary">
+      <h3 className="text-xl font-semibold text-foreground">Typography & Blocks</h3>
+      <p>
+        This fixture exercises inline <code>code</code>, <strong>bold text</strong>, and standard links to <a href="/concepts/risk" className="text-primary hover:underline">Risk</a>.
+      </p>
+
+      <blockquote className="border-l-4 border-primary pl-4 italic">
+        "Markdown blockquotes map directly onto semantic design tokens."
+      </blockquote>
+
+      <Callout variant="note" title="Note Callout">
+        This is a note callout providing informational context.
+      </Callout>
+
+      <Callout variant="warning" title="Warning Callout">
+        This is a warning callout indicating caution is required.
+      </Callout>
+
+      <Callout variant="caution" title="Caution Callout">
+        This is a caution callout warning against collateral loss.
+      </Callout>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Market</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Max Leverage</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <TableCell className="font-mono font-medium">BTC/USD</TableCell>
+            <TableCell>Perpetual</TableCell>
+            <TableCell>50x</TableCell>
+          </TableRow>
+          <TableRow>
+            <TableCell className="font-mono font-medium">ETH/USD</TableCell>
+            <TableCell>Perpetual</TableCell>
+            <TableCell>50x</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+
+      <CodeBlock filename="example.ts" language="typescript">
+        {`const client = new ExchangeRouterClient({ network: "testnet" });\nawait client.createOrder(params);`}
+      </CodeBlock>
+
+      <Tabs>
+        <TabItem label="Stellar">
+          <p className="text-sm">Stellar smart contract transactions settle in under 5 seconds.</p>
+        </TabItem>
+        <TabItem label="Soroban">
+          <p className="text-sm">Soroban provides deterministic Rust-based contract execution.</p>
+        </TabItem>
+      </Tabs>
+
+      <Steps>
+        <li>Connect your Freighter wallet to the SO4 interface.</li>
+        <li>Deposit testnet collateral from the faucet.</li>
+        <li>Submit your leveraged perpetual order.</li>
+      </Steps>
+
+      <ParamTable
+        params={[
+          { name: "caller", type: "Address", required: true, description: "Account authorising the order." },
+          { name: "sizeDeltaUsd", type: "i128", required: true, description: "Notional size change in USD (30 decimals)." },
+        ]}
+      />
+
+      <ContractAddress
+        contract="ExchangeRouter"
+        address="CB...EXAMPLE_ROUTER_CONTRACT_ADDRESS"
+      />
+
+      <Mermaid
+        chart={"graph TD\n  A[Order Created] --> B[Keeper Executed]\n  B --> C[Position Open]"}
+        title="Order lifecycle"
+        caption="An order moves from created, through keeper execution, to an open position."
+      />
+    </div>
   )
 }
 

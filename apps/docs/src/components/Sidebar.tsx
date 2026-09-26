@@ -47,7 +47,7 @@ export function Sidebar({ sections, currentRoute, className }: SidebarProps) {
                   >
                     {page.sidebarLabel ?? page.title}
                     {page.status === "beta" && (
-                      <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-warning-subtle text-warning-foreground font-mono">
+                      <span className="ml-2 px-1.5 py-0.5 text-10 rounded bg-warning-subtle text-warning-foreground font-mono">
                         beta
                       </span>
                     )}

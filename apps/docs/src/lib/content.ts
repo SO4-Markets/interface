@@ -3,7 +3,7 @@ import { join, relative } from "node:path"
 import { validateFrontmatter } from "./frontmatter"
 import type { Frontmatter } from "./frontmatter"
 
-export const appRoot = import.meta.dir + "/.."
+export const appRoot = import.meta.dir + "/../.."
 export const contentRoot = join(appRoot, "content")
 
 export interface Page {
@@ -29,7 +29,7 @@ async function walk(dir: string): Promise<string[]> {
     entries.map(async (entry) => {
       const path = join(dir, entry.name)
       return entry.isDirectory() ? walk(path) : [path]
-    }),
+    })
   )
   return files.flat()
 }
@@ -49,7 +49,7 @@ function parseMetaSections(meta: MetaConfig): MetaSection[] {
 }
 
 export async function loadContentIndex(
-  mode: "development" | "production" = "production",
+  mode: "development" | "production" = "production"
 ): Promise<PageIndex> {
   const metaRaw = await readFile(join(contentRoot, "meta.json"), "utf8")
   const meta = JSON.parse(metaRaw) as MetaConfig
@@ -62,11 +62,13 @@ export async function loadContentIndex(
   const errors: string[] = []
 
   for (const file of mdxFiles) {
-    const name = file.split("/").pop()!.replace(/\.mdx$/, "")
-    if (!isKebabCase(name)) {
-      errors.push(
-        `${file}: filename "${name}" is not lowercase kebab-case`,
-      )
+    const name = file
+      .split("/")
+      .pop()!
+      .replace(/\.mdx$/, "")
+    const sourceName = name.replace(/\.generated$/, "")
+    if (!isKebabCase(sourceName)) {
+      errors.push(`${file}: filename "${name}" is not lowercase kebab-case`)
       continue
     }
 
@@ -75,9 +77,7 @@ export async function loadContentIndex(
 
     if (byRoute.has(route)) {
       const existing = byRoute.get(route)!
-      errors.push(
-        `duplicate route ${route}: ${existing.file} and ${file}`,
-      )
+      errors.push(`duplicate route ${route}: ${existing.file} and ${file}`)
       continue
     }
 
@@ -116,7 +116,7 @@ export async function loadContentIndex(
   }
 
   const sidebarRoutes = new Set(
-    sections.flatMap((s) => s.pages.map((p) => `/${p}`)),
+    sections.flatMap((s) => s.pages.map((p) => `/${p}`))
   )
 
   for (const route of sidebarRoutes) {
@@ -125,7 +125,7 @@ export async function loadContentIndex(
     }
   }
   for (const route of byRoute.keys()) {
-    if (!sidebarRoutes.has(route)) {
+    if (route !== "/index" && !sidebarRoutes.has(route)) {
       errors.push(`orphan page ${route}`)
     }
   }

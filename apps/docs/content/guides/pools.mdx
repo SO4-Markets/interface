@@ -1,0 +1,87 @@
+---
+title: Pools
+description: Adding and removing liquidity in an SO4 GM pool, what a deposit is exposed to, and how a deposit or withdrawal is executed.
+updated: 2026-08-31
+status: beta
+---
+
+An SO4 GM pool holds one long token and TUSDC as the short token, and stands as
+the counterparty to every trader on that market. Depositing mints GM tokens
+that represent your share of the pool; withdrawing burns them for the
+underlying assets. The three markets and their tokens are defined in
+`apps/web/src/features/pools/data/markets.ts`.
+
+## The pools
+
+| Pool | Displayed as | Long token | Short token |
+| ---- | ------------ | ---------- | ----------- |
+| `TWBTC/TUSDC` | BTC/USD | TWBTC | TUSDC |
+| `TETH/TUSDC` | ETH/USD | TETH | TUSDC |
+| `TXLM/TUSDC` | XLM/USD | TXLM | TUSDC |
+
+All GM tokens use 7 decimals. TVL and APY are shown as `0` on the pools page
+today — `apps/web/src/features/earn/data/pools.ts` hard-codes `apy: 0` and
+`tvlUsd: 0` with a note to replace them with live values. Do not read a yield
+number off the current UI.
+
+## What a deposit is exposed to
+
+A GM pool provides unified liquidity: the same pool backs both the long and the
+short side of trading on its market. As a depositor you take on:
+
+- **Trader profit and loss.** When traders on the market are net profitable,
+  their gains are paid from the pool; when they are net losing, their losses
+  accrue to the pool.
+- **Price exposure to the long token.** The pool holds a real balance of the
+  long token, so its value moves with that token's price.
+- **The mechanics in [/concepts/liquidation](/concepts/liquidation) and
+  [/concepts/funding-and-fees](/concepts/funding-and-fees)**, from the other
+  side. Funding and borrow fees paid by traders flow toward the pool; a
+  liquidation that leaves bad debt is the pool's loss.
+
+This is not a delta-neutral position and it is not a fixed yield.
+
+## Adding liquidity
+
+<Steps>
+1. Get the pool's tokens from [/guides/faucet](/guides/faucet) — you can deposit
+   the long token, TUSDC, or both.
+2. On the pools page, use **Deposit** on the pool's row. Enter an amount and
+   confirm. The app builds a create-deposit request transaction
+   (`buildCreateDepositTransaction`, via `apps/web/src/features/pools`).
+3. Sign it. A "Deposit pending" note appears with the transaction hash and the
+   line "Keeper execution usually completes within ~60s"
+   (`apps/web/src/features/pools/components/pool-actions.tsx`). A keeper picks
+   up the request and mints your GM tokens in a second transaction.
+</Steps>
+
+Deposits and withdrawals are two-step by design: you submit a request, and a
+keeper executes it against the current oracle price. Your GM balance updates
+after the keeper step, not after your signature.
+
+## Removing liquidity
+
+Use **Withdraw** on the pool row (enabled once you hold GM for that pool).
+Enter a GM amount and confirm. This builds a create-withdrawal request
+(`buildCreateWithdrawalTransaction`); the keeper burns the GM and returns the
+underlying long token and TUSDC in proportion to the pool's current
+composition. The same ~60 second keeper window applies.
+
+There is no lock-up in the pool contract. The practical exit constraint is
+pool utilisation: if traders have borrowed most of one side, a large
+withdrawal of that asset may be limited until positions close.
+
+## Worked example
+
+You deposit 1,000 TUSDC into the BTC/USD pool when the pool is worth 100,000
+USD and holds 100,000 GM. You receive `1,000 / 100,000 × 100,000 = 1,000` GM,
+a 1% share. If traders on BTC/USD then lose 5,000 USD net and pay 500 USD in
+fees, the pool is worth `100,000 − (−5,000) + 500 = 105,500` USD. Your 1% is
+now worth 1,055 USD. The same 1% share absorbs 1% of a loss if traders win
+instead.
+
+## Related
+
+[/concepts/risk](/concepts/risk) is the full list of what can go wrong on the
+depositor side. [/concepts/oracles](/concepts/oracles) explains the price the
+keeper uses when it executes your deposit or withdrawal.

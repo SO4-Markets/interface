@@ -10,6 +10,7 @@ import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { walletKit } from "@/features/wallet/lib/wallet-kit"
 import { server } from "@/test/msw/server"
 import { fakeWalletAddress } from "@/test/fakes/wallet"
+import { queryKeys } from "@/shared/lib/query-keys"
 
 // ── Seed values ────────────────────────────────────────────────────────────────
 const CLAIM_AMOUNT_RAW = 10_000_000n
@@ -191,7 +192,7 @@ describe("FaucetPage — claim all success flow (#216)", () => {
       () =>
         expect(invalidateSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            queryKey: ["faucet", "data", fakeWalletAddress],
+            queryKey: queryKeys.faucet.data(fakeWalletAddress),
           }),
         ),
       { timeout: 5000 },

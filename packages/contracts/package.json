@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --pool=threads",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:coverage": "vitest run --coverage --typecheck.enabled=false --exclude src/generated.test.ts",

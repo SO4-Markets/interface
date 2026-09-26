@@ -83,6 +83,45 @@ The default Tailwind font-size scale (`text-xs`=12px, `text-sm`=14px, `text-base
 
 These are named by their pixel value (at the default 16px root) rather than a semantic step name (`2xs`/`3xs`/...) — a dozen-plus half-pixel steps don't fit a small semantic vocabulary without the names becoming arbitrary themselves. If you need a size not in this list, check whether it's really necessary before adding a new one; if it is, add it here and to `globals.css` in the same PR so the two never drift apart.
 
+### Motion: duration and easing
+
+The motion token system (OB-011) centralizes timing and easing decisions so animations and transitions feel consistent across the trading and landing experiences. Durations are scaled by context (feedback timings are fastest; landing sequences are slowest); easing functions are reused across the app rather than defined per-component.
+
+#### Duration scale
+
+| Token | Value | Use |
+|---|---|---|
+| `--duration-fast` | 100ms | Feedback: selection states, status changes, quick overlays |
+| `--duration-base` | 150ms | Standard: most transitions, color changes, reveal animations |
+| `--duration-moderate` | 200ms | Emphasis: section expansions, panel reveals, list animations |
+| `--duration-slow` | 300ms | Landing: hero animations, feature reveals, marquees |
+| `--duration-slowest` | 400ms | Landing: long sequences, extended hero motion |
+
+Trading UI prefers shorter durations (fast/base/moderate) to keep the interface responsive. The landing page can use longer durations (slow/slowest) for more expressive motion that builds visual interest without impairing navigation.
+
+#### Easing scale
+
+| Token | Function | Use |
+|---|---|---|
+| `--ease-in-out` | `cubic-bezier(0.4, 0, 0.2, 1)` | Default for most transitions (acceleration + deceleration) |
+| `--ease-out` | `cubic-bezier(0, 0, 0.2, 1)` | Entry animations (quick arrival, no overshoot) |
+| `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Exit animations (slowing into rest) |
+| `--ease-bounce` | `cubic-bezier(0.68, -0.55, 0.265, 1.55)` | Playful feedback (emphasizes non-critical state changes) |
+
+#### Transition utilities
+
+Named utilities provide explicit, consistent transitions:
+
+- `transition-opacity` — opacity changes (tooltips, visibility toggling)
+- `transition-transform` — position/scale changes (slides, reveals, expansions)
+- `transition-all-subtle` — color, background, border, and opacity (status badges, interactive highlights)
+
+Always name the properties you're animating (`transition-property: opacity, transform`) rather than `transition: all` — it's faster for the browser and makes the intent clear to reviewers. If you need simultaneous opacity + transform, compose the utilities or apply both properties to one element.
+
+#### Reduced-motion support
+
+The `prefers-reduced-motion` media query disables all named transitions (utilities set `transition-duration: 0` and animations to `animation-play-state: paused`). Never bypass this — it's a user accessibility requirement, not a style choice. The `useReducedMotion` hook (OB-012) provides reactive support for components that need to check the setting at runtime (SSR-safe, listens for system changes).
+
 ## Enforcement: the token-usage check
 
 [`scripts/check-design-tokens.ts`](./scripts/check-design-tokens.ts) (run via `bun run check:tokens`, also wired into CI) scans `apps/web/src` and `packages/ui/src` for:
@@ -115,6 +154,13 @@ bun run test:e2e -- design-system-visual --update-snapshots
 then review the diffs in `e2e/design-system-visual.spec.ts-snapshots/` in your PR — a baseline update should always be reviewable in the diff, not just silently regenerated. If a screenshot changed and you *didn't* expect it to, that's the suite doing its job — figure out why before updating the baseline.
 
 ## The component gallery (`/gallery`)
+
+Trading surfaces use `--trading-panel-padding` and `--trading-row-height` for
+compact panels. Depth fills use `--trading-depth-buy` and
+`--trading-depth-sell`, with side labels and numeric alignment so color is not
+the only state cue. `--trading-divider` is the shared low-emphasis divider
+role. These roles have semantic light/dark values and should be consumed via
+CSS variables or named utilities rather than raw colors or arbitrary sizes.
 
 [`apps/web/src/features/gallery/components/gallery-page.tsx`](./apps/web/src/features/gallery/components/gallery-page.tsx) renders every `packages/ui` primitive across all its variants on one page. It's not linked from the app's main navigation (it's an internal dev/design tool, not a trader-facing page) — visit `http://localhost:3000/gallery` directly in a local dev server. It exists to:
 

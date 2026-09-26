@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { parseMermaid } from "./mermaid"
 
 export interface ContentCheckOptions {
   root: string
@@ -40,6 +41,7 @@ export function checkContent(
     diagnostics.push(...checkFilename(page))
     diagnostics.push(...checkSlug(page))
     diagnostics.push(...checkFreshness(page, options.today ?? todayIso()))
+    diagnostics.push(...checkMermaid(page))
   }
 
   diagnostics.push(...checkDuplicateTitles(pages))
@@ -420,6 +422,60 @@ function daysBetween(from: string, to: string): number {
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+function checkMermaid(page: PageRecord): Array<ContentDiagnostic> {
+  const diagnostics: Array<ContentDiagnostic> = []
+  const lines = page.body.split("\n")
+  let inMermaid = false
+  let mermaidStartLine = 0
+  let metaStr = ""
+  let mermaidCodeLines: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line.startsWith("```mermaid")) {
+      inMermaid = true
+      mermaidStartLine = i + 1
+      metaStr = line.slice("```mermaid".length)
+      mermaidCodeLines = []
+    } else if (inMermaid && line.startsWith("```")) {
+      inMermaid = false
+      const code = mermaidCodeLines.join("\n").trim()
+      const captionMatch = metaStr.match(/caption=(?:"([^"]+)"|'([^']+)'|([^\s]+))/)
+      const titleMatch = metaStr.match(/title=(?:"([^"]+)"|'([^']+)'|([^\s]+))/)
+      const caption = captionMatch?.[1] || captionMatch?.[2] || captionMatch?.[3]
+      const title = titleMatch?.[1] || titleMatch?.[2] || titleMatch?.[3]
+
+      try {
+        const ast = parseMermaid(code, {
+          caption,
+          title,
+          file: page.relPath,
+          line: mermaidStartLine,
+        })
+        if (!caption && !ast.accDescr && !ast.accTitle && !title) {
+          diagnostics.push({
+            file: page.relPath,
+            line: mermaidStartLine,
+            rule: "mermaid-caption",
+            message: 'mermaid diagram missing required caption="..."',
+          })
+        }
+      } catch (err: any) {
+        diagnostics.push({
+          file: page.relPath,
+          line: mermaidStartLine,
+          rule: "mermaid-syntax",
+          message: err.message || String(err),
+        })
+      }
+    } else if (inMermaid) {
+      mermaidCodeLines.push(line)
+    }
+  }
+
+  return diagnostics
 }
 
 function slash(value: string): string {

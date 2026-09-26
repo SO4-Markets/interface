@@ -1,0 +1,74 @@
+---
+title: Earn
+description: The earn page portfolio view, how SO4 staking and reward accrual work, and how to claim distributions or compound them.
+updated: 2026-08-31
+status: beta
+---
+
+The earn page is where you stake SO4, see every yield-bearing position you
+hold, and claim what has accrued. The staking and claim actions are in
+`apps/web/src/features/earn/lib/earn.ts`; the portfolio and rewards views are
+under `apps/web/src/features/earn/components/`.
+
+## Portfolio view
+
+The **Portfolio** tab (`components/portfolio/portfolio-tab.tsx`) lists your
+assets and a **Rewards** bar (`components/portfolio/rewards-bar.tsx`) showing
+what has accrued but not yet been claimed. GM and GLV pool positions you opened
+from [/guides/pools](/guides/pools) show here alongside staked SO4, so the earn
+page is the single place to read your total yield exposure.
+
+## Staking SO4
+
+<Steps>
+1. Hold SO4. The token uses 7 decimals (`SO4_DECIMALS` in `earn.ts`).
+2. Open the **Stake** dialog (`components/stake/StakeDialog.tsx`), enter an
+   amount, and confirm. The app builds a stake transaction
+   (`buildStakeSO4Transaction`), simulates it, and asks your wallet to sign.
+3. On success the toast reads "SO4 staked successfully" and your staking
+   queries refresh.
+</Steps>
+
+Unstaking is the mirror action (`unstakeSO4`, `buildUnstakeSO4Transaction`).
+Both reject an amount of zero or less, and both require a connected wallet
+whose address matches `^G[A-Z2-7]{55}$`.
+
+## Reward accrual
+
+Staked SO4 accrues rewards over time. The accrued figure is read on-chain by
+`queries/useRewardsAccrued.ts` and shown in the rewards bar. This page does not
+state a reward rate or an APR: those are not constants in the client code, and
+`data/pools.ts` marks the pool APY values it does carry as placeholders. Read
+the live accrued amount on the page rather than projecting from a rate quoted
+elsewhere.
+
+## Claiming and compounding
+
+- **Claim** builds `buildClaimRewardsTransaction` and transfers the accrued
+  rewards to your wallet.
+- **Compound** builds `buildCompoundTransaction`, which restakes the accrued
+  rewards instead of transferring them, so they begin accruing too.
+- **Vesting.** Some distributions vest rather than unlock immediately;
+  `depositForVesting` (`buildDepositForVestingTransaction`) and
+  `queries/useVestingSchedule.ts` drive the vesting view. Check the schedule
+  before assuming a claimed amount is liquid.
+
+The **Distributions** tab (`components/distributions/distributions-tab.tsx`)
+lists past distributions and their status.
+
+## Worked example
+
+You stake 10,000 SO4. After some time the rewards bar shows 42 SO4 accrued.
+**Claim** moves 42 SO4 to your wallet and resets the accrued figure toward
+zero; your staked balance stays 10,000. **Compound** instead sets your staked
+balance to 10,042 SO4 and resets the accrued figure, so the next accrual is
+computed on the larger stake. The 42 figure is whatever the contract reports —
+it is not derived from a rate in this repository.
+
+## Related
+
+[/guides/pools](/guides/pools) for the GM and GLV positions that also surface
+here. [/concepts/funding-and-fees](/concepts/funding-and-fees) for where the
+fees that fund pool rewards come from. Note the
+[/guides/faucet](/guides/faucet) dispenses TUSDC, TWBTC, TETH, and TXLM only —
+SO4 is not one of its tokens.

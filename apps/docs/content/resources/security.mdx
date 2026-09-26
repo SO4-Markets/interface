@@ -1,7 +1,7 @@
 ---
 title: Security
 description: Audit status, how to report a vulnerability, and what SO4 does and does not guarantee about contract safety.
-updated: 2026-08-25
+updated: 2026-09-04
 status: stable
 ---
 
@@ -25,7 +25,7 @@ Current deployments are testnet-only — see [Contract addresses](/reference/con
 
 Report privately instead, by messaging the project maintainer directly: [t.me/ibrahimijai](https://t.me/ibrahimijai). Include:
 
-- What you found and why it's a vulnerability, not just unexpected behavior.
+- What you found and why it's a vulnerability rather than unexpected behavior.
 - Steps to reproduce, or a proof of concept if you have one.
 - The affected contract, file, or endpoint.
 - Your assessment of severity and impact, if you have one — helpful, not required.
@@ -55,7 +55,7 @@ There is no bug bounty program. Reports are still welcome and will be credited (
 - **No independent audit** (above) — the largest single caveat on this page.
 - **Oracle dependence.** Pricing relies on external oracle feeds; a stale, manipulated, or unavailable feed can affect liquidations and execution prices. See [Risk](/concepts/risk).
 - **Testnet-only deployment.** Current contract addresses are testnet; testnet tokens and state carry no real value and can be reset.
-- **Interface trust.** The interface prepares transactions for your wallet to sign; a compromised build of the interface (not just the contracts) could construct a malicious transaction. Always review what you're signing in your wallet, not just in the browser UI.
+- **Interface trust.** The interface prepares transactions for your wallet to sign; a compromised build of the interface, not only the contracts, could construct a malicious transaction. Always review what you're signing in your wallet, not only in the browser UI.
 - **Rapidly changing code.** The protocol and interface are under active development; behavior documented today can change before an equivalent audit or review catches up.
 
 The full, longer list of what can go wrong — market, liquidation, oracle, contract, network, interface, and custody risk — lives at [/concepts/risk](/concepts/risk); this page covers the security-process side specifically (audits, disclosure, scope), not the trading-risk side.

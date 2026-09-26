@@ -48,7 +48,7 @@ export function RoadmapSection() {
           {/* No dev-plan writeup exists yet — links to the source repo,
               a real destination, rather than a dead "#" anchor. */}
           <a
-            href="https://github.com/SO4-Markets/interface"
+            href="https://github.com/Levee-HQ/interface"
             target="_blank"
             rel="noreferrer"
             className="btn-landing hidden shrink-0 rounded-8 px-4 py-2.5 text-14 sm:inline-flex"
@@ -74,7 +74,7 @@ export function RoadmapSection() {
         </div>
 
         <a
-          href="https://github.com/SO4-Markets/interface"
+          href="https://github.com/Levee-HQ/interface"
           target="_blank"
           rel="noreferrer"
           className="btn-landing mt-6 flex w-full items-center justify-center rounded-8 px-4 py-2.5 text-14 sm:hidden"

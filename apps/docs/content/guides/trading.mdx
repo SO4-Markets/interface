@@ -1,0 +1,118 @@
+---
+title: Trading
+description: Panel-by-panel guide to the SO4 trade page: market selector, charts, order forms, leverage controls, and transaction confirmation.
+updated: 2026-08-31
+status: stable
+---
+
+The SO4 trade page at `/trade` provides the interface to open leveraged perpetual positions or execute spot token swaps across supported markets. Every order created through the interface is sequenced on Stellar via Soroban smart contracts and executed by off-chain keepers.
+
+The interface is divided into three primary panels: the market header and chart on the left, the trade execution panel on the right, and the positions and order management tabs along the bottom.
+
+## Market selector and statistics
+
+The top header bar displays market statistics and lets you switch trading pairs.
+
+- **Market selector**: Located at the top left of the chart area. Click the dropdown to search and choose from active trading markets, such as `BTC/USD`, `ETH/USD`, and `XLM/USD`.
+- **24h Volume**: Total rolling 24-hour traded volume in the selected market in USD.
+- **Open Interest**: Total notional value of active open positions currently held in the market.
+- **Mark Price**: The latest composite price derived from the oracle hierarchy (see [Oracles](/concepts/oracles)).
+- **Index Price**: The underlying spot reference price.
+
+### System status indicators
+
+The header and chart top bar include real-time operational indicators:
+
+- **Oracle staleness dot**: A status dot next to the mark price indicating price age. Green indicates fresh data (under 5 seconds old), yellow indicates warning (5 to 30 seconds old), and red indicates a stale feed (over 30 seconds old).
+- **Waiting for price update**: Displayed on the trade panel if live oracle data is temporarily unavailable. Order submission is paused until fresh attestations arrive.
+- **Circuit breaker banner**: Appears across the top of the screen if protocol circuit breakers activate due to extreme market volatility or oracle deviations.
+
+## Chart panel
+
+The chart area visualises historical and live price action using TradingView Lightweight Charts:
+
+- **Timeframe periods**: Select candle intervals from `1m`, `5m`, `15m`, `1h`, `4h`, and `1D`.
+- **Position entry line**: A green dashed horizontal line shows your volume-weighted entry price for an open long position, while a red dashed horizontal line shows your entry for an open short position.
+- **Liquidation line**: A large-dashed amber horizontal line indicates your estimated liquidation price.
+- **Accessible table view**: Screen readers and keyboard users can toggle an accessible data table listing representative open, high, low, and close (OHLC) values.
+
+## Trade panel
+
+The trade panel on the right side contains order input controls and execution parameters.
+
+### Trade types
+
+Select your intended action using the top segmented tabs:
+
+1. **Long**: Open a position that profits when the index price increases (see [Perpetuals](/concepts/perpetuals)).
+2. **Short**: Open a position that profits when the index price decreases.
+3. **Swap**: Exchange tokens directly within the pool without opening a leveraged position.
+
+### Order modes
+
+Choose the execution mode:
+
+1. **Market**: Executes immediately in the next ledger at the prevailing mark price subject to your slippage tolerance.
+2. **Limit**: Submits a resting limit order that executes only when the market reaches your specified limit price.
+3. **Trigger**: Submits a conditional order, such as a stop-loss or take-profit order, that triggers when the market crosses your target price (see [Order types](/concepts/order-types)).
+
+### Input fields
+
+- **Collateral / Pay**: Enter the amount of collateral to deposit. The interface shows your available wallet balance with a `Max` button to fill the full balance. Below the input, the equivalent USD value is shown in real time.
+- **Market / Receive**: Indicates the index market pair (such as `BTC/USD`) for perpetual positions or the destination asset for spot swaps.
+- **Limit price / Trigger price**: Visible when in Limit or Trigger mode. Enter the USD price threshold that must be reached before execution.
+
+### Leverage slider
+
+For `Long` and `Short` positions, the leverage slider adjusts exposure from **1.1x** up to **50x** (subject to market configuration in [DataStore](/reference/data-store)):
+
+- Moving the slider recalculates your total **Position size** in USD, which equals your deposited collateral value multiplied by the leverage multiplier.
+- Increasing leverage reduces the distance between your entry price and your liquidation price (see [Margin and leverage](/concepts/margin-and-leverage)).
+
+### Trade information rows
+
+Before submitting, the trade panel displays cost and risk estimates calculated from contract rules:
+
+- **Entry price**: Estimated execution price including price impact.
+- **Limit price**: The specified limit price when in Limit mode.
+- **Liq. price**: Estimated liquidation price. Highlighted in red if the position is within 10% of liquidation.
+- **Funding**: Current hourly funding rate paid or received, alongside a live countdown timer to the next funding settlement epoch (see [Funding and fees](/concepts/funding-and-fees)).
+- **Position fee**: Base protocol fee charged on open and close (typically 0.05% to 0.10% of position size).
+- **Price impact**: Percentage and USD change caused by your order relative to current pool depth.
+- **Execution fee**: Small fee in XLM (typically ~0.01 to 0.03 XLM) paid to off-chain keepers to settle the transaction on Stellar.
+- **Total fees**: The aggregate sum of position fees, price impact, and keeper fees in USD.
+
+### Advanced options
+
+Click **Show** under Advanced options to configure custom execution parameters:
+
+- **Slippage tolerance**: Sets the maximum acceptable price deviation (default: 1.0%, configurable from 0.1% to 10.0%). If the execution price at the time of keeper settlement is worse than `acceptablePrice`, the contract halts or freezes the order rather than filling at an adverse rate.
+
+## Confirmation step
+
+Clicking the action button (for example, **Long BTC/USD** or **Short ETH/USD**) opens the confirmation modal:
+
+1. **Review parameters**: Verify `Size`, `Leverage`, `Entry price`, `Price impact`, `Liq. price`, `Collateral`, and `Total fees`.
+2. **Network fee**: Displays the simulated Stellar transaction resource fee.
+3. **Execution fee**: Confirms the off-chain keeper transaction incentive.
+4. **TP/SL sidecar orders**: Lists attached conditional take-profit or stop-loss trigger orders if configured.
+5. **Submit**: Clicking **Confirm** requests a signature from your connected wallet (such as Freighter) and submits the transaction to the [ExchangeRouter](/reference/exchange-router#create_order) contract.
+
+## Worked example
+
+A trader opens a leveraged long position on `BTC/USD` with the following parameters:
+
+- **Collateral**: 100 USDC (valued at 100.00 USD).
+- **Leverage**: 10x.
+- **Position size**: 100 USDC × 10 = 1,000.00 USD (0.016667 BTC at 60,000 USD spot).
+- **Price impact**: 0.02% (0.20 USD), setting the estimated entry price to 60,012.00 USD.
+- **Position fee**: 0.10% of 1,000.00 USD = 1.00 USD.
+- **Keeper execution fee**: ~0.01 XLM (~0.001 USD).
+- **Liquidation price calculation**: With a maintenance margin requirement of 1.0% (10.00 USD minimum equity), the position liquidates when equity falls from 100.00 USD to 10.00 USD (a 90.00 USD loss, or 9.0% adverse price move on 10x leverage). The estimated liquidation price is `60,012.00 × (1 - 0.09) = 54,610.92 USD`.
+
+## Related
+
+- [Positions and orders](/guides/positions) — How to monitor open positions, edit margin, and track resting orders.
+- [Order types](/concepts/order-types) — Execution mechanics and guarantees across market, limit, and trigger orders.
+- [Liquidation](/concepts/liquidation) — Detailed maintenance margin rules and liquidation calculations.
+- [Risk](/concepts/risk) — Protocol, oracle, and market risks associated with leveraged trading.

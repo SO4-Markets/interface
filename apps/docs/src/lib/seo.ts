@@ -1,3 +1,7 @@
+/** Canonical origin of the documentation site. Used for canonical/OG URLs and
+ * by the static generator for the print-only page footer (DX-063). */
+export const DEFAULT_SITE_URL = "https://docs.so4.market"
+
 export interface SeoMetadataOptions {
   title: string
   description: string
@@ -13,7 +17,7 @@ export function generateSeoTags({
   route,
   updated,
   section = "Documentation",
-  siteUrl = "https://docs.so4.market",
+  siteUrl = DEFAULT_SITE_URL,
 }: SeoMetadataOptions): { headTags: string; structuredDataHtml: string } {
   const fullTitle = `${title} · SO4 docs`
   const canonicalUrl = `${siteUrl}${route}`

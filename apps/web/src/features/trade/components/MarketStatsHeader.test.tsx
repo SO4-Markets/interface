@@ -29,7 +29,7 @@ describe("MarketStatsHeader", () => {
       <MarketStatsHeader volume24h={NaN} markPrice={Infinity} />
     )
 
-    expect(view.getAllByText("—")).toHaveLength(4)
+    expect(view.getAllByText("—")).toHaveLength(5)
     expect(view.queryByText(/NaN|Infinity/)).not.toBeInTheDocument()
   })
 })

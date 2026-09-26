@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 // SO4 markets: the hero sentence is the fixed "Trade [word] from your
 // wallet" — every rotating word needs to read naturally in that slot. GMX's
@@ -25,35 +25,62 @@ export function AnimatedTitle() {
   // since Playwright's animation freeze can't reliably override an inline
   // `style.animation` referencing a custom property).
   const [phase, setPhase] = useState<"idle" | "out" | "in">("idle")
-  const reducedMotionRef = useRef(false)
+  const [reducedMotion, setReducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+  const [isPageHidden, setIsPageHidden] = useState(false)
+
 
   useEffect(() => {
-    reducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const updatePreference = () => {
+      setReducedMotion(query.matches)
+      if (query.matches) setPhase("idle")
+    }
+
+    query.addEventListener("change", updatePreference)
+    return () => query.removeEventListener("change", updatePreference)
   }, [])
 
   useEffect(() => {
-    if (reducedMotionRef.current) return
+    const handleVisibilityChange = () => {
+      setIsPageHidden(document.hidden)
+    }
 
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (reducedMotion || isPageHidden) return
+
+    let outTimer: ReturnType<typeof setTimeout> | undefined
     const holdTimer = setInterval(() => {
       setPhase("out")
-      const outTimer = setTimeout(() => {
+      outTimer = setTimeout(() => {
         setIndex((i) => (i + 1) % ROTATING_WORDS.length)
         setPhase("in")
       }, TRANSITION_MS)
-      return () => clearTimeout(outTimer)
     }, HOLD_MS)
 
-    return () => clearInterval(holdTimer)
-  }, [])
+    return () => {
+      clearInterval(holdTimer)
+      if (outTimer !== undefined) clearTimeout(outTimer)
+    }
+  }, [reducedMotion, isPageHidden])
 
   return (
     <span className="relative inline-block h-[1em] overflow-hidden align-bottom">
       <span
         key={index}
-        className="inline-block text-gmx-blue-400"
+        className="inline-block text-gmx-blue-400 min-w-max"
         style={{
           animation:
-            reducedMotionRef.current || phase === "idle"
+            reducedMotion || phase === "idle"
               ? "none"
               : phase === "in"
                 ? "var(--animate-title-in)"

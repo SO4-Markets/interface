@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Verify & Publish Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history: the docs content check compares each page's
+          # `updated:` frontmatter against the last commit that touched it,
+          # which a shallow clone cannot answer.
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Quality Gate from AGENTS.md §1
+      - name: Lint
+        run: bun lint
+
+      - name: Typecheck
+        run: bun typecheck
+
+      - name: Design token check
+        run: bun run check:tokens
+
+      - name: Documentation content and prose checks
+        run: bun run check:content && bun run --cwd apps/docs lint:prose
+
+      - name: Documentation link and FAQ drift checks
+        run: bun run check:links && bun run --cwd apps/docs check:faq
+
+      - name: Documentation generated-reference drift checks
+        run: bun run --cwd apps/docs check:tokens:generated && bun run --cwd apps/docs check:errors:generated
+
+      - name: Test
+        run: bun run test
+
+      - name: Coverage
+        run: bun run test:coverage
+
+      - name: Build
+        run: bun run build
+
+      # Release verification assertions & note extraction
+      - name: Verify release tag and changelog
+        run: bun run scripts/changelog/verify-tag.ts --tag "${{ github.ref_name }}" --output-notes /tmp/release-notes.md
+
+      # Publish GitHub Release (never pushes a commit back)
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md

@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { ViewportReveal } from "../viewport-reveal"
 
 // GMX's LaunchSection is a grid of separate chains it deploys to. SO4 is
 // Stellar-native — Soroban is Stellar's smart-contract layer, not a second
@@ -22,7 +23,7 @@ function StellarMark() {
 export function LaunchSection() {
   return (
     <section className="bg-white px-4 py-20 text-gmx-slate-900 sm:px-10 sm:py-30">
-      <div className="mx-auto flex max-w-300 flex-col gap-6 lg:flex-row lg:items-center">
+      <ViewportReveal className="mx-auto flex max-w-300 flex-col gap-6 lg:flex-row lg:items-center">
         <div className="lg:w-1/2">
           <h2 className="text-heading-2">Runs entirely on Stellar</h2>
           {/* gmx-slate-500 is a dark-surface muted-text token (001_theme_update.md
@@ -54,7 +55,7 @@ export function LaunchSection() {
             <span aria-hidden="true">→</span>
           </a>
         </div>
-      </div>
+      </ViewportReveal>
     </section>
   )
 }

@@ -1,0 +1,74 @@
+---
+title: Referrals
+description: Creating and using SO4 referral codes, the three affiliate tiers, and how the trader discount and affiliate commission are set.
+updated: 2026-08-31
+status: beta
+---
+
+SO4 referrals do two things: a trader who applies a code pays lower fees, and
+the affiliate who owns that code earns a commission on the fees their referred
+traders pay. The tier table, the discount, and the commission percentages are
+defined in `apps/web/src/features/referrals/data/tiers.ts`; the on-chain
+actions are in `apps/web/src/features/referrals/lib/referrals.ts`.
+
+## Tiers
+
+An affiliate's tier is set by the combined monthly trading volume of the
+traders using their code (`getTierFromVolume` picks the highest tier whose
+threshold the volume meets):
+
+| Tier | Monthly referred volume | Trader fee discount | Affiliate commission |
+| ---- | ----------------------- | ------------------- | -------------------- |
+| Bronze | 0 USD and up | 5% | 5% |
+| Silver | 2,500 USD and up | 5% | 10% |
+| Gold | 25,000 USD and up | 5% | 15% |
+
+The trader discount is a flat **5%** at every tier — moving up tiers only
+raises the affiliate's commission, from 5% to 10% to 15%. The percentages
+apply to trading fees, not to trade size. Referred volume is computed by
+`apps/web/src/features/referrals/lib/computeReferralVolume.ts`.
+
+## Using a code as a trader
+
+<Steps>
+1. Get a code from an affiliate.
+2. On the referrals page, or the first-trade prompt on the trade panel, enter
+   the code. The app uppercases and trims it, then builds
+   `buildSetTraderReferralCodeTransaction` (`setTraderReferralCode` in
+   `lib/referrals.ts`).
+3. Sign it. On success the toast reads `Referral code "CODE" applied`. From the
+   next trade, your trading fee is reduced by the tier's trader discount.
+</Steps>
+
+A trader address can hold one referral code. Applying a new code replaces the
+old one.
+
+## Creating a code as an affiliate
+
+<Steps>
+1. On the referrals page, open the create-code dialog
+   (`components/CreateReferralDialog.tsx`).
+2. Enter a code. It is validated by `validateReferralCode` before submission —
+   an invalid code is rejected client-side with the reason.
+3. Confirm and sign. The app builds `buildRegisterCodeTransaction`; on success
+   the code is stored locally and the toast confirms registration.
+</Steps>
+
+Once traders use your code, the **Affiliates** and **Distributions** tabs show
+your referred traders, their volume, your current tier, and the commission
+accrued. Claiming a rebate builds `buildClaimRebatesTransaction`.
+
+## Worked example
+
+Three traders use your code and together trade 30,000 USD of volume this month.
+30,000 is at or above the Gold threshold of 25,000, so you are Gold: a **15%**
+affiliate commission. If those traders pay 300 USD in trading fees over the
+month, your commission is `300 × 0.15 = 45` USD, claimable as a rebate. Each of
+those traders separately pays 5% less in fees than they would with no code — so
+the 300 USD figure is already the post-discount total they were charged.
+
+## Related
+
+[/guides/earn](/guides/earn) is where claimed rebates and other distributions
+appear. [/concepts/funding-and-fees](/concepts/funding-and-fees) defines the
+trading fees that both the discount and the commission are a percentage of.

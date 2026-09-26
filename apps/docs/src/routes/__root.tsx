@@ -5,6 +5,7 @@ import {
   createRootRoute,
 } from "@tanstack/react-router"
 import appCss from "@workspace/ui/globals.css?url"
+import { NotFoundPage } from "../components/NotFound"
 
 const TITLE = "SO4 Docs"
 const DESCRIPTION = "Documentation for SO4 Markets."
@@ -20,14 +21,7 @@ export const Route = createRootRoute({
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
-  notFoundComponent: () => (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <h1 className="text-3xl font-semibold text-foreground">404</h1>
-      <p className="mt-3 text-muted-foreground">
-        The requested docs page could not be found.
-      </p>
-    </main>
-  ),
+  notFoundComponent: () => <NotFoundPage />,
   component: Outlet,
   shellComponent: RootDocument,
 })

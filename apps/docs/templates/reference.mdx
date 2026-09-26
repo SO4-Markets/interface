@@ -1,0 +1,33 @@
+---
+title: Reference title
+description: One sentence naming exactly what this page lists and where the values come from, between fifty and one hundred sixty characters in length.
+updated: 2026-08-31
+status: draft
+---
+
+{/*
+  REFERENCE template. Copy to content/reference/<slug>.mdx, then:
+    1. Replace every placeholder, including the frontmatter.
+    2. Add "reference/<slug>" to the Reference section of content/meta.json.
+    3. Run check:content, check:links, and lint:prose from apps/docs.
+  A reference page is a lookup table, not a narrative. If the values are
+  generated (addresses, schema, tokens), do not create this by hand — extend
+  the generator and commit the *.generated.mdx output instead.
+*/}
+
+One sentence stating what the reader looks up here and the authority for the
+values. Then the table or list, ordered so a reader can scan to a row fast
+(alphabetical, by network, by code — whatever fits the lookup).
+
+## Section
+
+| Key | Value | Notes |
+| --- | ----- | ----- |
+| ... | ...   | ...   |
+
+State the "current as of" date for anything that can change, or link the
+generated page that owns it.
+
+## Related
+
+The concept or guide pages that explain what these values mean.

@@ -1,15 +1,41 @@
-export type ChangelogEntryType = "added" | "changed" | "deprecated" | "removed" | "fixed" | "security"
-export type ChangelogArea =
-  | "trade"
-  | "pools"
-  | "earn"
-  | "referrals"
-  | "faucet"
-  | "wallet"
-  | "docs"
-  | "general"
-  | "ci"
-  | "internal"
+export const CHANGELOG_ENTRY_TYPES = [
+  "added",
+  "changed",
+  "deprecated",
+  "removed",
+  "fixed",
+  "security",
+] as const
+
+export const CHANGELOG_AREAS = [
+  "trade",
+  "pools",
+  "earn",
+  "referrals",
+  "faucet",
+  "wallet",
+  "docs",
+  "general",
+  "ci",
+  "internal",
+] as const
+
+export type ChangelogEntryType = (typeof CHANGELOG_ENTRY_TYPES)[number]
+export type ChangelogArea = (typeof CHANGELOG_AREAS)[number]
+
+export function isChangelogEntryType(val: unknown): val is ChangelogEntryType {
+  return (
+    typeof val === "string" &&
+    (CHANGELOG_ENTRY_TYPES as ReadonlyArray<string>).includes(val)
+  )
+}
+
+export function isChangelogArea(val: unknown): val is ChangelogArea {
+  return (
+    typeof val === "string" &&
+    (CHANGELOG_AREAS as ReadonlyArray<string>).includes(val)
+  )
+}
 
 export interface ChangelogEntry {
   type: ChangelogEntryType

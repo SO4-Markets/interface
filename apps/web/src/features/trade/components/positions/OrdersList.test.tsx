@@ -39,6 +39,7 @@ vi.mock("@/features/trade/lib/stellar", () => ({
   claimFundingFees: vi.fn(),
   sendBatchOrderTxn: vi.fn(),
   createSidecarOrder: vi.fn(),
+  amendOrderViaReplace: vi.fn(),
 }))
 
 function createMockOrder(overrides: Record<string, unknown> = {}) {

@@ -1,7 +1,7 @@
 ---
 title: SyntheticsReader contract
 description: Read market state, positions, and funding views from the SO4 SyntheticsReader contract without reconstructing raw DataStore keys.
-updated: 2026-08-25
+updated: 2026-09-04
 status: stable
 ---
 
@@ -140,4 +140,4 @@ The generated reader relies on several infrastructure contracts at read time:
 - `oracle` for pool pricing and value calculations
 - `orderHandler` for account-order lookups
 
-This is why the raw contract API has explicit address arguments even for a read-only query. The reader is intentionally not a generic `DataStore` client: it is a protocol-specific view layer that translates data-store state into the market, pool, funding, and position objects the interface actually needs.
+This is why the raw contract API has explicit address arguments even for a read-only query. The reader is intentionally not a generic `DataStore` client: it is a protocol-specific view layer that translates DataStore state into the market, pool, funding, and position objects the interface actually needs.

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { queryKeys } from "../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
 import { useMarkets } from "./useMarkets"
 import type { Market } from "./useMarkets"
 import { syntheticsReaderClient } from "@/lib/contracts"
@@ -17,7 +17,7 @@ export type MarketInfo = Market & {
   isDisabled: boolean
 }
 
-const CHAIN_ID = "stellar-mainnet"
+const CHAIN_ID = activeQueryNetwork()
 const USD_DECIMALS = 30
 // Reader returns funding_factor_per_second with 30 decimals; multiply by 3600 for per-hour.
 const SECONDS_PER_HOUR = 3600n

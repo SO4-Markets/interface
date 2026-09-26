@@ -1,20 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <!-- Dark brand background with rounded corners -->
   <rect width="32" height="32" rx="6" fill="#0A0B0D"/>
-  <!-- SO4 hexagon mark, scaled to fit with padding -->
+  <!-- Levee bridge mark, scaled to fit with padding -->
   <g transform="translate(6,6) scale(0.833)">
     <!-- Hexagon body -->
     <path
-      d="M4 6 L12 2 L20 6 L20 14 L12 18 L4 14 Z"
-      stroke="#4DB8FF"
-      stroke-width="2"
+      d="M4 5.5 12 2l8 3.5v13L12 22l-8-3.5v-13Z"
+      stroke="#73E0D0"
+      stroke-width="1.25"
       stroke-linejoin="round"
-      fill="rgba(77,184,255,0.10)"
+      fill="rgba(115,224,208,0.10)"
     />
-    <!-- Vertical spine -->
-    <line x1="12" y1="2" x2="12" y2="18" stroke="#4DB8FF" stroke-width="2" stroke-linecap="round"/>
-    <!-- Diagonal cross lines -->
-    <line x1="4"  y1="6"  x2="20" y2="14" stroke="#4DB8FF" stroke-width="0.9" opacity="0.5"/>
-    <line x1="20" y1="6"  x2="4"  y2="14" stroke="#4DB8FF" stroke-width="0.9" opacity="0.5"/>
+    <path d="M7 8.5h4.2c2.4 0 4 1.2 4 3.2s-1.6 3.2-4 3.2H9.5V19" fill="none" stroke="#73E0D0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

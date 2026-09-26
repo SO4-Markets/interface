@@ -1,0 +1,43 @@
+---
+title: Concept title
+description: One sentence naming the mechanic this page explains and the reader question it answers, between fifty and one hundred sixty characters.
+updated: 2026-08-31
+status: draft
+---
+
+{/*
+  CONCEPT template. Copy to content/concepts/<slug>.mdx, then:
+    1. Replace every placeholder, including the frontmatter.
+    2. Add "concepts/<slug>" to the Concepts section of content/meta.json.
+    3. Run check:content, check:links, and lint:prose from apps/docs.
+  A concept page explains how one mechanic works and how it can fail. It is
+  read by a trader or liquidity provider before they need it, not during a task.
+*/}
+
+The first paragraph answers the page's title question in two or three
+sentences. No history, no motivation — those come next. A reader who stops
+here should still have a correct, if shallow, mental model.
+
+## How it works
+
+The mechanic, in plain terms and in the order a reader would reason about it.
+Name the contract or module that implements it and link the file in the pull
+request, not in the page body.
+
+## Worked example
+
+State real inputs, show the arithmetic, state the result. Compute the numbers;
+do not estimate them. Example shape: "A position of X, with parameter Y,
+reaches state Z at input W — here is the calculation."
+
+## How it can fail
+
+Enumerate the failure modes and what the system does in each. If a case is
+unhandled today, say so; do not describe intended behaviour as current
+behaviour. Link to [/concepts/risk](/concepts/risk) for the broader picture.
+
+## Related
+
+Link adjacent concepts inline where the reader needs them above, and close with
+the one or two pages a reader should read next — for example
+[/concepts/liquidation](/concepts/liquidation).

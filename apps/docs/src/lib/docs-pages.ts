@@ -1,4 +1,4 @@
-export type DocsPageKind = "short" | "long" | "tabs" | "search"
+export type DocsPageKind = "short" | "long" | "tabs" | "search" | "kitchen-sink"
 
 export interface DocsPage {
   slug: string
@@ -15,6 +15,13 @@ export const docsPages: Array<DocsPage> = [
     description: "Start here for SO4 Markets documentation.",
     section: "Start",
     kind: "short",
+  },
+  {
+    slug: "/fixture/kitchen-sink",
+    title: "MDX Kitchen Sink",
+    description: "Committed fixture page exercising every custom MDX component.",
+    section: "Fixture",
+    kind: "kitchen-sink",
   },
   {
     slug: "/concepts/risk",

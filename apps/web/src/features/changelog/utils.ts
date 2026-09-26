@@ -1,27 +1,10 @@
+import { CHANGELOG_AREAS, CHANGELOG_ENTRY_TYPES, isChangelogEntryType } from "./types"
 import type { ChangelogArea, ChangelogEntryType } from "./types"
+import type { StatusVariant } from "@workspace/ui/components/status-badge"
 import { formatDate as formatDateShared } from "@/shared/lib/format"
 
-export const CHANGELOG_TYPES: Array<ChangelogEntryType> = [
-  "added",
-  "changed",
-  "deprecated",
-  "removed",
-  "fixed",
-  "security",
-]
-
-export const CHANGELOG_AREAS: Array<ChangelogArea> = [
-  "trade",
-  "pools",
-  "earn",
-  "referrals",
-  "faucet",
-  "wallet",
-  "docs",
-  "general",
-  "ci",
-  "internal",
-]
+export const CHANGELOG_TYPES = CHANGELOG_ENTRY_TYPES
+export { CHANGELOG_AREAS }
 
 /** Areas hidden behind the "show internal changes" toggle by default (DX-010). */
 export const INTERNAL_AREAS: Array<ChangelogArea> = ["ci", "internal"]
@@ -31,8 +14,8 @@ export function publicAreas(): Array<ChangelogArea> {
   return CHANGELOG_AREAS.filter((area) => !INTERNAL_AREAS.includes(area))
 }
 
-export function typeToVariant(type: ChangelogEntryType) {
-  const map: Record<ChangelogEntryType, string> = {
+export function typeToVariant(type: string): StatusVariant {
+  const map: Record<ChangelogEntryType, StatusVariant> = {
     added: "success",
     changed: "info",
     fixed: "info-subtle",

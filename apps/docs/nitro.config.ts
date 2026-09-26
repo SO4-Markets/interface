@@ -1,6 +1,7 @@
 import { defineNitroConfig } from "nitro/config"
 
 export default defineNitroConfig({
+  errorHandler: "./error.ts",
   publicAssets: [
     {
       dir: "public",
@@ -26,6 +27,16 @@ export default defineNitroConfig({
     {
       route: "/old-path",
       handler: "./redirect.ts"
+    },
+    // DX-061: "was this helpful" feedback. `serverDir` is unset, so file-based
+    // route scanning under routes/ never runs (see scanServerRoutes in
+    // nitro's own source) — /old-path above only works because it is
+    // registered explicitly here, and this endpoint needs the same explicit
+    // registration for the same reason.
+    {
+      route: "/api/feedback",
+      method: "post",
+      handler: "./routes/api/feedback.post.ts"
     }
   ]
 })

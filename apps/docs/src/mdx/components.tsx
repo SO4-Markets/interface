@@ -15,6 +15,8 @@ import {
   TableHead,
   TableCell,
 } from "@workspace/ui/components/table"
+import { CodeGroup } from "./CodeGroup"
+import { parseMermaid, renderMermaidSvg } from "../lib/mermaid"
 
 export interface TabsProps {
   children: React.ReactNode
@@ -28,7 +30,7 @@ export function Tabs({ children, defaultValue, className }: TabsProps) {
 
   return (
     <div className={cn("my-6 border border-border rounded-xl overflow-hidden", className)}>
-      <div className="flex border-b border-border bg-surface-sunken">
+      <div className="flex border-b border-border bg-surface-sunken" data-tab-list>
         {childrenArray.map((child: any, idx: number) => {
           const label = child?.props?.label || `Tab ${idx + 1}`
           return (
@@ -48,7 +50,24 @@ export function Tabs({ children, defaultValue, className }: TabsProps) {
           )
         })}
       </div>
-      <div className="p-4">{childrenArray[activeTab]}</div>
+      {/*
+        Every panel stays mounted (inactive ones carry the `hidden` attribute)
+        so hidden panels remain searchable and can be expanded by the print
+        stylesheet — same convention as the primitives-based `Tabs`, whose
+        panels use `keepMounted`.
+      */}
+      <div className="p-4">
+        {childrenArray.map((child: any, idx: number) => (
+          <div
+            key={idx}
+            data-tab-panel
+            data-tab-label={child?.props?.label || `Tab ${idx + 1}`}
+            hidden={idx !== activeTab}
+          >
+            {child}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -160,13 +179,49 @@ export function ContractAddress({ contract, address }: ContractAddressProps) {
 
 export interface MermaidProps {
   chart: string
+  caption?: string
+  title?: string
+  className?: string
 }
 
-export function Mermaid({ chart }: MermaidProps) {
+export function Mermaid({ chart, caption, title, className }: MermaidProps) {
+  const meta = { caption, title }
+  const ast = parseMermaid(chart, meta)
+  const id = React.useId().replace(/:/g, "_")
+  const rendered = renderMermaidSvg(ast, meta, id)
+  const captionId = `caption-${id}`
+
   return (
-    <div className="my-6 p-4 rounded-xl border border-border bg-surface-sunken text-center font-mono text-xs text-text-secondary overflow-x-auto">
-      <div className="mermaid">{chart}</div>
-    </div>
+    <figure
+      className={cn(
+        "mermaid-wrapper my-6 rounded-xl border border-border bg-surface-sunken overflow-hidden",
+        className
+      )}
+      role="figure"
+      aria-labelledby={captionId}
+    >
+      <div
+        className="mermaid-scroll overflow-x-auto p-4 md:p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        tabIndex={0}
+        role="region"
+        aria-label="Diagram content"
+      >
+        <div
+          className="mermaid-diagram mermaid-diagram-light block dark:hidden"
+          dangerouslySetInnerHTML={{ __html: rendered.lightSvg }}
+        />
+        <div
+          className="mermaid-diagram mermaid-diagram-dark hidden dark:block"
+          dangerouslySetInnerHTML={{ __html: rendered.darkSvg }}
+        />
+      </div>
+      <figcaption
+        id={captionId}
+        className="mermaid-caption px-4 py-2 border-t border-border bg-surface-elevated text-xs font-sans text-text-secondary text-center"
+      >
+        {rendered.caption}
+      </figcaption>
+    </figure>
   )
 }
 
@@ -186,7 +241,7 @@ export const components: MDXComponents = {
       <code
         {...props}
         className={cn(
-          "font-mono text-[0.875em] bg-surface-sunken px-1.5 py-0.5 rounded text-text-primary",
+          "rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-sm text-text-primary",
           props.className
         )}
       />
@@ -215,7 +270,7 @@ export const components: MDXComponents = {
         <Link
           to={href}
           preload="intent"
-          className="text-primary hover:underline font-medium"
+          className="font-medium text-primary hover:underline"
           {...props}
         >
           {children}
@@ -227,24 +282,37 @@ export const components: MDXComponents = {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
+        className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline"
         {...props}
       >
         {children}
-        <Icon icon={ArrowUpRight01Icon} size="sm" className="inline-block text-text-tertiary ml-0.5" />
+        <Icon
+          icon={ArrowUpRight01Icon}
+          size="sm"
+          className="ml-0.5 inline-block text-text-tertiary"
+        />
       </a>
     )
   },
   ul: (props) => (
-    <ul className="list-disc pl-6 mb-4 space-y-2 text-text-primary text-sm" {...props} />
+    <ul
+      className="mb-4 list-disc space-y-2 pl-6 text-sm text-text-primary"
+      {...props}
+    />
   ),
   ol: (props) => (
-    <ol className="list-decimal pl-6 mb-4 space-y-2 text-text-primary text-sm" {...props} />
+    <ol
+      className="mb-4 list-decimal space-y-2 pl-6 text-sm text-text-primary"
+      {...props}
+    />
   ),
   li: (props) => <li {...props} />,
   hr: (props) => <hr className="my-8 border-border" {...props} />,
   img: (props) => (
-    <img className="rounded-lg border border-border my-6 max-w-full h-auto" {...props} />
+    <img
+      className="my-6 h-auto max-w-full rounded-lg border border-border"
+      {...props}
+    />
   ),
   Callout: (props: any) => <Callout {...props} />,
   Tabs: (props: any) => <Tabs {...props} />,

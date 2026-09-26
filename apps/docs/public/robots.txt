@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://docs.so4.market/sitemap.xml

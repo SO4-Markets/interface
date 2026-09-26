@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
+import type { MouseEvent, Ref } from "react"
 
 // ── Shared classes ──
 
@@ -32,39 +33,34 @@ export function SiteLogo({ variant = "app" }: SiteLogoProps) {
   const content = (
     <>
       <span className="inline-flex h-[22px] w-[22px] items-center justify-center">
-        <svg viewBox="0 0 24 24" fill="none" className="h-full w-full">
+        <svg viewBox="0 0 24 24" fill="none" className="h-full w-full" aria-hidden="true">
           <path
-            d="M4 6 L12 2 L20 6 L20 14 L12 18 L4 14 Z"
+            d="M4 5.5 12 2l8 3.5v13L12 22l-8-3.5v-13Z"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.25"
             fill="currentColor"
             fillOpacity="0.08"
             className="text-primary"
           />
           <path
-            d="M12 2 L12 18"
+            d="M7 8.5h4.2c2.4 0 4 1.2 4 3.2s-1.6 3.2-4 3.2H9.5V19"
             stroke="currentColor"
-            strokeWidth="1.5"
-            className="text-primary"
-          />
-          <path
-            d="M4 6 L20 14"
-            stroke="currentColor"
-            strokeWidth="0.5"
-            opacity="0.5"
-            className="text-primary"
-          />
-          <path
-            d="M20 6 L4 14"
-            stroke="currentColor"
-            strokeWidth="0.5"
-            opacity="0.5"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             className="text-primary"
           />
         </svg>
       </span>
       <span className="font-mono-num text-17 font-medium tracking-[0.02em] text-foreground">
-        so4<span className="text-muted-foreground max-[380px]:hidden">.market</span>
+ ob-031-034-035-032-trading-workspace
+        levee<span className="text-muted-foreground max-[380px]:hidden">.market</span>
+
+        so4
+        <span className="text-muted-foreground max-[380px]:hidden">
+          .market
+        </span>
+ main
       </span>
     </>
   )
@@ -88,25 +84,52 @@ export function SiteLogo({ variant = "app" }: SiteLogoProps) {
 
 interface HamburgerButtonProps {
   open: boolean
-  onToggle: () => void
+  onToggle: (event: MouseEvent<HTMLButtonElement>) => void
+  buttonRef?: Ref<HTMLButtonElement>
+  controls?: string
+  className?: string
 }
 
-export function HamburgerButton({ open, onToggle }: HamburgerButtonProps) {
+export function HamburgerButton({
+  open,
+  onToggle,
+  buttonRef,
+  controls,
+  className = "md:hidden",
+}: HamburgerButtonProps) {
   return (
     <Button
+      ref={buttonRef}
       variant="ghost"
       size="icon"
-      className="md:hidden"
+      className={className}
       aria-label={open ? "Close menu" : "Open menu"}
       aria-expanded={open}
+      aria-controls={controls}
       onClick={onToggle}
     >
       {open ? (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        >
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        >
           <path d="M3 12h18M3 6h18M3 18h18" />
         </svg>
       )}
@@ -116,7 +139,7 @@ export function HamburgerButton({ open, onToggle }: HamburgerButtonProps) {
 
 // ── Mobile menu hook ──
 
-export function useMobileMenu() {
+export function useMobileMenu(onEscape?: () => void) {
   const [open, setOpen] = useState(false)
 
   const toggle = useCallback(() => setOpen((v) => !v), [])
@@ -126,12 +149,13 @@ export function useMobileMenu() {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        onEscape?.()
         setOpen(false)
       }
     }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
-  }, [open])
+  }, [onEscape, open])
 
   return { open, toggle, close }
 }

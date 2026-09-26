@@ -1,0 +1,68 @@
+---
+title: Faucet
+description: Requesting SO4 testnet tokens, the per-token claim cooldown measured in ledgers, and what to do when a claim is rejected.
+updated: 2026-08-31
+status: stable
+---
+
+The faucet at `/faucet` gives a connected wallet a fixed amount of each SO4
+testnet token — TUSDC, TWBTC, TETH, and TXLM — so you can trade, provide
+liquidity, or test an integration without buying anything. Every value on the
+page is read from the faucet contract, not hard-coded in the app
+(`apps/web/src/features/faucet/hooks/useFaucetData.ts`).
+
+## Before you start
+
+- A wallet connected to **testnet**. If the wallet is on mainnet the page shows
+  a network-mismatch banner and claims target the wrong network underneath it —
+  see [/guides/troubleshooting](/guides/troubleshooting).
+- Nothing else. The faucet does not require an existing balance or a prior
+  transaction.
+
+## Claiming tokens
+
+<Steps>
+1. Open `/faucet` and connect your wallet.
+2. For one token, use its **Claim** button. For all four at once, use **Claim
+   all** — the app sends a single `claim_many` transaction with every token id
+   (`apps/web/src/features/faucet/hooks/useClaim.tsx`).
+3. Sign the transaction in your wallet. On success a toast links the
+   transaction on the explorer and the token balances on the page refresh.
+</Steps>
+
+The claim amount per token comes from the contract's `claim_amount` view and is
+shown on each token card. The four tokens all use 7 decimals
+(`apps/web/src/features/faucet/data/tokens.ts`).
+
+## Cooldown
+
+The faucet enforces one cooldown, expressed as a number of **ledgers**, not
+seconds. The contract exposes it as `cooldown_ledgers()`, and the page reads it
+once for all tokens. The cooldown is tracked per account **and per token**:
+`last_claim_ledger(account, token)` records your most recent claim of each
+token independently.
+
+So you can claim TUSDC and TWBTC in the same session, but a second TUSDC claim
+must wait `cooldown_ledgers` ledgers after the first. Stellar testnet closes a
+ledger roughly every 5 seconds, so a cooldown of, for example, 720 ledgers is
+about one hour — the app does not do this conversion or show a countdown. It
+shows the ledger number of your last claim of each token
+(`Last claim ledger 1,234,567`) and nothing more.
+
+## When a claim fails
+
+- **"Cooldown active — please wait before claiming again."** The contract
+  rejected the claim with error code 6 (`ClaimTooSoon`). You claimed that token
+  within the last `cooldown_ledgers` ledgers. Wait, or claim a different token.
+- **Any other error** is passed through `parseSorobanError` and shown as-is.
+  A wallet-signature rejection, an expired transaction, or an RPC timeout all
+  land here — [/guides/troubleshooting](/guides/troubleshooting) covers each.
+- The page auto-refreshes balances and claim state every 30 seconds, so a
+  balance that has not updated yet is usually a read lag, not a lost claim.
+
+## Related
+
+Once you have testnet tokens: [/guides/pools](/guides/pools) to provide
+liquidity, [/concepts/liquidation](/concepts/liquidation) before opening a
+leveraged position, and [/concepts/risk](/concepts/risk) for what testnet does
+and does not simulate.

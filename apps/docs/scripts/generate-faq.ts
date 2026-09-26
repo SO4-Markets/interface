@@ -5,16 +5,28 @@ import { headingEntries, loadPages } from "./content"
 const faq = (await loadPages()).find((page) => page.route === "/resources/faq")
 if (!faq) throw new Error("FAQ source is missing")
 const landing = new Set(faq.frontmatter.landing ?? [])
+// `headingEntries` returns `{ title, id }` pairs, so each entry's answer text
+// is taken from its own section of the FAQ body.
+const sectionBodies = new Map(
+  faq.body
+    .split(/\n(?=## )/)
+    .filter((text) => text.startsWith("## "))
+    .map((text) => [
+      text.match(/\{#([a-z0-9-]+)\}/)?.[1],
+      text.slice(text.indexOf("\n") + 1).trim(),
+    ]),
+)
 const entries = headingEntries(faq.body)
   .filter((entry) => landing.has(entry.id))
   .map((entry) => {
-    const link = entry.answer.match(/\[([^\]]+)\]\(([^)]+)\)\.$/)
+    const answer = sectionBodies.get(entry.id) ?? ""
+    const link = answer.match(/\[([^\]]+)\]\(([^)]+)\)\.$/)
     if (!link)
       throw new Error(`FAQ ${entry.id} must end with one documentation link`)
     return {
       id: entry.id,
       question: entry.title,
-      answer: entry.answer.slice(0, link.index).trim(),
+      answer: answer.slice(0, link.index).trim(),
       linkLabel: link[1],
       href: link[2],
     }

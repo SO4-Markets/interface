@@ -1,0 +1,116 @@
+---
+title: Oracles
+description: Where SO4 prices come from, the order the app falls back through sources, how staleness is judged, and what happens when a source fails.
+updated: 2026-08-31
+status: beta
+---
+
+SO4 reads a USD price for each market from a chain of sources, tries them in a
+fixed order, and uses the first one that answers with data. The price feed is
+implemented in `apps/web/src/features/trade/lib/oracle.ts`; this page describes
+what that file does today, not what the README summary says.
+
+> The README and the DX1 content map describe the intended design as "Binance
+> primary, GMX fallback". The shipped `fetchTokenPrices` puts the SO4 oracle
+> service first and Pyth second, with Binance and GMX below them. This page
+> follows the code.
+
+## Sources, in priority order
+
+`fetchTokenPrices()` in `oracle.ts` walks these sources top to bottom and
+returns the first that produces at least one price:
+
+| # | Source | Endpoint | Notes |
+| - | ------ | -------- | ----- |
+| 1 | **SO4 oracle service** | `oracle.biscotti-proxy-worker.workers.dev/prices` | The primary source. A hosted aggregator; its own comments say it combines Binance, Coinbase, and Pyth. Returns a `min` and `max` price per token, scaled by `10^30`, with a Unix-seconds timestamp. |
+| 2 | **Pyth Hermes** | via `fetchPythAttestations` (`apps/web/src/features/trade/lib/pyth.ts`) | Used only if source 1 threw or returned nothing. Binance display prices are layered on top to fill any symbol Pyth did not return. |
+| 3 | **Binance REST** | `api.binance.com/api/v3/ticker/bookTicker` | Bid becomes the min price, ask becomes the max price. |
+| 4 | **GMX oracle** | `${ENV.ORACLE_URL}/prices/tickers` | Last networked source. Prices are decoded with GMX v2 scaling: `usdPrice × 10^(30 − tokenDecimals)`. |
+| 5 | **Built-in dummy prices** | none | A hard-coded `DUMMY_PRICES` array. Reached only if every source above failed. Prices are static and wrong; the UI has no live data at this point. |
+
+The four tracked markets are BTC, ETH, XLM, and USDC, mapped from the test token
+symbols `TWBTC`, `TETH`, `TXLM`, `TUSDC`.
+
+## What triggers a fallback
+
+Each source is wrapped in its own `try`/`catch`. The app moves to the next
+source when the current one:
+
+- throws — a network error, or a non-200 HTTP response, or
+- returns an empty result — for source 1, an empty map; for source 2, no Pyth
+  attestations.
+
+There is no health scoring, no retry, and no circuit breaker. A source that
+succeeds once is not preferred later; every call re-walks the list from the
+top.
+
+## Update frequency and staleness
+
+The trade page re-fetches prices on its own interval and marks each price with
+a staleness level, from `OracleStalenessIndicator`
+(`apps/web/src/features/trade/components/OracleStalenessIndicator.tsx`) and the
+`OracleStaleness` type in `pyth.ts`:
+
+| Level | Age of the price | Indicator |
+| ----- | ---------------- | --------- |
+| `fresh` | under 5 seconds | green dot |
+| `warning` | 5 to 30 seconds | yellow dot |
+| `stale` | over 30 seconds | red dot, "Stale" label |
+
+The indicator is a display cue. It does not block trading, and the app does not
+substitute a different source when a price goes stale — it keeps showing the
+last value it has with the red dot.
+
+## Mark price versus execution price
+
+Sources 1, 3, and 4 return a `min` and a `max` price — the two sides of a
+spread. The displayed mark price and the price used for position valuation and
+the liquidation check are derived from these; which side is used depends on the
+direction of the position and the operation. The exact selection lives in the
+contract and client code that [/concepts/liquidation](/concepts/liquidation)
+describes, and in `oracle.ts`'s consumers rather than in `oracle.ts` itself.
+If you are integrating, read those before assuming a single price.
+
+## Failure modes
+
+| Situation | What the code does today |
+| --------- | ------------------------ |
+| SO4 oracle service outage | Falls through to Pyth, then Binance, then GMX. |
+| All networked sources fail | Serves the static `DUMMY_PRICES`. The values are placeholders and the staleness indicator will read stale. There is no banner telling the user the feed is dead — this is unhandled. |
+| One source returns a price far from the others | Nothing. `fetchTokenPrices` takes the first source that answers; it does not cross-check sources for deviation. Deviation checks, if any, happen in the contract at execution time, not in the price feed. |
+| Price older than 30 seconds | Marked `stale` in the UI. Trading is not blocked client-side. |
+
+## Worked example
+
+The SO4 oracle service returns `{ symbol: "TWBTC", min: 7.87e34, max: 7.871e34,
+timestamp: 1_760_000_000 }`. `oracle.ts` divides by `1e30`, giving a min of
+78,700 and a max of 78,710 USD, with `updatedAt = 1_760_000_000 × 1000` ms. If
+the current time is 1,760,000,020,000 ms, the price is 20 seconds old, so the
+trade page shows a yellow `warning` dot. At 1,760,000,035,000 ms it is 35
+seconds old and the dot turns red.
+
+## The price path
+
+From source to liquidation check, the value flows like this:
+
+```mermaid caption="Oracle price ingestion pipeline and liquidation check flow"
+graph TD
+  SO4[SO4 oracle service] --> TP[TokenPrice<br/>minPrice, maxPrice, updatedAt, source]
+  Pyth[Pyth Hermes] --> TP
+  Binance[Binance REST] --> TP
+  GMX[GMX oracle] --> TP
+  Dummy[DUMMY_PRICES] --> TP
+  TP --> Trade[trade page: mark price + staleness dot]
+  TP --> PosVal[position valuation]
+  PosVal --> Margin[maintenance-margin check]
+  Margin --> Liq[liquidation]
+```
+
+The client only owns the top half — choosing a source and shaping a `TokenPrice`. Position valuation and the liquidation decision run against that price in contract and client code covered by [/concepts/liquidation](/concepts/liquidation).
+
+## Related
+
+[/concepts/liquidation](/concepts/liquidation) — the price the oracle produces
+is the input to the liquidation check. [/concepts/risk](/concepts/risk) — oracle
+failure is one of the enumerated ways a position can move against you without
+the market moving.

@@ -1,0 +1,85 @@
+---
+title: Perpetuals
+description: What a perpetual contract is, how it differs from spot and from a dated future, and why funding is what keeps its price tied to the index.
+updated: 2026-09-02
+status: stable
+---
+
+A perpetual — a perp — is a contract that tracks the price of an asset without ever expiring and without you owning the asset. You post collateral, choose a direction, and your position gains or loses value as the index price moves. Because the contract never settles on a delivery date, nothing forces its price back toward the asset's price; <Term id="funding">funding</Term>, a recurring payment between the two sides of the market, does that job instead.
+
+## How a perp differs from spot and from a dated future
+
+| | Spot | Dated future | Perpetual |
+| --- | --- | --- | --- |
+| What you hold | The asset itself | A contract to trade at a set date | A contract with no end date |
+| What ends it | Selling | Expiry and settlement | You closing it, or [liquidation](/concepts/liquidation) |
+| What ties its price to spot | It is spot | Convergence at expiry | Funding, paid continuously |
+| Collateral needed | The full amount | Margin | Margin |
+
+Buying 0.1 BTC on a spot venue costs the full price of 0.1 BTC, and the coins are yours until you sell them. A dated future can drift from spot while it lives, but the drift has a deadline: at expiry the contract settles against the reference price, so an arbitrageur can hold the difference until it closes. A perp has no such deadline. Left alone, a perp trading above the index would stay there.
+
+## Why funding exists
+
+Funding replaces the discipline that expiry provides. It is a payment made at fixed intervals from one side of the market to the other, sized by how far the market has leaned. When the perp trades above the index, longs pay shorts, which makes holding a long more expensive and holding a short more attractive until the imbalance closes. When it trades below, the flow reverses.
+
+The point is the incentive, not the payment. Funding does not push the perp price directly; it pays traders to push it, by making the crowded side pay the empty one for as long as the gap lasts.
+
+On SO4 the funding rate for a market is read from the contracts as a signed per-second factor and converted to a per-hour rate, settling in fixed eight-hour epochs. The rate, the sign convention, and the other four costs a position can carry are covered in [funding and fees](/concepts/funding-and-fees); this page does not repeat them.
+
+## Long and short
+
+The two directions are symmetric. A long profits when the index price rises and loses when it falls; a short does the reverse. Both post collateral, both pay the same fees, and both can be liquidated. Neither is the default or the safe one.
+
+Profit and loss on an open position is computed as a fraction of position size, not of collateral:
+
+```
+pnlUsd = (priceDelta / entryPrice) × sizeUsd
+
+  where priceDelta = currentPrice − entryPrice   for a long
+        priceDelta = entryPrice − currentPrice   for a short
+```
+
+That formula is `calculatePnl` in `apps/web/src/features/trade/lib/trade-math.ts`.
+
+### Worked example, both directions
+
+A trader posts 1,000 USD of collateral on BTC/USD at 5x leverage, with the index at 60,000 USD.
+
+Position size is `1,000 × 5 = 5,000 USD`, which is `5,000 ÷ 60,000 = 0.083333 BTC` of exposure.
+
+**If BTC rises 10%, to 66,000:**
+
+- Long: `(66,000 − 60,000) ÷ 60,000 × 5,000 = +500 USD` — a 50% gain on the 1,000 USD of collateral.
+- Short: `(60,000 − 66,000) ÷ 60,000 × 5,000 = −500 USD` — a 50% loss on the same collateral.
+
+**If BTC falls 10%, to 54,000:**
+
+- Long: `(54,000 − 60,000) ÷ 60,000 × 5,000 = −500 USD`.
+- Short: `(60,000 − 54,000) ÷ 60,000 × 5,000 = +500 USD`.
+
+The mirror is exact. So is the multiplier between the index and the trader's money: a 10% move in BTC is a 50% move in their collateral, because the position is five times that collateral. Both positions in this example would be liquidated by a 19.5% adverse move — 48,300 for the long, 71,700 for the short — before the collateral is fully gone. [Liquidation](/concepts/liquidation) shows that calculation.
+
+Fees and funding are left out above so the direction arithmetic stays visible. They are real, and they come out of the same collateral. At a funding rate of 0.003% per hour, this 5,000 USD position pays `5,000 × 0.00003 = 0.15 USD` an hour, or 3.60 USD a day. The fees charged when it opens and closes are on top of that.
+
+## What the words mean here
+
+Three terms have a specific meaning on SO4, and reading them loosely is where mistakes start.
+
+**Position size** is notional value in USD — what your exposure is worth, not what you paid for it. The contracts store it as `size_in_usd` alongside `size_in_tokens`, the token quantity that USD figure bought (`PositionProps` in `packages/contracts/src/generated/synthetics-reader/src/index.ts`). The trade panel's "Position size" row is collateral value multiplied by the leverage you selected.
+
+**Collateral** is a token balance you transfer in, not a USD deposit. The interface converts it to USD for display at the current price of that token (`usePositions.ts`). Which token depends on the market and the direction. On SO4's markets a long is collateralised in the index token and a short in TUSDC, so a long's collateral is itself exposed to the price it is betting on. [Margin and leverage](/concepts/margin-and-leverage) works through what that does to the numbers.
+
+**Entry price** is the average price your size was filled at, derived as `size_in_usd ÷ size_in_tokens` rather than stored directly. Before you trade, the panel shows an estimate: the current mid price adjusted for <Term id="price-impact">price impact</Term>. The price you actually get is set when a keeper executes the order, not when you sign it. [Order types](/concepts/order-types) explains what each order type does and does not guarantee about that.
+
+## Where SO4 differs from the generic description
+
+Most of this page is true of any perpetual venue. Four things are specific to SO4, and each has its own page:
+
+- **One pool is the counterparty to both sides.** There is no order book matching you against another trader. A single GM pool per market backs every long and every short — see [unified liquidity](/concepts/unified-liquidity).
+- **The index price comes from a chain of external sources.** SO4's own oracle service first, then Pyth, Binance, and GMX, with a static fallback if all of them fail — see [oracles](/concepts/oracles).
+- **Orders are executed by keepers in a second transaction.** Signing does not fill your order; it creates one — see [order types](/concepts/order-types).
+- **Positions settle on Stellar.** Collateral sits in the protocol's contracts, and every change is a transaction your wallet signs — see [the introduction](/get-started/introduction).
+
+## Related
+
+[Margin and leverage](/concepts/margin-and-leverage) turns collateral and size into the numbers you can check before opening a position. [Liquidation](/concepts/liquidation) is where those numbers decide whether you keep anything. [Risk](/concepts/risk) is the unflattering list of everything else.

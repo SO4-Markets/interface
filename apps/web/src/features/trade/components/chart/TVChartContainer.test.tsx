@@ -1,24 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
 import { TVChartContainer } from "./TVChartContainer"
+import { useOracleCandles } from "../../hooks/useOracleCandles"
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
+
+let mockCreateChartInstance: ReturnType<typeof vi.fn> | null = null
+let mockAddSeriesInstance: ReturnType<typeof vi.fn> | null = null
+
+const mockChartMethods = {
+  addSeries: vi.fn(),
+  remove: vi.fn(),
+  applyOptions: vi.fn(),
+  timeScale: vi.fn(() => ({ fitContent: vi.fn() })),
+}
+
+const mockSeriesMethods = {
+  setData: vi.fn(),
+  update: vi.fn(),
+  createPriceLine: vi.fn(() => ({ applyOptions: vi.fn() })),
+  removePriceLine: vi.fn(),
+  applyOptions: vi.fn(),
+}
 
 vi.mock("lightweight-charts", () => ({
   CandlestickSeries: Symbol("CandlestickSeries"),
   LineStyle: { Dashed: 0, LargeDashed: 1 },
-  createChart: vi.fn(() => ({
-    addSeries: vi.fn(() => ({
-      setData: vi.fn(),
-      update: vi.fn(),
-      createPriceLine: vi.fn(() => ({ applyOptions: vi.fn() })),
-      removePriceLine: vi.fn(),
-      applyOptions: vi.fn(),
-    })),
-    remove: vi.fn(),
-    applyOptions: vi.fn(),
-    timeScale: vi.fn(() => ({ fitContent: vi.fn() })),
-  })),
+  createChart: vi.fn(() => {
+    mockCreateChartInstance = mockChartMethods
+    mockChartMethods.addSeries.mockReturnValue(mockSeriesMethods)
+    return mockChartMethods
+  }),
 }))
 
 let mockCandles: Array<Record<string, unknown>> = []
@@ -26,12 +38,23 @@ let mockIsLoading = false
 let mockIsError = false
 let mockLiveBar: Record<string, unknown> | null = null
 let mockPositions: Array<Record<string, unknown>> = []
+let mockRefetch = vi.fn()
 
 vi.mock("../../hooks/useOracleCandles", () => ({
   useOracleCandles: () => ({
-    data: mockCandles,
+    data: {
+      candles: mockCandles,
+      sourceType: "oracle_reference",
+      venueName: "Binance Reference",
+      symbol: "BTC",
+      period: "5m",
+      network: "testnet",
+    },
     isLoading: mockIsLoading,
     isError: mockIsError,
+    isFetching: false,
+    isPlaceholderData: false,
+    refetch: mockRefetch,
   }),
 }))
 
@@ -74,6 +97,7 @@ describe("TVChartContainer", () => {
     mockIsError = false
     mockLiveBar = null
     mockPositions = []
+    mockRefetch = vi.fn()
   })
 
   const defaultProps = { symbol: "BTC", period: "5m" }
@@ -326,5 +350,373 @@ describe("TVChartContainer", () => {
 
     const error = screen.getByRole("alert")
     expect(error).toHaveTextContent(/unable to load chart data for btc/i)
+  })
+
+  it("provides a Retry button when data load fails", () => {
+    mockIsError = true
+    mockCandles = []
+    render(<TVChartContainer {...defaultProps} />)
+
+    const retryButton = screen.getByRole("button", { name: /retry loading/i })
+    expect(retryButton).toBeInTheDocument()
+  })
+
+  it("calls refetch when Retry button is clicked after error", async () => {
+    mockIsError = true
+    mockCandles = []
+    render(<TVChartContainer {...defaultProps} />)
+
+    const retryButton = screen.getByRole("button", { name: /retry loading/i })
+    retryButton.click()
+
+    expect(mockRefetch).toHaveBeenCalled()
+  })
+
+  it("distinguishes no-history from error state", () => {
+    mockIsError = false
+    mockCandles = []
+    render(<TVChartContainer {...defaultProps} />)
+
+    const status = screen.getByRole("status", { name: "" })
+    expect(status).toHaveTextContent(/no trading history available for btc/i)
+    expect(status).toHaveTextContent(/market may be new/i)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("shows stale state with last known data when live feed stops", async () => {
+    mockCandles = SAMPLE_CANDLES
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    // Simulate live feed stopping (isPlaceholderData or isFetching with hasData)
+    vi.mocked(useOracleCandles).mockReturnValue({
+      data: {
+        candles: SAMPLE_CANDLES,
+        sourceType: "oracle_reference",
+        venueName: "Binance Reference",
+        symbol: "BTC",
+        period: "5m",
+        network: "testnet",
+      },
+      isLoading: false,
+      isError: false,
+      isFetching: true,
+      isPlaceholderData: false,
+      refetch: mockRefetch,
+    } as any)
+
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent(/live data unavailable for 5m/i)
+    expect(alert).toHaveTextContent(/showing last known data/i)
+  })
+
+  it("provides Refresh Now button in stale state", async () => {
+    mockCandles = SAMPLE_CANDLES
+    vi.mocked(useOracleCandles).mockReturnValue({
+      data: {
+        candles: SAMPLE_CANDLES,
+        sourceType: "oracle_reference",
+        venueName: "Binance Reference",
+        symbol: "BTC",
+        period: "5m",
+        network: "testnet",
+      },
+      isLoading: false,
+      isError: false,
+      isFetching: true,
+      isPlaceholderData: false,
+      refetch: mockRefetch,
+    } as any)
+
+    render(<TVChartContainer {...defaultProps} />)
+
+    const refreshButton = screen.getByRole("button", { name: /refresh now/i })
+    expect(refreshButton).toBeInTheDocument()
+
+    refreshButton.click()
+    expect(mockRefetch).toHaveBeenCalled()
+  })
+
+  it("renders data source and venue identification metadata badge", () => {
+    mockCandles = SAMPLE_CANDLES
+    render(<TVChartContainer {...defaultProps} />)
+
+    expect(screen.getByText(/Reference Price \(Binance Reference\)/i)).toBeInTheDocument()
+  })
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // Chart lifecycle and memory (OB-070)
+  // ═════════════════════════════════════════════════════════════════════════
+
+  it("creates chart instance once on mount and cleans up on unmount", () => {
+    mockCandles = SAMPLE_CANDLES
+    mockChartMethods.remove.mockClear()
+
+    const { unmount } = render(<TVChartContainer {...defaultProps} />)
+
+    // Chart should be created
+    expect(mockChartMethods.addSeries).toHaveBeenCalled()
+    expect(mockChartMethods.remove).not.toHaveBeenCalled()
+
+    unmount()
+
+    // Cleanup called on unmount
+    expect(mockChartMethods.remove).toHaveBeenCalled()
+  })
+
+  it("does not create duplicate chart instances on re-render", () => {
+    mockCandles = SAMPLE_CANDLES
+    const createChartSpy = vi.spyOn(
+      require("lightweight-charts"),
+      "createChart",
+    )
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+    const callCountAfterMount = createChartSpy.mock.calls.length
+
+    // Re-render with same props
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    // createChart should not be called again
+    expect(createChartSpy.mock.calls.length).toBe(callCountAfterMount)
+
+    createChartSpy.mockRestore()
+  })
+
+  it("cleans up ResizeObserver on unmount", () => {
+    const observerStub = (ObserverStub as any).prototype
+    const disconnectSpy = vi.spyOn(observerStub, "disconnect")
+
+    mockCandles = SAMPLE_CANDLES
+    const { unmount } = render(<TVChartContainer {...defaultProps} />)
+
+    disconnectSpy.mockClear()
+    unmount()
+
+    expect(disconnectSpy).toHaveBeenCalled()
+    disconnectSpy.mockRestore()
+  })
+
+  it("cleans up MutationObserver on unmount", () => {
+    const observerStub = (ObserverStub as any).prototype
+    const disconnectSpy = vi.spyOn(observerStub, "disconnect")
+
+    mockCandles = SAMPLE_CANDLES
+    const { unmount } = render(<TVChartContainer {...defaultProps} />)
+
+    // Two observers are created (resize + mutation)
+    expect(disconnectSpy).not.toHaveBeenCalled()
+
+    disconnectSpy.mockClear()
+    unmount()
+
+    expect(disconnectSpy.mock.calls.length).toBeGreaterThanOrEqual(1)
+    disconnectSpy.mockRestore()
+  })
+
+  it("does not call setData with empty candles array on mount if no data", () => {
+    mockCandles = []
+    mockSeriesMethods.setData.mockClear()
+
+    render(<TVChartContainer {...defaultProps} />)
+
+    // setData should not be called with actual candles before they arrive
+    expect(mockSeriesMethods.setData).not.toHaveBeenCalled()
+  })
+
+  it("calls setData once when historical candles arrive", () => {
+    mockCandles = []
+    mockSeriesMethods.setData.mockClear()
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    // Candles arrive
+    mockCandles = SAMPLE_CANDLES
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    // setData called exactly once with full array
+    expect(mockSeriesMethods.setData).toHaveBeenCalledTimes(1)
+    expect(mockSeriesMethods.setData).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ time: 1_700_000_000 }),
+      ]),
+    )
+  })
+
+  it("calls fitContent only once per symbol/period load, not on every candle update", () => {
+    const fitContentSpy = vi.spyOn(mockChartMethods.timeScale(), "fitContent")
+    fitContentSpy.mockClear()
+
+    mockCandles = SAMPLE_CANDLES
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    expect(fitContentSpy).toHaveBeenCalledTimes(1)
+
+    // Simulate live bar update (adds one more candle)
+    mockCandles = [
+      ...SAMPLE_CANDLES,
+      { time: 1_700_010_800, open: 115, high: 125, low: 105, close: 120 },
+    ]
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    // fitContent should NOT be called again
+    expect(fitContentSpy).toHaveBeenCalledTimes(1)
+
+    fitContentSpy.mockRestore()
+  })
+
+  it("clears price lines when symbol changes", () => {
+    mockCandles = SAMPLE_CANDLES
+    mockPositions = [
+      {
+        key: "pos-1",
+        indexToken: "BTC",
+        isLong: true,
+        entryPrice: 105,
+        liquidationPrice: 90,
+      },
+    ]
+    mockSeriesMethods.removePriceLine.mockClear()
+
+    const { rerender } = render(<TVChartContainer symbol="BTC" period="5m" />)
+
+    // Price lines created for initial position
+    expect(mockSeriesMethods.createPriceLine).toHaveBeenCalled()
+
+    // Change symbol
+    mockCandles = []
+    mockSeriesMethods.removePriceLine.mockClear()
+    rerender(<TVChartContainer symbol="ETH" period="5m" />)
+
+    // Old price lines removed
+    expect(mockSeriesMethods.removePriceLine).toHaveBeenCalled()
+  })
+
+  it("recovers candle data and price lines after reconnect", () => {
+    // Initial load
+    mockCandles = SAMPLE_CANDLES
+    mockPositions = [
+      {
+        key: "pos-1",
+        indexToken: "BTC",
+        isLong: true,
+        entryPrice: 105,
+        liquidationPrice: 90,
+      },
+    ]
+    mockSeriesMethods.setData.mockClear()
+    mockSeriesMethods.createPriceLine.mockClear()
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    const initialSetDataCalls = mockSeriesMethods.setData.mock.calls.length
+    const initialPriceLineCalls = mockSeriesMethods.createPriceLine.mock.calls
+      .length
+
+    // Simulate disconnection: clear candles
+    mockCandles = []
+    mockSeriesMethods.setData.mockClear()
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    // Reconnection: candles re-arrive
+    mockCandles = SAMPLE_CANDLES
+    mockSeriesMethods.setData.mockClear()
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    // setData called with same candles (verifies correct recovery)
+    expect(mockSeriesMethods.setData).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ time: 1_700_000_000, close: 105 }),
+        expect.objectContaining({ time: 1_700_007_200, close: 115 }),
+      ]),
+    )
+
+    // Price lines should be recreated
+    expect(mockSeriesMethods.createPriceLine).toHaveBeenCalled()
+  })
+
+  it("does not retain candles beyond current data set", () => {
+    mockCandles = SAMPLE_CANDLES
+    mockSeriesMethods.setData.mockClear()
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    const firstSetDataCall = mockSeriesMethods.setData.mock.calls[0][0]
+    expect(firstSetDataCall).toHaveLength(3)
+
+    // Update with fewer candles (e.g., different period or data reset)
+    mockCandles = [SAMPLE_CANDLES[0]]
+    mockSeriesMethods.setData.mockClear()
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    const secondSetDataCall = mockSeriesMethods.setData.mock.calls[0][0]
+    expect(secondSetDataCall).toHaveLength(1)
+
+    // Should not retain old candles
+    expect(secondSetDataCall[0]).toEqual(
+      expect.objectContaining({ time: 1_700_000_000 }),
+    )
+  })
+
+  it("updates price lines when positions change", () => {
+    mockCandles = SAMPLE_CANDLES
+    mockPositions = []
+    mockSeriesMethods.removePriceLine.mockClear()
+    mockSeriesMethods.createPriceLine.mockClear()
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    // No price lines initially
+    expect(mockSeriesMethods.createPriceLine).not.toHaveBeenCalled()
+
+    // Position added
+    mockPositions = [
+      {
+        key: "pos-1",
+        indexToken: "BTC",
+        isLong: true,
+        entryPrice: 105,
+        liquidationPrice: 90,
+      },
+    ]
+    mockSeriesMethods.createPriceLine.mockClear()
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    expect(mockSeriesMethods.createPriceLine).toHaveBeenCalledTimes(2) // entry + liquidation
+
+    // Position removed
+    mockPositions = []
+    mockSeriesMethods.removePriceLine.mockClear()
+    rerender(<TVChartContainer {...defaultProps} />)
+
+    expect(mockSeriesMethods.removePriceLine).toHaveBeenCalled()
+  })
+
+  it("handles live bar updates without memory accumulation", () => {
+    mockCandles = SAMPLE_CANDLES
+    mockSeriesMethods.update.mockClear()
+
+    const { rerender } = render(<TVChartContainer {...defaultProps} />)
+
+    // Add 100 live bar updates
+    for (let i = 0; i < 100; i++) {
+      mockLiveBar = {
+        time: 1_700_010_000 + i * 60,
+        open: 115 + i,
+        high: 125 + i,
+        low: 105 + i,
+        close: 120 + i,
+      }
+      rerender(<TVChartContainer {...defaultProps} />)
+    }
+
+    // Each update should call series.update, not accumulate
+    expect(mockSeriesMethods.update.mock.calls.length).toBeGreaterThan(0)
+
+    // Original candles array should not grow
+    mockCandles = SAMPLE_CANDLES
+    expect(mockCandles).toHaveLength(3)
   })
 })

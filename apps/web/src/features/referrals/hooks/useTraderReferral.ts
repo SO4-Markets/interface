@@ -28,11 +28,11 @@ export type UseTraderReferralResult = {
 export function useTraderReferral(trader: string | null): UseTraderReferralResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.referrals.traderReferral(trader ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !trader) {
         return null
       }
-      const result = await executeGraphQLQuery(GET_TRADER_REFERRAL, { trader })
+      const result = await executeGraphQLQuery(GET_TRADER_REFERRAL, { trader }, { signal })
       // Return the first (most recent) referral assignment
       return result.traderReferrals.nodes[0] ?? null
     },

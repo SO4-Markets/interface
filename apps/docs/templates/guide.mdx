@@ -1,0 +1,47 @@
+---
+title: Guide title
+description: One sentence naming the task this guide walks through and the surface it happens on, between fifty and one hundred sixty characters long.
+updated: 2026-08-31
+status: draft
+---
+
+{/*
+  GUIDE template. Copy to content/guides/<slug>.mdx, then:
+    1. Replace every placeholder, including the frontmatter.
+    2. Add "guides/<slug>" to the Guides section of content/meta.json.
+    3. Run check:content, check:links, and lint:prose from apps/docs.
+  A guide is task-first: what the page is for, how to do the main action, and
+  what to check afterwards. Perform every documented action yourself before
+  writing it, and confirm that in the pull request.
+*/}
+
+One or two sentences: what this page is for and who does it. Name the route in
+`apps/web` where the action happens.
+
+## Before you start
+
+What the reader needs first — a connected wallet, testnet assets from
+[/guides/faucet](/guides/faucet), a position, whatever applies. Link each
+prerequisite rather than re-explaining it.
+
+## Doing the main action
+
+Use `<Steps>` only when it is genuinely a procedure:
+
+<Steps>
+1. First step, phrased as one concrete action.
+2. Second step. Name the button or field the reader clicks or fills.
+3. What confirms success — a toast, a balance change, a new row.
+</Steps>
+
+If a step can fail in a way the reader will hit, say what the failure looks
+like and link [/guides/troubleshooting](/guides/troubleshooting).
+
+## After
+
+What to verify, where the result shows up, and how to reverse it if the action
+is reversible.
+
+## Related
+
+The concept pages behind this surface, linked inline above and listed here.

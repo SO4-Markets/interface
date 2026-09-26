@@ -1,0 +1,79 @@
+---
+title: Quickstart
+description: Place your first SO4 testnet trade in about ten minutes — install Freighter, connect it, switch to Testnet, fund the account, and submit an order.
+updated: 2026-09-02
+status: beta
+---
+
+This page walks you through your first SO4 trade on the Stellar testnet. You install the Freighter wallet, connect it, switch it to Testnet, fund the account, and submit a small order. Every button name and message quoted below is what the interface showed during a clean-profile run on 2026-08-30, with Freighter 5.46 in a fresh Chrome profile. Dollar amounts and fees move with the market; treat the figures as current as of that run.
+
+## Before you start
+
+You need the Freighter wallet extension in your browser and a Freighter account with a recovery phrase you saved. Everything below runs on the Stellar testnet, where tokens have no real value. If you have not read [what SO4 is](/get-started/introduction), that page gives the two-paragraph version first.
+
+## 1. Install the Freighter wallet
+
+Install Freighter from its official website and follow the account creation flow. Freighter walks you through setting a password and saving a recovery phrase. The recovery phrase is the only way to restore the account, so keep it somewhere safe.
+
+[The wallets page](/get-started/wallets) covers Freighter, xBull, and Hana in more depth, along with what connecting and signing authorise. This page uses Freighter because it is the wallet the interface is tested with.
+
+## 2. Connect the wallet to SO4
+
+Open the SO4 app. In the top-right of the page, click **Connect Wallet**.
+
+The wallet modal opens with the heading **Connect Wallet** and the description **Choose a supported Stellar wallet to continue.** The Freighter row shows **Freighter** with **Detected** on the right. Click it.
+
+Freighter opens a **Connection Request** page for the site. It says **Allow [site] to view your wallet address, balance, activity and request approval for transactions**, and it lists your **Wallet** address and **Network**. Click **Connect**.
+
+The navbar now shows your shortened address in the format of the first six characters, three dots, and the last four, like **GDXO4N...D4HH**. A prompt appears that reads **I have a referral code**, with **Apply** and **Skip for now** buttons. Click **Skip for now**.
+
+## 3. Switch Freighter to Testnet
+
+A new Freighter wallet starts on **Mainnet**. The SO4 app runs on **Testnet**, so you must switch before any transaction can be approved. Open the Freighter extension, and in the wallet header choose **Testnet** next to **Mainnet**.
+
+> **Wrong network.** If you approve a transaction while Freighter is still on Mainnet, Freighter rejects it. The approval screen reads: "Freighter is set to Main Net". Then: "The transaction you're trying to sign is on Test Net." Then: "Signing this transaction is not possible at the moment."
+> A **Got it** button dismisses the message, and the transaction is never submitted. You can also catch the mismatch earlier: the connection request in step 2 lists **Network Main Net** when Freighter is on the wrong network. Switch Freighter to **Testnet** and try the transaction again.
+
+## 4. Fund the account and claim test tokens
+
+A brand-new account holds zero XLM, and every transaction needs a little XLM to pay the Stellar network fee. Fund the account before you claim or trade.
+
+> **No XLM for fees.** If you try to claim or trade before funding, the app shows a toast that reads exactly: "Transaction failed. Please try again." The transaction never reaches the network. Get XLM first, then claim.
+
+<Steps>
+1. Get testnet XLM. Click your address in the navbar to open the account menu, then click **Testnet Faucet**. That opens the Stellar testnet friendbot, which credits the account with 10,000 testnet XLM in a few seconds. Freighter's own **Add XLM** button on Testnet does the same.
+2. Open the **Faucet** page from the app's top navigation. The page heading reads **Testnet Faucet** with the description **Claim test tokens to try trading on SO4. Tokens have no real value.**
+3. Each token card (TUSDC, TWBTC, TETH, TXLM) shows **Your balance**, **Claim amount**, and a **Claim** button. The example trade in step 5 needs TWBTC, so click **Claim** on the TWBTC card.
+4. Freighter opens **Confirm Transaction** and lists **Network Test Net**, the **Fee** in XLM (about 0.007 XLM for one token on the 2026-08-30 run), and **Memo None**. Click **Confirm**.
+5. The card shows **Claiming** while the transaction confirms, then a toast appears that reads **Test token claimed** with a **View transaction** link. One token took about 8 to 12 seconds from clicking **Claim** to the success toast.
+</Steps>
+
+The **Claim Test Tokens** button below the cards claims all four tokens in one transaction. On the current testnet build that transaction fails on-chain and the app shows the toast "Transaction failed. Please try again." Claim one token at a time with the per-token **Claim** buttons.
+
+## 5. Open a small position
+
+Open the **Trade** page. The market defaults to **TWBTC/USD**, and the three trade-type tabs read **Long**, **Short**, and **Swap**. Leave **Long** selected. On this market the collateral for a long is TWBTC, so the collateral you enter is priced in test Bitcoin.
+
+<Steps>
+1. Enter **0.0005** in the collateral field. At the price on the 2026-08-30 run, that is about $39 of collateral. The **Leverage** slider defaults to **10x**, and the **Position size** row reads about $393.
+2. Review the rows above the button: **Entry price**, **Liq. price**, **Position fee**, **Price impact**, **Execution fee**, and **Total fees**. On the example runs these sat around $78,700 entry, $71,200 liquidation, $0.39 position fee, -0.05% price impact, ~0.30 XLM execution fee, and $0.64 total fees.
+3. Click **Long TWBTC**. A confirmation dialog opens titled **Confirm Long CCFTOP…XDUO**, showing **Size**, **Leverage 10x**, **Entry price**, **Liq. price**, **Network fee ~0.0175 XLM**, **Execution fee ~0.01 XLM**, **Collateral 0.0005 CCFTOP…XDUO**, and **Total fees**. Click **Confirm Long**.
+4. Freighter opens **Confirm Transaction** with **Network Test Net** and a **Fee** around 0.0175 XLM. Click **Confirm**.
+5. The toast reads **Batch order submitted**, with **1 operations**, the transaction hash, and a **View transaction** link. Signing and confirmation took about 6 to 12 seconds on the example runs.
+</Steps>
+
+## 6. Check the order
+
+The panel under the chart has **Positions**, **Orders**, **Trades**, and **Claims** tabs. The order you submitted appears under **Orders**. The tab label shows the count, **Orders (1)**, and the row lists **Market**, **Type**, **Size**, **Trigger**, and **Created** columns with a **Cancel** button. On the example run the row read **BTC/USD**, **Long**, **MarketIncrease**, **$393.51**, **$0.00**, and a created time.
+
+The **Positions** tab currently shows **No open positions**. On the current testnet build, the order is recorded on-chain but not executed into a position, so no position row appears. The order-execution pipeline is still being wired up on testnet; the project status note in the README describes the OrderVault client as pending integration. Once execution is live, an executed position appears here with its market, size, entry, mark, liquidation, and PnL columns.
+
+## 7. Cancel the order
+
+To undo the order, click **Cancel** on the order row in the **Orders** tab. The button shows an ellipsis while the request is pending, and a toast reads **Cancelling order...**. Freighter opens **Confirm Transaction** with a fee around 0.0046 XLM. Click **Confirm**, and the toast reads **Order cancelled**, with the transaction hash and a **View transaction** link. The cancel took about 9 seconds on the example run.
+
+## What happened
+
+Your 0.0005 TWBTC went to the protocol as collateral for a long position about ten times its value. The order was a market increase of about $393. The position fee (about $0.39, roughly 0.1% of size) is taken from your collateral. The network and execution fees are paid in XLM, the asset Stellar charges transaction fees in. The market's funding rate reads **+0.000%/h**, which means neither side currently pays the other.
+
+If the price moves against a leveraged position, your collateral can be consumed before the position is closed. [Liquidation](/concepts/liquidation) explains that mechanic with a worked example. For positions held across funding intervals, funding transfers value between longs and shorts — see [funding and fees](/concepts/funding-and-fees). The <Term id="maintenance-margin">maintenance margin</Term> concept is defined in the [glossary](/reference/glossary), and the [risk overview](/concepts/risk) lists the full set of ways a trade can lose money.

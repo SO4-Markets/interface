@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import "@testing-library/jest-dom/vitest"
 import { axe } from "vitest-axe"
 import { describe, expect, it } from "vitest"
 import { KeyboardShortcut } from "@workspace/ui/components/keyboard-shortcut"
@@ -63,9 +64,11 @@ describe("DocsHome", () => {
     const user = userEvent.setup()
     render(<DocsHome />)
 
+    // The next page after the docs home is the committed MDX fixture — see
+    // `docsPages` in ../lib/docs-pages.
     await user.keyboard("{Alt>}{ArrowRight}{/Alt}")
     expect(
-      screen.getByRole("heading", { level: 1, name: "Risk Basics" })
+      screen.getByRole("heading", { level: 1, name: "MDX Kitchen Sink" })
     ).toBeInTheDocument()
 
     await user.keyboard("{Alt>}{ArrowLeft}{/Alt}")

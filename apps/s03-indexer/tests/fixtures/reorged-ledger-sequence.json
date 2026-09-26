@@ -1,0 +1,70 @@
+{
+  "orphaned": [
+    {
+      "id": "orphan-pos-inc",
+      "eventName": "pos_inc",
+      "ledger": 200,
+      "transactionHash": "tx-orphan-pos",
+      "named": {
+        "position_key": "reorg-pos-1",
+        "market": "MARKET_TOKEN",
+        "account": "ACCOUNT",
+        "collateral_token": "MARKET_TOKEN",
+        "is_long": true,
+        "size_delta_usd": "100",
+        "next_size_usd": "100",
+        "next_collateral_amount": "5",
+        "execution_price": "10"
+      }
+    },
+    {
+      "id": "orphan-ord-crt",
+      "eventName": "ord_crt",
+      "ledger": 200,
+      "transactionHash": "tx-orphan-order",
+      "named": {
+        "key": "reorg-order-1",
+        "market": "MARKET_TOKEN",
+        "account": "ACCOUNT",
+        "order_type": "LimitIncrease",
+        "is_long": true,
+        "size_delta_usd": "100",
+        "acceptable_price": "10"
+      }
+    }
+  ],
+  "canonical": [
+    {
+      "id": "canonical-pos-inc",
+      "eventName": "pos_inc",
+      "ledger": 200,
+      "transactionHash": "tx-canonical-pos",
+      "named": {
+        "position_key": "reorg-pos-1",
+        "market": "MARKET_TOKEN",
+        "account": "ACCOUNT",
+        "collateral_token": "MARKET_TOKEN",
+        "is_long": true,
+        "size_delta_usd": "250",
+        "next_size_usd": "250",
+        "next_collateral_amount": "8",
+        "execution_price": "12"
+      }
+    },
+    {
+      "id": "canonical-ord-crt",
+      "eventName": "ord_crt",
+      "ledger": 200,
+      "transactionHash": "tx-canonical-order",
+      "named": {
+        "key": "reorg-order-1",
+        "market": "MARKET_TOKEN",
+        "account": "ACCOUNT",
+        "order_type": "LimitIncrease",
+        "is_long": true,
+        "size_delta_usd": "250",
+        "acceptable_price": "12"
+      }
+    }
+  ]
+}

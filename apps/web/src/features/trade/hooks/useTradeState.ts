@@ -8,11 +8,13 @@
 //   - TODO: migrate to a full Selector context (Redux-style) using reselect + use-context-selector
 //     once state complexity grows — see GMX's SyntheticsStateContext pattern
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useMarkets } from "./useMarkets"
 import { useTokenList } from "./useTokenList"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { CONTRACTS } from "@/app/config/contracts"
 import { POOL_MARKETS } from "@/features/pools/data/markets"
+import { ENV } from "@/app/config/env"
 
 export type TradeType = "Long" | "Short" | "Swap"
 export type TradeMode = "Market" | "Limit" | "Trigger"
@@ -105,14 +107,54 @@ function loadFromStorage(): TradeState {
 
 function normalizeTradeState(state: TradeState): TradeState {
   const market = POOL_MARKETS.find((entry) => entry.marketToken === state.marketAddress)
-  if (market) return state
+  if (market) {
+    // Market is still valid; revalidate collateral selections for this market
+    const collateral = state.collaterals[market.marketToken]
+    const isLong = state.tradeType === "Long"
+    const isShort = state.tradeType === "Short"
 
+    // Clear incompatible amounts/triggers when collateral doesn't match market config
+    if (
+      (isLong && collateral.long && collateral.long !== market.longToken) ||
+      (isShort && collateral.short && collateral.short !== market.shortToken)
+    ) {
+      return {
+        ...state,
+        collaterals: {
+          ...state.collaterals,
+          [market.marketToken]: {
+            long: market.longToken,
+            short: market.shortToken,
+          },
+        },
+        fromAmount: "",
+        triggerPrice: "",
+        sidecarOrders: [],
+      }
+    }
+
+    return {
+      ...state,
+      collaterals: {
+        ...state.collaterals,
+        [market.marketToken]: {
+          long: market.longToken,
+          short: market.shortToken,
+        },
+      },
+    }
+  }
+
+  // Market is invalid — reset to default and clear draft amounts
   return {
     ...state,
     fromTokenAddress: CONTRACTS.tokens.tusdc,
     toTokenAddress: DEFAULT_MARKET.indexToken,
     marketAddress: DEFAULT_MARKET.marketToken,
     collaterals: DEFAULT_COLLATERALS,
+    fromAmount: "",
+    triggerPrice: "",
+    sidecarOrders: [],
   }
 }
 
@@ -127,12 +169,34 @@ function saveToStorage(state: TradeState) {
 export function useTradeState() {
   const { markets, getMarketsForIndexToken } = useMarkets()
   const { indexTokens, stableTokens } = useTokenList()
+  const account = useWalletStore((s) => s.address)
   const [state, setState] = useState<TradeState>(loadFromStorage)
+  const prevAccountRef = useRef(account)
+  const prevNetworkRef = useRef(ENV.NETWORK)
 
   // Persist every change
   useEffect(() => {
     saveToStorage(state)
   }, [state])
+
+  // Clear stale approvals and draft amounts when account/network changes
+  useEffect(() => {
+    const accountChanged = prevAccountRef.current !== account
+    const networkChanged = prevNetworkRef.current !== ENV.NETWORK
+
+    if (accountChanged || networkChanged) {
+      // Clear amounts but preserve market/type selections
+      setState((prev) => ({
+        ...prev,
+        fromAmount: "",
+        triggerPrice: "",
+        sidecarOrders: [],
+      }))
+    }
+
+    prevAccountRef.current = account
+    prevNetworkRef.current = ENV.NETWORK
+  }, [account])
 
   const update = useCallback((patch: Partial<TradeState>) => {
     setState((prev) => ({ ...prev, ...patch }))

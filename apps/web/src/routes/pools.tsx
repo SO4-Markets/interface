@@ -1,4 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { PoolsPage } from "../features/pools/components/pools-page"
+import { Suspense, lazy } from "react"
+import { LoadingPage } from "../shared/components/LoadingPage"
 
-export const Route = createFileRoute("/pools")({ component: PoolsPage })
+const PoolsPage = lazy(() =>
+  import("../features/pools/components/pools-page").then((m) => ({
+    default: m.PoolsPage,
+  }))
+)
+
+export const Route = createFileRoute("/pools")({
+  component: () => (
+    <Suspense fallback={<LoadingPage />}>
+      <PoolsPage />
+    </Suspense>
+  ),
+})

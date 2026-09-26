@@ -11,18 +11,24 @@ export interface SearchDialogProps {
   isOpen: boolean
   onClose: () => void
   onSearch?: (query: string) => Promise<SearchResult[]>
+  initialQuery?: string
   className?: string
 }
 
-export function SearchDialog({ isOpen, onClose, onSearch, className }: SearchDialogProps) {
-  const [query, setQuery] = useState("")
+export function SearchDialog({ isOpen, onClose, onSearch, initialQuery = "", className }: SearchDialogProps) {
+  const [query, setQuery] = useState(initialQuery)
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (isOpen) {
+      setQuery(initialQuery)
+    }
+  }, [isOpen, initialQuery])
+
+  useEffect(() => {
     if (!isOpen) {
-      setQuery("")
       setResults([])
       setError(null)
       return

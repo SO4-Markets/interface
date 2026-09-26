@@ -1,12 +1,91 @@
 ---
 title: Funding and fees
-description: How funding, transaction charges, borrowing costs, and price impact affect a perpetual position.
-updated: 2026-08-24
+description: Every cost a leveraged position can accrue on SO4 — position fee, price impact, funding, borrow fee, and the network fee — with a worked multi-interval example.
+updated: 2026-08-31
 status: stable
 ---
 
-Trading cost is more than a displayed fee because time, market balance, execution, and the Stellar transaction can each affect the result.
+Opening or holding a position on SO4 can cost five distinct things: a position fee when size changes, price impact on the entry or exit price, recurring <Term id="funding">funding</Term> while the position stays open, a borrow fee on the collateral it locks up, and a network fee paid to the keeper that executes the order. All five are computed client-side today; none of them read a live value from the deployed contracts yet, which the [gaps](#where-the-client-diverges-from-the-contracts) section below covers in detail.
 
-<Term id="funding">Funding</Term> transfers value between long and short positions. <Term id="price-impact">Price impact</Term> changes the execution estimate as a trade changes market exposure. <Term id="open-interest">Open interest</Term> describes positions that remain active.
+## The five costs
 
-Always review the transaction simulation and wallet prompt before signing. See [risk](/concepts/risk) for failure modes.
+### Position fee
+
+Charged whenever a position's size changes, on both the increase (open) and the decrease (close) side, at `positionFeeBps` from `DEFAULT_FEE_CONFIG` — currently 10 basis points (0.10%) of the size delta. `useTradeFees.ts` accepts an `isIncrease` parameter but does not use it to vary the rate, so opening and closing the same size cost the same fee. A `Swap` trade uses `swapFeeBps` instead, also 10 basis points today.
+
+Source: `positionFeeBps` and `swapFeeBps`, `apps/web/src/features/trade/lib/data-store.ts`; applied in `apps/web/src/features/trade/hooks/useTradeFees.ts`.
+
+### Price impact
+
+An estimate shown as `priceImpactUsd` and, in the trade panel, as a percentage move applied to the entry price (`getEstimatedEntryPrice` in `apps/web/src/features/trade/lib/pricing.ts`). In the current client this is a flat `PRICE_IMPACT_BPS = 5` (0.05%) applied to every trade regardless of size or which side of the pool it falls on — not a function of pool imbalance, despite what the name suggests a GMX-style system would compute.
+
+Source: `PRICE_IMPACT_BPS`, `apps/web/src/features/trade/hooks/useTradeFees.ts`.
+
+### Funding
+
+A recurring transfer between the long and short sides of a market, intended to keep the market's price near the reference price named in [oracles](/concepts/oracles). `useFundingRate.ts` reads a signed `funding_factor_per_second` from `SyntheticsReaderClient.get_funding_info` — the comment on the generated type says it "mirrors `gmx_types::FundingInfo`" — and converts it to a fractional per-hour rate: `ratePerHour = fundingFactorPerSecond × 3600 / 10^30`. Under the GMX v2 convention this contract mirrors, a positive rate means the side with larger <Term id="open-interest">open interest</Term> pays the smaller side; SO4's client does not separately label which side is paying, so read the sign from the raw rate.
+
+Funding settles in fixed 8-hour epochs (`FUNDING_INTERVAL_MS` in `useFundingRate.ts`); the trade panel's `FundingRate` component (`apps/web/src/features/trade/components/FundingRate.tsx`) shows the current per-hour rate next to a countdown to the next epoch boundary, not the amount accrued so far.
+
+Source: `useFundingRate.ts`, `FundingRate.tsx`.
+
+### Borrow fee
+
+A fee for holding an open position, charged against the collateral it locks up rather than against trade size. `DEFAULT_FEE_CONFIG.borrowingRatePerHour` sets it to `0.0001` (0.01%/hour) in `data-store.ts`, and `useMarketsInfo.ts` reports the same fixed `0.0001` per market. A separate, unused helper, `estimateBorrowFeePerHour` in `trade-math.ts`, computes a different figure from a `borrowingFactorBps` parameter divided by both `10_000` and `24` — the extra division by 24 does not match a function documented as a per-hour rate, and this helper is not called from `useTradeFees` or any component today.
+
+Source: `borrowingRatePerHour`, `apps/web/src/features/trade/lib/data-store.ts`; `estimateBorrowFeePerHour`, `apps/web/src/features/trade/lib/trade-math.ts`.
+
+### Network (execution) fee
+
+Paid to the keeper that executes the order in a second transaction, shown in the trade panel as "Execution fee" with the tooltip "Paid to network keepers who execute your order." `minExecutionFeeXlm` is `0.3` XLM in `DEFAULT_FEE_CONFIG`; `useTradeFees.ts` converts it to a USD estimate using the current XLM mid price, falling back to `0.17` USD/XLM if no live price is available.
+
+Source: `minExecutionFeeXlm`, `data-store.ts`; conversion in `useTradeFees.ts`.
+
+## Summary
+
+Values below are current as of `apps/web/src/features/trade/lib/data-store.ts` and `apps/web/src/features/trade/hooks/useTradeFees.ts` on this branch; funding is the one row read live per market rather than configured client-side.
+
+| Cost | Current value | Charged when |
+| --- | --- | --- |
+| Position fee | 0.10% of size (10 bps) | Every increase or decrease of size |
+| Swap fee | 0.10% of size (10 bps) | A `Swap`-type trade |
+| Price impact | 0.05% of size (5 bps), flat | Every trade, same rate regardless of size |
+| Funding | Signed rate from `SyntheticsReader`, per-hour, settled every 8 hours | Continuously, while a position is open |
+| Borrow fee | 0.01%/hour (1 bp) of collateral | Continuously, while a position is open — not currently shown in the trade panel |
+| Network (execution) fee | 0.3 XLM minimum per keeper execution | Once per increase and once per decrease |
+
+## Worked example: costs over a held position
+
+A trader opens a $10,000 long position and holds it across three consecutive 8-hour funding epochs (24 hours) before closing it. Assume the XLM price used for the execution-fee estimate is $0.17, and assume `SyntheticsReader.get_funding_info` for this market yields a `ratePerHour` of 0.00003 (0.003%/hour) for the whole window — an illustrative rate, not a value read from a deployed contract.
+
+**Open:**
+
+- Position fee: `10,000 × 0.0010 = $10.00`
+- Price impact: `10,000 × 0.0005 = $5.00`
+- Execution fee: `0.3 × 0.17 = $0.051`
+- Open subtotal: `$15.051`
+
+**Held for 24 hours (3 × 8-hour epochs), funding only — the client does not accrue a borrow fee into any total today:**
+
+- Funding per hour: `10,000 × 0.00003 = $0.30`
+- Funding over 24 hours: `0.30 × 24 = $7.20`
+
+**Close** (the client charges the same position fee and price impact rate on a decrease as on an increase, and a second execution fee for the keeper that executes the close):
+
+- Position fee: `10,000 × 0.0010 = $10.00`
+- Price impact: `10,000 × 0.0005 = $5.00`
+- Execution fee: `0.3 × 0.17 = $0.051`
+- Close subtotal: `$15.051`
+
+**Total for the round trip:** `$15.051 + $7.20 + $15.051 = $37.302` — of which funding, the only cost that grows with how long the position stays open, is $7.20 for this one day. Held for a week at the same rate instead of a day, funding alone would be `10,000 × 0.00003 × 24 × 7 = $50.40`, more than three times the combined open and close costs.
+
+## Where the client diverges from the contracts {#where-the-client-diverges-from-the-contracts}
+
+- `fetchFeeConfig` in `data-store.ts` returns a hard-coded `DEFAULT_FEE_CONFIG` for every market; despite its name, it does not read DataStore. Position fee, swap fee, and the execution-fee minimum are the same for every market until that changes.
+- Price impact is a flat rate, not a function of trade size or which side of the pool a trade adds to or removes from — see [price impact](#price-impact) above.
+- The borrow fee is configured in two places that disagree (`data-store.ts` and `trade-math.ts`) and is not applied to `totalFeesUsd` in `useTradeFees.ts` or shown as a row in the trade panel. A position accrues it in the protocol regardless of what the interface currently displays.
+- Funding is the one cost read live from a contract (`SyntheticsReader.get_funding_info`); everything else in this page is a client-side estimate that can differ from what the transaction actually settles for.
+
+## Related
+
+[/concepts/liquidation](/concepts/liquidation) — funding and borrow fees reduce the collateral backing a position, which moves its liquidation price. [/concepts/oracles](/concepts/oracles) — the price funding and price impact are measured against. [/concepts/risk](/concepts/risk) — the broader list of what can go wrong, including these costs being estimates.

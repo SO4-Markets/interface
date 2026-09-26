@@ -9,6 +9,7 @@ import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { walletKit } from "@/features/wallet/lib/wallet-kit"
 import { server } from "@/test/msw/server"
 import { fakeWalletAddress } from "@/test/fakes/wallet"
+import { queryKeys } from "@/shared/lib/query-keys"
 
 // ── Seed values ────────────────────────────────────────────────────────────────
 const CLAIM_AMOUNT_RAW = 10_000_000n   // → fromContractAmount → 1.0 → "1 TUSDC"
@@ -98,7 +99,7 @@ describe("FaucetPage — claim one success flow (#215)", () => {
      
     } as any)
 
-    // Spy on toast so we can assert calls without needing <Toaster /> rendered
+    // Spy on toast so we can assert calls without needing <ToastProvider /> rendered
      
     vi.spyOn(toast, "loading").mockReturnValue("mock-toast-id")
     vi.spyOn(toast, "success")
@@ -204,7 +205,7 @@ describe("FaucetPage — claim one success flow (#215)", () => {
       () =>
         expect(invalidateSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            queryKey: ["faucet", "data", fakeWalletAddress],
+            queryKey: queryKeys.faucet.data(fakeWalletAddress),
           }),
         ),
       { timeout: 5000 },

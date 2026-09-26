@@ -85,37 +85,50 @@ function Accordion(props: AccordionProps) {
     if (type === "multiple") return defaultValue ?? []
     return defaultValue ?? null
   })
+  const currentValue = isControlled ? value : uncontrolledValue
+  const currentValueRef = React.useRef(currentValue)
+  currentValueRef.current = currentValue
 
   const openValues = React.useMemo(() => {
-    const currentValue = isControlled ? value : uncontrolledValue
     if (type === "multiple")
       return Array.isArray(currentValue) ? currentValue : []
     return typeof currentValue === "string" ? [currentValue] : []
-  }, [isControlled, type, uncontrolledValue, value])
+  }, [currentValue, type])
 
   const toggleValue = React.useCallback(
     (itemValue: string) => {
+      const currentOpenValues =
+        type === "multiple"
+          ? Array.isArray(currentValueRef.current)
+            ? currentValueRef.current
+            : []
+          : typeof currentValueRef.current === "string"
+            ? [currentValueRef.current]
+            : []
+
       if (type === "multiple") {
-        const nextValue = openValues.includes(itemValue)
-          ? openValues.filter((openValue) => openValue !== itemValue)
-          : [...openValues, itemValue]
+        const nextValue = currentOpenValues.includes(itemValue)
+          ? currentOpenValues.filter((openValue) => openValue !== itemValue)
+          : [...currentOpenValues, itemValue]
         const multipleOnValueChange =
           onValueChange as MultipleAccordionProps["onValueChange"]
 
+        currentValueRef.current = nextValue
         if (!isControlled) setUncontrolledValue(nextValue)
         multipleOnValueChange?.(nextValue)
         return
       }
 
-      const isOpen = openValues.includes(itemValue)
+      const isOpen = currentOpenValues.includes(itemValue)
       const nextValue = isOpen && collapsible ? null : itemValue
       const singleOnValueChange =
         onValueChange as SingleAccordionProps["onValueChange"]
 
+      currentValueRef.current = nextValue
       if (!isControlled) setUncontrolledValue(nextValue)
       singleOnValueChange?.(nextValue)
     },
-    [collapsible, isControlled, onValueChange, openValues, type]
+    [collapsible, isControlled, onValueChange, type]
   )
 
   const contextValue = React.useMemo<AccordionContextValue>(
@@ -163,7 +176,10 @@ function AccordionItem({
         data-slot="accordion-item"
         data-state={open ? "open" : "closed"}
         data-disabled={disabled ? "" : undefined}
-        className={cn("border-b border-border/60 last:border-b-0", className)}
+        className={cn(
+          "group border-b border-border/60 last:border-b-0",
+          className
+        )}
         {...props}
       />
     </AccordionItemContext.Provider>
@@ -247,13 +263,17 @@ function AccordionContent({
       data-slot="accordion-content"
       data-state={open ? "open" : "closed"}
       className={cn(
-        "grid overflow-hidden text-11 leading-relaxed text-muted-foreground transition-[grid-template-rows,padding-bottom] duration-200 motion-reduce:transition-none",
-        open ? "grid-rows-[1fr] pb-3" : "grid-rows-[0fr] pb-0",
+        "grid overflow-hidden text-11 leading-relaxed text-muted-foreground transition-[grid-template-rows] duration-200 motion-reduce:transition-none",
+        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         className
       )}
       {...props}
     >
-      <div className="min-h-0 overflow-hidden">{children}</div>
+      <div className="min-h-0 overflow-hidden">
+        <div className="pb-3 opacity-0 transition-opacity duration-200 group-data-[state=open]:opacity-100 motion-reduce:transition-none">
+          {children}
+        </div>
+      </div>
     </div>
   )
 }

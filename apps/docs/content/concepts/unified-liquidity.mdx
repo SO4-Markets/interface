@@ -1,0 +1,70 @@
+---
+title: Unified liquidity
+description: Why one GM pool backs both sides of a market's trades, what a depositor is exposed to, and how the pool's balance limits leverage and price impact.
+updated: 2026-08-31
+status: stable
+---
+
+Every SO4 market has exactly one pool, and that pool is the counterparty to every trade on the market — long or short, opening or closing. There is no separate book for longs and no separate book for shorts; a single balance of the long token and TUSDC backs both sides at once. This is what "unified liquidity" means in practice: one deposit funds every position, in either direction, that the market can hold.
+
+## How this differs from isolated liquidity
+
+An isolated-liquidity design gives each side of a market — or each market entirely — its own segregated pool, so a loss on one book cannot touch capital sitting in another. SO4's GM pool design does the opposite on purpose: the same TWBTC/TUSDC pool, for example, backs every long and every short on BTC/USD, and a liquidity provider's deposit is exposed to both sides simultaneously rather than to a single direction.
+
+The trade-off is capital efficiency against concentration. A unified pool needs less total capital to support a given amount of open interest, because a long trader's gain and a short trader's loss can net out of the same balance instead of requiring two separately funded books. It also means a depositor cannot choose to fund only the long side or only the short side — the deposit backs whatever the market's traders are doing, in aggregate, at all times.
+
+## What a depositor is exposed to
+
+A GM pool deposit is not a fixed-yield position. Depositing mints GM tokens representing a share of the pool (see [/guides/pools](/guides/pools) for the deposit and withdrawal mechanics); that share's value moves with three things happening at once:
+
+- **Net trader profit and loss.** When traders on the market are net profitable, the pool pays their gains out of its own balance — the pool is the counterparty, not a matched order book. When traders are net losing, those losses accrue to the pool as a gain.
+- **The long token's price.** The pool holds a real balance of the long token (`longTokenAmount` in `PoolValueInfo`, from `SyntheticsReaderClient.getMarketPoolValueInfo`), so a depositor carries that token's price exposure directly, on top of any trader PnL.
+- **Fee and funding income.** Position fees, borrow fees, and net funding paid by traders (see [/concepts/funding-and-fees](/concepts/funding-and-fees)) flow toward the pool as `totalBorrowingFees` and related fields in the same `PoolValueInfo` response.
+
+Stated without euphemism: if traders on a market are heavily net long into a sustained price rise, the pool is functionally short that token over the same period and loses value as the price rises, regardless of how the long token's own price performs in isolation. If traders are heavily net short into a decline, the pool loses in the opposite direction. A depositor who wants exposure to a token's price without also taking the other side of that market's trader positioning is holding the wrong instrument.
+
+## How pool composition limits leverage and price impact
+
+The pool's current balance directly caps how much size the market can support on each side. `useMarketsInfo.ts` computes the liquidity available to new long or short size as the pool's total USD value minus the open interest already outstanding on that side:
+
+```
+availableLiquidityLong  = max(poolValueUsd - openInterestLong,  0)
+availableLiquidityShort = max(poolValueUsd - openInterestShort, 0)
+```
+
+Both `poolValueUsd` (from `getMarketPoolValueInfo`) and `openInterestLong` / `openInterestShort` (from `getOpenInterest`) are read from `SyntheticsReaderClient` per market. As open interest on one side grows toward the pool's value, the liquidity left for more size on that side shrinks toward zero — a pool with heavy long skew has little room left for new longs even if the pool itself is large, because the same balance is already backing the existing long exposure. `maxLeverage` is currently a fixed `50` in `useMarketsInfo.ts` rather than a value read from `DataStore`, so it does not yet reflect this constraint per market.
+
+Price impact (see [/concepts/funding-and-fees](/concepts/funding-and-fees)) is meant to widen as a trade pushes a market further toward one-sided open interest, discouraging trades that would leave the pool more exposed. The current client applies a flat rate regardless of pool composition; that gap is documented on the funding-and-fees page rather than repeated here.
+
+## Where this lives in the contracts
+
+`SyntheticsReader` is the read path for all of this: `get_market_pool_value_info` for the pool's balances and PnL, and `get_open_interest` for the outstanding long and short exposure per market — see [/reference/synthetics-reader](/reference/synthetics-reader) for the full field list and units. Trades that change pool exposure enter through `ExchangeRouter`, described in [/reference/exchange-router](/reference/exchange-router).
+
+```text
+ Trader submits an order
+        │
+        ▼
+ ExchangeRouter.create_order()  ──▶  OrderVault holds collateral
+        │
+        ▼
+ Keeper executes the order
+        │
+        ▼
+ Position opens or changes size against the market's one pool
+        │
+        ├──▶ openInterestLong / openInterestShort shift (get_open_interest)
+        │
+        ▼
+ Pool's long-token and TUSDC balance, and its PnL, shift with the trade
+   (get_market_pool_value_info) ──▶ every depositor's GM share revalues
+```
+
+Caption: one order changes the same pool that every depositor's GM share is priced against — there is no separate ledger per side or per depositor.
+
+## Worked example
+
+A BTC/USD pool is worth $500,000 and currently carries $180,000 of long open interest and $60,000 of short open interest. Available liquidity for new longs is `500,000 − 180,000 = $320,000`; for new shorts it is `500,000 − 60,000 = $440,000`. A trader then opens a $250,000 long. Long open interest becomes `180,000 + 250,000 = $430,000`, and available liquidity for further longs drops to `500,000 − 430,000 = $70,000` — even though the pool's own value has not changed, the room left for the same side has shrunk by more than the new position's size relative to what remained, because the new long consumed most of what was available. A depositor who joined before this trade is now backing a pool with a much larger, and much more one-sided, long exposure than when they deposited.
+
+## Related
+
+[/guides/pools](/guides/pools) covers adding and removing liquidity and the deposit worked example. [/concepts/funding-and-fees](/concepts/funding-and-fees) covers the fee and price-impact side of the same mechanism. [/concepts/risk](/concepts/risk) is the full list of what can go wrong on the depositor side.

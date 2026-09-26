@@ -1,6 +1,14 @@
 {
   "sections": [
     {
+      "label": "Get started",
+      "pages": [
+        "get-started/introduction",
+        "get-started/quickstart",
+        "get-started/wallets"
+      ]
+    },
+    {
       "label": "Developers",
       "pages": [
         "developers/architecture",
@@ -16,9 +24,14 @@
     {
       "label": "Concepts",
       "pages": [
-        "concepts/risk",
+        "concepts/perpetuals",
+        "concepts/unified-liquidity",
+        "concepts/margin-and-leverage",
+        "concepts/liquidation",
         "concepts/funding-and-fees",
-        "concepts/liquidation"
+        "concepts/order-types",
+        "concepts/oracles",
+        "concepts/risk"
       ]
     },
     {
@@ -27,11 +40,26 @@
         "reference/data-store",
         "reference/synthetics-reader",
         "reference/order-vault",
+        "reference/contracts.generated",
+        "reference/exchange-router",
         "reference/graphql.generated",
+        "reference/tokens.generated",
+        "reference/errors",
         "reference/glossary"
       ]
     },
-    { "label": "Reference", "pages": ["reference/contracts.generated", "reference/exchange-router", "reference/glossary"] },
+    {
+      "label": "Guides",
+      "pages": [
+        "guides/trading",
+        "guides/positions",
+        "guides/pools",
+        "guides/earn",
+        "guides/referrals",
+        "guides/faucet",
+        "guides/troubleshooting"
+      ]
+    },
     {
       "label": "Resources",
       "pages": [
