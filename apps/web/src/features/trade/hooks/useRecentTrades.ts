@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { BINANCE_SYMBOL } from "../lib/oracle"
+import { useEffect, useState } from "react"
+import { marketSubscriptionManager } from "../lib/market-data-stream"
 
 export type TradeSide = "buy" | "sell" | "unknown"
 
@@ -14,26 +14,26 @@ export type TradeItem = {
 
 export type UseRecentTradesResult = {
   trades: Array<TradeItem>
-  status: "connecting" | "connected" | "disconnected" | "error"
+  status: "connecting" | "connected" | "disconnected" | "error" | "polling"
   error: Error | null
   isLoading: boolean
 }
 
-const BINANCE_WS_BASE = "wss://stream.binance.com:9443/ws"
-const BINANCE_REST_BASE = "https://api.binance.com"
 const MAX_TRADES = 50
 
 /**
  * Deduplicate array of trades by unique `id`, sort deterministically (newest timestamp first),
  * and bound to MAX_TRADES rows.
  */
-export function deduplicateAndSortTrades(trades: Array<TradeItem>, maxRows = MAX_TRADES): Array<TradeItem> {
+export function deduplicateAndSortTrades(
+  trades: Array<TradeItem>,
+  maxRows = MAX_TRADES,
+): Array<TradeItem> {
   const map = new Map<string, TradeItem>()
   for (const t of trades) {
     if (!t.id || typeof t.price !== "number" || typeof t.qty !== "number") continue
     if (!Number.isFinite(t.price) || t.price <= 0 || !Number.isFinite(t.qty) || t.qty <= 0) continue
     if (!Number.isFinite(t.time) || t.time <= 0) continue
-    // Key by string id
     map.set(String(t.id), t)
   }
 
@@ -43,24 +43,6 @@ export function deduplicateAndSortTrades(trades: Array<TradeItem>, maxRows = MAX
   })
 
   return sorted.slice(0, maxRows)
-}
-
-type BinanceTradeMsg = {
-  e?: string
-  E?: number
-  s?: string
-  t?: number
-  p?: string
-  q?: string
-  m?: boolean // is buyer market maker?
-}
-
-type BinanceRestTrade = {
-  id: number
-  price: string
-  qty: string
-  time: number
-  isBuyerMaker?: boolean
 }
 
 export function useRecentTrades(symbol: string | undefined): UseRecentTradesResult {
@@ -116,6 +98,9 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
         // Non-fatal, live WS stream will fill trades if REST fails
       }
     }
+    const shared = marketSubscriptionManager.getOrCreate(symbol)
+    return shared.getTradesResult()
+  })
 
     // ── Connect WebSocket live feed ──────────────────────────────────────────
     function connectWs() {
@@ -169,8 +154,10 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
       }
     }
 
-    void fetchSnapshot()
-    connectWs()
+    const shared = marketSubscriptionManager.getOrCreate(symbol)
+    const unsubscribe = shared.subscribeTrades((next) => {
+      setResult(next)
+    })
 
     return () => {
       mounted = false
@@ -182,5 +169,5 @@ export function useRecentTrades(symbol: string | undefined): UseRecentTradesResu
     }
   }, [symbol])
 
-  return { trades, status, error, isLoading }
+  return result
 }

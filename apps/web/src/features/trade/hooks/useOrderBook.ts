@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState } from "react"
-import { BINANCE_SYMBOL } from "../lib/oracle"
+import { useEffect, useState } from "react"
+import { marketSubscriptionManager } from "../lib/market-data-stream"
 
 export type OrderBookLevel = {
   price: number
   size: number
-  total: number   // cumulative depth from top of side
-  depth: number   // fraction 0–1 relative to max total on that side
+  total: number // cumulative depth from top of side
+  depth: number // fraction 0–1 relative to max total on that side
 }
 
 export type OrderBookState = {
-  bids: Array<OrderBookLevel>  // descending by price (best bid first)
-  asks: Array<OrderBookLevel>  // ascending by price (best ask first)
+  bids: Array<OrderBookLevel> // descending by price (best bid first)
+  asks: Array<OrderBookLevel> // ascending by price (best ask first)
   spread: number | null
   spreadPct: number | null
   midPrice: number | null
-  status: "connecting" | "connected" | "disconnected" | "error"
+  status: "connecting" | "connected" | "disconnected" | "error" | "polling"
   isLoading: boolean
 }
 
@@ -124,10 +124,10 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
         applyDelta(book.bids, msg.b)
         applyDelta(book.asks, msg.a)
       }
-      bufferRef.current = []
-      snapshotDone.current = true
-      publish()
     }
+    const shared = marketSubscriptionManager.getOrCreate(symbol)
+    return shared.getBookState()
+  })
 
     // OB-119: schedules a coalesced publish — at most one per animation
     // frame — instead of committing on every single WS message. Under a
@@ -153,13 +153,15 @@ export function useOrderBook(symbol: string | undefined): OrderBookState {
       const mid    = bestBid !== null && bestAsk !== null ? (bestBid + bestAsk) / 2 : null
       const pct    = spread !== null && mid !== null && mid > 0 ? (spread / mid) * 100 : null
       setState({
-        bids, asks,
-        spread,
-        spreadPct: pct,
-        midPrice: mid,
-        status: "connected",
+        bids: [],
+        asks: [],
+        spread: null,
+        spreadPct: null,
+        midPrice: null,
+        status: "disconnected",
         isLoading: false,
       })
+      return
     }
 
     // ── REST snapshot ──────────────────────────────────────────────────────

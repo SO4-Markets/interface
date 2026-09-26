@@ -168,6 +168,12 @@ export function DepthLadder({ symbol, compact = false }: Props) {
               Connecting…
             </span>
           )}
+          {status === "polling" && (
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Polling (Fallback)
+            </span>
+          )}
           {(status === "disconnected" || status === "error") && (
             <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-destructive" />

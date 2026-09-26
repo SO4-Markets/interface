@@ -38,6 +38,11 @@ export function RecentTradesTape({ symbol }: Props) {
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" /> Connecting…
             </span>
           )}
+          {status === "polling" && (
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Polling (Fallback)
+            </span>
+          )}
           {(status === "disconnected" || status === "error") && (
             <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">{/* ds-allow: dense status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-destructive" /> Disconnected

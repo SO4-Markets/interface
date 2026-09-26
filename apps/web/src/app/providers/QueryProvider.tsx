@@ -83,6 +83,9 @@ function AccountCacheLifecycle() {
   return null
 }
 
+// Bound query cache to prevent unbounded growth across long sessions
+boundQueryCache(queryClient)
+
 export function QueryProvider({ children }: { children: ReactNode }) {
   const client =
     typeof window === "undefined" ? createQueryClient() : getQueryClient()
