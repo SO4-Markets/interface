@@ -23,9 +23,6 @@ export function TVChart({ symbol, onSelectToken }: Props) {
   // When the period changes, persist preference and invalidate the candles cache
   function handlePeriodChange(p: Period) {
     setPeriod(p)
-    if (symbol) {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.oracleCandles(symbol, p) })
-    }
   }
 
   // Keyboard navigation: Left/Right arrows move between period buttons

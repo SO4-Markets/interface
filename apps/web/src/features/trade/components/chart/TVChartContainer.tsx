@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
+import { cn } from "@workspace/ui/lib/utils"
 import {
   Table,
   TableBody,
@@ -245,7 +246,7 @@ export function TVChartContainer({ symbol, period }: Props) {
   // Only allowed after historical data is loaded (hasDataRef guards the race
   // where a live bar arrives before the first setData call completes).
   useEffect(() => {
-    if (!seriesRef.current || !liveBar || !hasDataRef.current) return
+    if (!seriesRef.current || !liveBar || !hasDataRef.current.current) return
     try {
       seriesRef.current.update(toChartBar(liveBar))
     } catch {
@@ -348,7 +349,7 @@ export function TVChartContainer({ symbol, period }: Props) {
           </VisuallyHidden>
         )}
 
-        {/* Loading skeleton */}
+        {/* Loading skeleton overlay */}
         {isLoading && (
           <div
             className="absolute inset-0 z-10 flex flex-col gap-1 p-2 bg-background/50 backdrop-blur-[1px]"
