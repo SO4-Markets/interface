@@ -1,13 +1,15 @@
 ---
 title: Order types
 description: Execution mechanics, lifecycle states, and guarantee limits for market, limit, and trigger stop-loss orders in SO4.
-updated: 2026-08-31
+updated: 2026-09-26
 status: stable
 ---
 
 SO4 supports market orders, limit orders, trigger orders (take-profit and stop-loss), and spot swaps. Every order is recorded on Stellar via Soroban smart contracts and executed by off-chain keepers when price and slippage conditions are satisfied.
 
 The execution guarantee differs between order types: a market order prioritises immediate execution over price certainty, whereas a limit or trigger order guarantees a price condition but carries no guarantee of execution.
+
+SO4 is a keeper venue over unified pool liquidity. Showing an order book layout does **not** create executable resting depth: account orders, oracle prices, and pool balances are not bid/ask level-2 liquidity. Partial fills remain unsupported until the protocol exposes verified fill-quantity events.
 
 ## Supported order types
 

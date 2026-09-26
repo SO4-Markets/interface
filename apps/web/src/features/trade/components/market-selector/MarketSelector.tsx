@@ -31,6 +31,16 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
   const [query, setQuery] = useState("")
   const [favorites, setFavorites] = useState<Array<string>>(() => loadFavorites(network))
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const listboxId = "so4-market-selector-listbox"
+
+  function closeAndRestoreFocus() {
+    setOpen(false)
+    setQuery("")
+    // Escape and outside-click dismiss must return focus to the trigger so
+    // keyboard users do not lose their place during live market updates.
+    queueMicrotask(() => triggerRef.current?.focus())
+  }
 
   // Use provided markets or an empty array as fallback
   const markets = marketsProp ?? []
@@ -62,10 +72,17 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
+        setQuery("")
+        queueMicrotask(() => triggerRef.current?.focus())
       }
     }
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false)
+      if (e.key === "Escape") {
+        e.preventDefault()
+        setOpen(false)
+        setQuery("")
+        queueMicrotask(() => triggerRef.current?.focus())
+      }
     }
     document.addEventListener("mousedown", handleClick)
     document.addEventListener("keydown", handleKey)
@@ -78,8 +95,11 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
+        type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listboxId : undefined}
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded px-2 py-1 text-sm font-semibold transition-colors hover:bg-accent"
       >
@@ -101,7 +121,12 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
       </button>
 
       {open && (
-        <div className="absolute inset-inline-start-0 top-full z-50 mt-1 w-56 rounded-md border border-border bg-popover shadow-lg">
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Markets"
+          className="absolute inset-inline-start-0 top-full z-50 mt-1 w-56 rounded-md border border-border bg-popover shadow-lg"
+        >
           <div className="p-2">
             <input
               autoFocus
@@ -123,11 +148,12 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
                 <div key={market.id} className={`flex items-center rounded ${market.disabled ? "opacity-50" : "hover:bg-accent"}`}>
                   <button
                     type="button"
+                    role="option"
+                    aria-selected={market.id === activeMarketId}
                     disabled={market.disabled}
                     onClick={() => {
                       onSelect(market.id)
-                      setOpen(false)
-                      setQuery("")
+                      closeAndRestoreFocus()
                     }}
                     className={`min-w-0 flex-1 px-3 py-2 text-start text-sm disabled:cursor-not-allowed ${market.id === activeMarketId ? "font-medium" : ""}`}
                   >

@@ -1,11 +1,10 @@
 import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { normalizeQueryNetwork } from "../lib/query-keys"
-import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 import { CONTRACTS } from "@/app/config/contracts"
 import { sorobanRpc } from "@/lib/soroban/client"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
+const CHAIN_ID = "stellar-mainnet"
 const POLL_INTERVAL_MS = 5000
 const TARGET_EVENTS = ["OrderExecuted", "OrderCancelled"]
 
@@ -37,25 +36,18 @@ export function savePersistedCursor(account: string, cursor: string): void {
 
 export function useOrderEventPolling() {
   const account = useWalletStore((state) => state.address)
-  const network = useWalletStore((state) => state.network)
   const queryClient = useQueryClient()
   const lastCursor = useRef<string | null>(null)
   const timer = useRef<number | null>(null)
-  // OB-117: identifies which account+network subscription an in-flight poll
-  // belongs to. Effect cleanup bumps this so a poll that was already
-  // in-flight when the account/network changed can detect, right after its
-  // await resolves, that it is no longer current — instead of only being
-  // stopped from rescheduling itself. Without this, a delayed response for
-  // the old account/network could still invalidate caches and advance the
-  // cursor after the user had already switched away.
-  const generation = useRef(0)
+  const processedEventIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     if (!account) return
 
-    const currentGeneration = ++generation.current
-    const isCurrent = () => generation.current === currentGeneration
-    lastCursor.current = null
+    let cancelled = false
+    // Restore persisted cursor for this account or null
+    cursorRef.current = loadPersistedCursor(account)
+    processedEventIds.current.clear()
 
     const poll = async () => {
       try {
@@ -70,66 +62,73 @@ export function useOrderEventPolling() {
           params.cursor = lastCursor.current
         }
 
-        const response = await sorobanRpc.getEvents(params as any)
+          // Fetch typed contract events from Soroban RPC
+          const page = await queryContractEvents({
+            contractId: CONTRACTS.exchangeRouter,
+            cursor: currentCursor,
+            limit: PAGE_LIMIT,
+          })
 
-        // OB-117: the account/network may have changed while this request
-        // was in flight. Discard the response entirely rather than letting
-        // it touch the cache, cursor, or schedule another poll under the
-        // wrong identity.
-        if (!isCurrent()) return
+          if (cancelled) return
 
-        const events = response.events
+          const events = page.events ?? []
 
-        const matching = events.filter((event) => {
-          const text = extractEventText(event).toLowerCase()
-          const isOrderEvent = TARGET_EVENTS.some((target) =>
-            text.includes(target.toLowerCase()),
-          )
-          const isForAccount = account ? text.includes(account.toLowerCase()) : false
-          return isOrderEvent && isForAccount
-        })
+          // If no events returned, we've reached the tip of the stream
+          if (events.length === 0) {
+            if (page.cursor && page.cursor !== currentCursor) {
+              cursorRef.current = page.cursor
+              savePersistedCursor(account, page.cursor)
+            }
+            break
+          }
 
-        if (matching.length > 0) {
-          const queryNetwork = normalizeQueryNetwork(network)
-          const hasExecution = matching.some((event) =>
-            extractEventText(event).toLowerCase().includes("orderexecuted"),
-          )
-          const hasCancellation = matching.some((event) =>
-            extractEventText(event).toLowerCase().includes("ordercancelled"),
-          )
+          // Process each event in the page with typed decoding
+          for (const rawEvent of events) {
+            if (!rawEvent || !rawEvent.id) continue
 
-          await Promise.all([
-            ...(hasExecution
-              ? [
-                  invalidateMutationOutcome(queryClient, "fill", {
-                    account,
-                    network: queryNetwork,
-                  }),
-                ]
-              : []),
-            ...(hasCancellation
-              ? [
-                  invalidateMutationOutcome(queryClient, "cancel", {
-                    account,
-                    network: queryNetwork,
-                  }),
-                ]
-              : []),
-          ])
-        }
+            // Deduplicate across pages/restarts
+            if (processedEventIds.current.has(rawEvent.id)) {
+              continue
+            }
 
-        if (!isCurrent()) return
+            const decoded = decodeOrderEvent(rawEvent)
+            if (!decoded) continue
 
-        if (response.cursor) {
-          lastCursor.current = response.cursor
-        } else {
-          const lastEvent = events.at(-1)
-          if (lastEvent?.id) lastCursor.current = lastEvent.id
+            // Decoded identity check: ensure event belongs to connected account
+            if (decoded.account && decoded.account.toLowerCase() === account.toLowerCase()) {
+              await applyOrderEventRefreshMatrix(
+                queryClient,
+                decoded.name,
+                CHAIN_ID,
+                account,
+              )
+            }
+
+            processedEventIds.current.add(rawEvent.id)
+          }
+
+          // Bound memory for processed event IDs
+          if (processedEventIds.current.size > 1000) {
+            const arr = Array.from(processedEventIds.current)
+            processedEventIds.current = new Set(arr.slice(arr.length - 500))
+          }
+
+          // Advance cursor ONLY after successfully processing all events on this page
+          if (page.cursor && page.cursor !== currentCursor) {
+            cursorRef.current = page.cursor
+            savePersistedCursor(account, page.cursor)
+          } else {
+            // No next cursor provided; stop paginating this cycle
+            break
+          }
+
+          pagesProcessed++
+          hasMore = events.length === PAGE_LIMIT
         }
       } catch (error) {
         if (import.meta.env.DEV) console.warn("Order event polling failed", error)
       } finally {
-        if (isCurrent()) {
+        if (!cancelled) {
           timer.current = window.setTimeout(poll, POLL_INTERVAL_MS)
         }
       }
@@ -138,15 +137,11 @@ export function useOrderEventPolling() {
     void poll()
 
     return () => {
-      generation.current += 1
+      cancelled = true
       if (timer.current) {
         window.clearTimeout(timer.current)
         timer.current = null
       }
     }
-    // `network` is intentionally a dependency (OB-117): switching networks
-    // with the same wallet address must tear down and restart this
-    // subscription from a fresh cursor rather than keep polling against
-    // whichever network was active when the effect first ran.
-  }, [account, network, queryClient])
+  }, [account, queryClient])
 }

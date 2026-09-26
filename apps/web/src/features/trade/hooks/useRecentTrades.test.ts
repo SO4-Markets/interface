@@ -1,126 +1,187 @@
+/**
+ * OB-119: Trades deduplication and memory bounds tests.
+ *
+ * Verifies that the tape retains a bounded number of rows and deduplicates
+ * correctly by stable ID.
+ */
+
 import { describe, expect, it } from "vitest"
-import {  deduplicateAndSortTrades } from "./useRecentTrades"
-import type {TradeItem} from "./useRecentTrades";
+import { deduplicateAndSortTrades } from "./useRecentTrades"
+import type { TradeItem } from "./useRecentTrades"
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-function makeTrade(overrides: Partial<TradeItem> & { id: string }): TradeItem {
-  return {
-    price: 100,
-    qty: 1,
-    time: 1_700_000_000,
+describe("OB-119: recent trades deduplication and bounds", () => {
+  const createTrade = (id: string, time: number, price = 100, qty = 1): TradeItem => ({
+    id,
+    price,
+    qty,
+    time,
     side: "buy",
-    venue: "Binance Reference",
-    ...overrides,
-  }
-}
-
-// ── suite ─────────────────────────────────────────────────────────────────────
-
-describe("deduplicateAndSortTrades", () => {
-  it("returns an empty array from an empty input", () => {
-    expect(deduplicateAndSortTrades([])).toEqual([])
+    venue: "Test",
   })
 
-  it("keeps a single valid trade unchanged", () => {
-    const t = makeTrade({ id: "1", price: 200, qty: 0.5, time: 1_700_000_000, side: "buy" })
-    expect(deduplicateAndSortTrades([t])).toHaveLength(1)
+  describe("deduplicateAndSortTrades", () => {
+    it("removes duplicate IDs, keeping the last occurrence", () => {
+      const trades = [
+        createTrade("1", 1000),
+        createTrade("2", 2000),
+        createTrade("1", 3000), // duplicate - this one is kept
+      ]
+
+      const result = deduplicateAndSortTrades(trades)
+      expect(result).toHaveLength(2)
+      expect(result.map(t => t.id)).toEqual(["1", "2"]) // sorted by time desc
+      // ID "1" kept with time 3000 (last occurrence)
+      const trade1 = result.find(t => t.id === "1")
+      expect(trade1?.time).toBe(3000)
+    })
+
+    it("sorts trades newest first by timestamp", () => {
+      const trades = [
+        createTrade("1", 1000),
+        createTrade("2", 3000),
+        createTrade("3", 2000),
+      ]
+
+      const result = deduplicateAndSortTrades(trades)
+      expect(result.map(t => t.id)).toEqual(["2", "3", "1"])
+    })
+
+    it("uses ID as tiebreaker for equal timestamps", () => {
+      const trades = [
+        createTrade("a", 1000),
+        createTrade("c", 1000),
+        createTrade("b", 1000),
+      ]
+
+      const result = deduplicateAndSortTrades(trades)
+      // Equal time: sort by ID lexicographically (desc)
+      expect(result.map(t => t.id)).toEqual(["c", "b", "a"])
+    })
+
+    it("bounds output to maxRows (50 by default)", () => {
+      const trades: Array<TradeItem> = []
+      for (let i = 0; i < 100; i++) {
+        trades.push(createTrade(String(i), i * 1000))
+      }
+
+      const result = deduplicateAndSortTrades(trades, 50)
+      expect(result).toHaveLength(50)
+      // Should keep the 50 most recent
+      expect(result[0].id).toBe("99")
+      expect(result[49].id).toBe("50")
+    })
+
+    it("filters out entries with invalid price or qty", () => {
+      const trades = [
+        createTrade("1", 1000, 100, 1),      // valid
+        createTrade("2", 2000, 0, 1),        // invalid price
+        createTrade("3", 3000, 100, 0),      // invalid qty
+        createTrade("4", 4000, -10, 1),      // invalid price
+        createTrade("5", 5000, 100, -5),     // invalid qty
+        createTrade("6", 6000, NaN, 1),      // invalid price
+        createTrade("7", 7000, 100, Infinity), // invalid qty
+        createTrade("8", 8000, 100, 1),      // valid
+      ]
+
+      const result = deduplicateAndSortTrades(trades)
+      expect(result).toHaveLength(2)
+      expect(result.map(t => t.id)).toEqual(["8", "1"])
+    })
+
+    it("filters out entries with invalid timestamps", () => {
+      const trades = [
+        createTrade("1", 1000),
+        createTrade("2", 0),        // invalid
+        createTrade("3", -1000),    // invalid
+        createTrade("4", NaN),      // invalid
+        createTrade("5", 5000),
+      ]
+
+      const result = deduplicateAndSortTrades(trades)
+      expect(result).toHaveLength(2)
+      expect(result.map(t => t.id)).toEqual(["5", "1"])
+    })
+
+    it("handles empty array", () => {
+      const result = deduplicateAndSortTrades([])
+      expect(result).toEqual([])
+    })
+
+    it("handles all-duplicate array", () => {
+      const trades = [
+        createTrade("1", 1000),
+        createTrade("1", 2000),
+        createTrade("1", 3000),
+      ]
+
+      const result = deduplicateAndSortTrades(trades)
+      expect(result).toHaveLength(1)
+      expect(result[0].id).toBe("1")
+    })
   })
 
-  it("deduplicates trades with the same id, keeping the last-seen value", () => {
-    const t1 = makeTrade({ id: "42", price: 100 })
-    const t2 = makeTrade({ id: "42", price: 200 })
-    // Last one in the array wins (map.set overwrites)
-    const result = deduplicateAndSortTrades([t1, t2])
-    expect(result).toHaveLength(1)
-    expect(result[0].price).toBe(200)
+  describe("memory bounds", () => {
+    it("never retains more than maxRows trades", () => {
+      const trades: Array<TradeItem> = []
+      // Simulate 200 trades arriving
+      for (let i = 0; i < 200; i++) {
+        trades.push(createTrade(String(i), i * 1000))
+      }
+
+      const result = deduplicateAndSortTrades(trades, 50)
+      expect(result.length).toBeLessThanOrEqual(50)
+    })
+
+    it("discards oldest trades when bound is exceeded", () => {
+      const trades: Array<TradeItem> = []
+      for (let i = 0; i < 100; i++) {
+        trades.push(createTrade(String(i), i * 1000))
+      }
+
+      const result = deduplicateAndSortTrades(trades, 10)
+      expect(result).toHaveLength(10)
+      // Should keep trades 99 down to 90
+      expect(result[0].id).toBe("99")
+      expect(result[9].id).toBe("90")
+    })
   })
 
-  it("sorts newest timestamp first", () => {
-    const trades = [
-      makeTrade({ id: "1", time: 1_000 }),
-      makeTrade({ id: "2", time: 3_000 }),
-      makeTrade({ id: "3", time: 2_000 }),
-    ]
-    const result = deduplicateAndSortTrades(trades)
-    expect(result.map((t) => t.time)).toEqual([3_000, 2_000, 1_000])
-  })
+  describe("convergence under burst arrivals", () => {
+    it("produces stable output regardless of arrival batching", () => {
+      const initial = [createTrade("1", 1000), createTrade("2", 2000)]
+      
+      // Path A: add trades one at a time
+      let stateA = deduplicateAndSortTrades(initial)
+      stateA = deduplicateAndSortTrades([...stateA, createTrade("3", 3000)])
+      stateA = deduplicateAndSortTrades([...stateA, createTrade("4", 4000)])
 
-  it("breaks timestamp ties by id descending", () => {
-    const trades = [
-      makeTrade({ id: "a", time: 1_000 }),
-      makeTrade({ id: "c", time: 1_000 }),
-      makeTrade({ id: "b", time: 1_000 }),
-    ]
-    const result = deduplicateAndSortTrades(trades)
-    // localeCompare descending: c > b > a
-    expect(result.map((t) => t.id)).toEqual(["c", "b", "a"])
-  })
+      // Path B: add trades in a batch
+      let stateB = deduplicateAndSortTrades(initial)
+      stateB = deduplicateAndSortTrades([
+        ...stateB,
+        createTrade("3", 3000),
+        createTrade("4", 4000),
+      ])
 
-  it("bounds the result to maxRows (default 50)", () => {
-    const trades = Array.from({ length: 80 }, (_, i) =>
-      makeTrade({ id: String(i), time: i })
-    )
-    expect(deduplicateAndSortTrades(trades)).toHaveLength(50)
-  })
+      // Both paths converge
+      expect(stateA.map(t => t.id)).toEqual(stateB.map(t => t.id))
+      expect(stateA.map(t => t.time)).toEqual(stateB.map(t => t.time))
+    })
 
-  it("respects a custom maxRows override", () => {
-    const trades = Array.from({ length: 20 }, (_, i) =>
-      makeTrade({ id: String(i), time: i })
-    )
-    expect(deduplicateAndSortTrades(trades, 5)).toHaveLength(5)
-  })
+    it("handles rapid updates to the same trade ID", () => {
+      const trades = [
+        createTrade("1", 1000),
+        createTrade("1", 2000),  // update
+        createTrade("1", 3000),  // update
+        createTrade("2", 4000),
+      ]
 
-  it("silently drops trades with missing id", () => {
-    // @ts-expect-error — intentionally malformed
-    const bad: TradeItem = { price: 100, qty: 1, time: 1_000, side: "buy", venue: "test" }
-    const good = makeTrade({ id: "ok" })
-    expect(deduplicateAndSortTrades([bad, good])).toHaveLength(1)
-  })
-
-  it("silently drops trades with non-positive price", () => {
-    const bad = makeTrade({ id: "x", price: 0 })
-    const good = makeTrade({ id: "y", price: 1 })
-    expect(deduplicateAndSortTrades([bad, good])).toHaveLength(1)
-  })
-
-  it("silently drops trades with non-positive qty", () => {
-    const bad = makeTrade({ id: "x", qty: -1 })
-    const good = makeTrade({ id: "y", qty: 0.001 })
-    expect(deduplicateAndSortTrades([bad, good])).toHaveLength(1)
-  })
-
-  it("silently drops trades with non-positive time", () => {
-    const bad = makeTrade({ id: "x", time: 0 })
-    const good = makeTrade({ id: "y", time: 1 })
-    expect(deduplicateAndSortTrades([bad, good])).toHaveLength(1)
-  })
-
-  it("silently drops trades with NaN price", () => {
-    const bad = makeTrade({ id: "x", price: NaN })
-    const good = makeTrade({ id: "y" })
-    expect(deduplicateAndSortTrades([bad, good])).toHaveLength(1)
-  })
-
-  it("silently drops null entries in the array", () => {
-    // @ts-expect-error — intentionally malformed
-    const result = deduplicateAndSortTrades([null, makeTrade({ id: "ok" })])
-    expect(result).toHaveLength(1)
-  })
-
-  it("preserves 'unknown' side trades (side data is not required for inclusion)", () => {
-    const t = makeTrade({ id: "u", side: "unknown" })
-    expect(deduplicateAndSortTrades([t])).toHaveLength(1)
-    expect(deduplicateAndSortTrades([t])[0].side).toBe("unknown")
-  })
-
-  it("is idempotent — calling twice produces the same result", () => {
-    const trades = [
-      makeTrade({ id: "1", time: 2_000 }),
-      makeTrade({ id: "2", time: 1_000 }),
-    ]
-    const first = deduplicateAndSortTrades(trades)
-    const second = deduplicateAndSortTrades(first)
-    expect(second).toEqual(first)
+      const result = deduplicateAndSortTrades(trades)
+      expect(result).toHaveLength(2)
+      expect(result.map(t => t.id)).toEqual(["2", "1"])
+      // Last occurrence of ID "1" is kept (time 3000)
+      const trade1 = result.find(t => t.id === "1")
+      expect(trade1?.time).toBe(3000)
+    })
   })
 })

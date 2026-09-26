@@ -31,6 +31,20 @@ apps/docs/
   scripts/                  check-content.ts, check-links.ts, lint-prose.ts
 ```
 
+## Trading docs and motion notes
+
+When documenting trading, order types, or troubleshooting:
+
+- Distinguish **pending transactions**, **accepted orders**, **fills**, **stale
+  books/oracles**, and **syncing account data**. A confirmed transaction hash
+  must never be described as a fill.
+- Link the motion specification
+  ([`docs/ob_1/001_motion_specification.md`](../../docs/ob_1/001_motion_specification.md))
+  and the shared toast (`@workspace/ui/components/toast`). Do not recommend
+  Sonner or another toaster.
+- Document only verified shipped behaviour. Upstream limits belong in
+  [`docs/order-book-execution-model.md`](../../docs/order-book-execution-model.md).
+
 A page's route is its path under `content/` with `.mdx` removed:
 `content/guides/pools.mdx` serves at `/guides/pools`.
 
