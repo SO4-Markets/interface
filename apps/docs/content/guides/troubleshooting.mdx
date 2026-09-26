@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 description: Symptom-first fixes for stuck transactions, wallet and network problems, and stale data — and what to include in a bug report.
-updated: 2026-09-04
+updated: 2026-09-26
 status: stable
 ---
 
@@ -79,6 +79,17 @@ Likely causes, in order:
 - Confirm the transaction hash on Stellar Expert actually invoked `ExchangeRouter` successfully.
 - Check the orders list for a pending order with the same parameters.
 - Confirm you're on the same network and market you traded on.
+
+## Confirmed transaction but account still syncing
+
+**What you see:** `TxStatus` shows success (ledger confirmation) while Positions / Orders / balances still look empty or stale.
+
+**Cause:** ledger confirmation and indexer catch-up are different machines. Invalidating a TanStack Query marks it stale and may refetch, but it does not prove the indexer has processed the new ledger. The UI must keep showing “syncing” / prior data until the indexed watermark advances.
+
+**Checks:**
+- Wait for the indexer height to move, then reopen the Positions or Orders tab so inactive queries refetch.
+- Compare the transaction on [Stellar Expert](https://stellar.expert) — if the chain shows success and the app still lags, report it as indexer freshness, not as a failed trade.
+- Do not treat a confirmed hash as a fill; fills require `ord_exe` (or equivalent) plus the resulting position evidence.
 
 ## Chart not loading
 
