@@ -1,7 +1,7 @@
 ---
 title: OrderVault contract
 description: Escrow collateral for live SO4 orders, record vault transfers, and document the custody lifecycle for order execution and cancellation.
-updated: 2026-08-25
+updated: 2026-09-04
 status: stable
 ---
 
@@ -62,7 +62,7 @@ In practice, this means the refund path is governed by the order lifecycle rathe
 - a failed or expired order should leave the vault in a recoverable state such that the original user can receive the unused collateral back;
 - a cancellation path releases the escrowed amount through the vault transfer-out primitive.
 
-The key security rule is simple: the order-vault escrow is only as safe as the order handler's settlement logic. If the order never reaches a valid executed state, the refund path must release the deposit to the correct account and not leave a stranded balance in custody.
+The key security rule is simple: the OrderVault escrow is only as safe as the order handler's settlement logic. If the order never reaches a valid executed state, the refund path must release the deposit to the correct account and not leave a stranded balance in custody.
 
 ## Worked example: cancelled order {#worked-example}
 
@@ -98,9 +98,9 @@ For an order that fails at execution or expires before it can be filled, the sam
 
 ## Implementation notes {#implementation-notes}
 
-The generated client is intentionally minimal. It records only the two transfer primitives the order-vault contract needs to support escrow movement:
+The generated client is intentionally minimal. It records only the two transfer primitives the OrderVault contract needs to support escrow movement:
 
 - `recordTransferIn` to accept collateral into custody
 - `transferOut` to release collateral when the order settles or is cancelled
 
-This is why the vault is best thought of as the escrow ledger for live orders rather than as a full order-management API. The actual lifecycle rules live in the order and execution handlers, while the vault simply enforces the asset movement that those lifecycle decisions require.
+This is why the vault is best thought of as the escrow ledger for live orders rather than as a full order-management API. The actual lifecycle rules live in the order and execution handlers, while the vault only enforces the asset movement that those lifecycle decisions require.

@@ -1,0 +1,86 @@
+name: Docs External Links
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # weekly Monday 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: docs-external-links
+  cancel-in-progress: false
+
+jobs:
+  external-links:
+    name: Check external links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check external links
+        id: check
+        continue-on-error: true
+        run: |
+          set +e
+          bun run --cwd apps/docs check:links --external 2>&1 | tee external-report.txt
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Create issue on failure
+        if: steps.check.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('external-report.txt', 'utf8').slice(0, 60000);
+            const title = `Docs: broken external links — ${new Date().toISOString().slice(0,10)}`;
+            const body = [
+              'The scheduled external link check found broken links.',
+              '',
+              'This workflow is separate from CI so it never blocks pull requests.',
+              'Configure ignored URLs in `apps/docs/link-ignore.json`.',
+              '',
+              '<details><summary>Report</summary>',
+              '',
+              '```',
+              report,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
+            // Open exactly one issue per run
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['documentation'],
+            });
+
+      - name: Fail if external links broken (for visibility)
+        if: steps.check.outputs.exit_code != '0'
+        run: |
+          echo "External link check failed — issue opened. See external-report.txt"
+          cat external-report.txt
+          exit 1

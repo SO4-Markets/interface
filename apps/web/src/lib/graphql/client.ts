@@ -41,6 +41,7 @@ export type GraphQLResponse<T> = {
 export async function executeGraphQLQuery<TResult, TVariables>(
   document: TypedDocumentNode<TResult, TVariables>,
   variables?: TVariables,
+  options: { signal?: AbortSignal } = {},
 ): Promise<TResult> {
   if (!INDEXER_CONFIG.enabled || !INDEXER_CONFIG.graphqlUrl) {
     throw new Error("Indexer is disabled")
@@ -56,6 +57,7 @@ export async function executeGraphQLQuery<TResult, TVariables>(
       query: document.loc?.source.body ?? "",
       variables: variables ?? {},
     }),
+    signal: options.signal,
   })
 
   if (!response.ok) {

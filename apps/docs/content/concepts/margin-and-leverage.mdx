@@ -1,0 +1,116 @@
+---
+title: Margin and leverage
+description: How collateral, position size, and effective leverage relate on SO4, with the formula, two worked examples, and where the maximum is enforced.
+updated: 2026-09-02
+status: stable
+---
+
+Leverage on SO4 is one ratio: the USD value of your position divided by the USD value of the collateral behind it. Choosing 10x on 1,000 USD of collateral opens a 10,000 USD position, and every 1% the index moves is 10% of your collateral. The whole page is that sentence, made precise enough to compute before you open a position rather than after.
+
+## The five words, and what each one means
+
+| Term | Meaning on SO4 | Where you see it |
+| --- | --- | --- |
+| **Collateral** | A token balance transferred into the protocol, valued in USD at that token's current price | "Collateral" input in the trade panel; "Collateral" column in the positions table |
+| **Position size** | Notional exposure in USD — collateral value × leverage | "Position size" row in the trade panel; "Size" column in the positions table |
+| **Initial margin** | The collateral required to open a given size — size ÷ leverage. It is the same number as the collateral you post | The amount you type into the collateral input |
+| **Effective leverage** | Size ÷ collateral value, recomputed as prices move | Leverage badge on the slider; the "Leverage" preview in the collateral dialog |
+| **Maintenance margin** | The minimum equity a position must keep before it can be liquidated — a percentage of size, not of collateral | Not displayed directly; it sets the liquidation price |
+
+<Term id="maintenance-margin">Maintenance margin</Term> is the one that ends positions, and it has its own page: [liquidation](/concepts/liquidation).
+
+## The formula
+
+```
+sizeUsd   = collateralUsd × leverage
+leverage  = sizeUsd ÷ collateralUsd
+```
+
+Both directions are implemented as one-line helpers — `sizeFromCollateralAndLeverage` and `collateralFromSizeAndLeverage` in `apps/web/src/features/trade/lib/trade-math.ts`. The trade panel calls the first to turn your collateral input and slider position into the size it submits (`TradePanel.tsx`). For a position that already exists, the interface divides instead: `leverage = sizeUsd ÷ collateralUsd` in `usePositions.ts`, rounded to a whole number for the positions table.
+
+Two details in that second calculation matter more than they look.
+
+**Collateral is revalued, size is not.** `collateralUsd` is the collateral token amount multiplied by that token's current price. `sizeUsd` is the notional the contracts recorded when the position opened. So displayed leverage moves when the collateral token's price moves, not when your profit or loss changes.
+
+**Unrealised profit and loss is not in the ratio.** The leverage the interface shows you is size over collateral, not size over equity. A position 400 USD underwater still displays the leverage it opened at. The number that decides liquidation is equity, and equity is collateral value plus profit and loss.
+
+## Which collateral you can post
+
+Collateral is fixed per market and per direction. It comes from the market definitions in `apps/web/src/features/pools/data/markets.ts`, applied as the defaults in `useTradeState.ts`: a long is collateralised in the market's long token, a short in its short token. The shipped interface has no collateral selector, so these are the only combinations available today.
+
+| Market | Long collateral | Short collateral |
+| --- | --- | --- |
+| BTC/USD | TWBTC | TUSDC |
+| ETH/USD | TETH | TUSDC |
+| XLM/USD | TXLM | TUSDC |
+
+All four are testnet tokens with no real value; [the faucet guide](/guides/faucet) covers getting them.
+
+The consequence is that a long carries its market's price twice: once through the position, and once through the collateral backing it. The first worked example below shows that working in the trader's favour; [liquidation](/concepts/liquidation) shows what it costs when the price falls instead.
+
+## Worked example 1: a long that wins, with volatile collateral
+
+A trader opens a long on BTC/USD with the index at 60,000 USD, posting 0.02 TWBTC as collateral and choosing 5x.
+
+- Collateral value: `0.02 × 60,000 = 1,200 USD`
+- Position size: `1,200 × 5 = 6,000 USD`
+- Exposure: `6,000 ÷ 60,000 = 0.1 BTC`
+
+BTC rises 10%, to 66,000.
+
+- Profit and loss: `(66,000 − 60,000) ÷ 60,000 × 6,000 = +600 USD`
+- Collateral value: `0.02 × 66,000 = 1,320 USD`
+- Equity: `1,320 + 600 = 1,920 USD`
+- Displayed leverage: `6,000 ÷ 1,320 = 4.55x`
+
+The trader made 600 USD on the position and another 120 USD on the collateral revaluing, and their leverage fell without them touching anything. The same mechanism runs in reverse when BTC falls: the collateral shrinks while the position loses, which is why a long's real liquidation price sits closer than the interface's estimate — [liquidation](/concepts/liquidation) works that case through.
+
+## Worked example 2: a short that loses, and what the numbers do
+
+A trader opens a short on BTC/USD at the same 60,000 USD index price, posting 1,000 TUSDC and choosing 10x.
+
+- Position size: `1,000 × 10 = 10,000 USD`
+- Exposure: `10,000 ÷ 60,000 = 0.166667 BTC`
+- Liquidation price, from the formula on the [liquidation](/concepts/liquidation) page: `65,700 USD`, a 9.5% adverse move
+
+BTC rises 4%, to 62,400.
+
+- Profit and loss: `(60,000 − 62,400) ÷ 60,000 × 10,000 = −400 USD`
+- Collateral value: still `1,000 USD` — TUSDC does not move with BTC
+- Equity: `1,000 − 400 = 600 USD`
+- Displayed leverage: `10,000 ÷ 1,000 = 10x`, unchanged
+- Leverage against equity: `10,000 ÷ 600 = 16.67x`
+
+The position is 40% of the way to losing its collateral, and the leverage figure on screen has not moved. This is the gap to hold in mind: the interface reports the ratio it opened with, while the ratio that matters has risen by two thirds.
+
+## Changing leverage on an open position
+
+You cannot edit the leverage of an open position directly. You change the collateral under it, and the ratio follows. The trade page's collateral dialog (`CollateralDialog.tsx`) submits a size-zero increase order to add collateral, or a size-zero decrease order to remove it, and previews the resulting leverage as `sizeUsd ÷ newCollateralUsd` before you confirm.
+
+Continuing the short above — 10,000 USD of size against 1,000 TUSDC:
+
+| Action | New collateral | New leverage | New liquidation price |
+| --- | --- | --- | --- |
+| Add 500 TUSDC | 1,500 USD | 6.67x | 68,700 USD |
+| No change | 1,000 USD | 10x | 65,700 USD |
+| Remove 400 TUSDC | 600 USD | 16.67x | 63,300 USD |
+
+Adding collateral moves the liquidation price 3,000 USD further away; removing 400 moves it 2,400 USD closer. Both are size-zero orders, and both pay a keeper execution fee, so the move is not free — see [funding and fees](/concepts/funding-and-fees).
+
+The dialog refuses two cases outright. Withdrawing the entire collateral balance fails with "Cannot remove all collateral (Close position instead)". Withdrawing enough to push the position past 50x fails with "New leverage exceeds maximum allowed (50x)" — on this position, removing more than 800 TUSDC.
+
+## The maximum, and where it is enforced
+
+Three separate places in the interface cap leverage at 50x:
+
+- The leverage slider's `max` default, in `LeverageSlider.tsx`.
+- `maxLeverage: 50`, hard-coded per market in `useMarketsInfo.ts` with a comment marking the DataStore read as a follow-up.
+- The removal check in `CollateralDialog.tsx` described above.
+
+None of those is the authority. The real limit is market configuration held by the contracts. The indexer's schema carries `maxLeverage` and `minCollateralUsd` on `MarketConfigSnapshot` (`apps/s03-indexer/schema.graphql`). A position that exceeds the contract's cap is rejected with `LEVERAGE_TOO_HIGH`, shown as "Leverage is above the maximum allowed for this market" — see [the error reference](/reference/errors#leverage-too-high).
+
+Two honest caveats about that. The client's 50x is a placeholder, not a value read from the contracts, so a market configured lower will reject an order the slider allowed. And the indexer's mapping for market-creation events stores only the raw event payload in `rawConfig` today; it does not populate the `maxLeverage` or `minCollateralUsd` columns (`apps/s03-indexer/src/mappings/mappingHandlers.ts`). Neither the interface nor the indexer can currently tell you a market's real cap.
+
+## Related
+
+[Liquidation](/concepts/liquidation) converts these numbers into the price at which the position ends. [Funding and fees](/concepts/funding-and-fees) covers the costs that reduce collateral while a position is open, which moves the liquidation price without the market moving. [Perpetuals](/concepts/perpetuals) is the instrument itself, if the terms above are new.

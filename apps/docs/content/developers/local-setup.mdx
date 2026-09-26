@@ -1,7 +1,7 @@
 ---
 title: Local setup
 description: Clone the repo, install dependencies, run the dev server, and understand the commit gate.
-updated: 2026-08-25
+updated: 2026-09-04
 status: stable
 ---
 
@@ -104,7 +104,7 @@ bun run --cwd apps/web typecheck
 bun run --cwd apps/web build
 ```
 
-**Key rule: run the whole gate, not a subset.** Even if you only changed a comment, run all commands. Turbo caches aggressively, so the full run is usually just a few seconds.
+**Key rule: run the whole gate, not a subset.** Even if you only changed a comment, run all commands. Turbo caches aggressively, so the full run usually takes a few seconds.
 
 The gate exists to catch:
 

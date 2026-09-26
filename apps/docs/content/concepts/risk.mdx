@@ -1,12 +1,104 @@
 ---
 title: Risk
-description: A concise overview of market, liquidation, oracle, contract, network, interface, and custody risks in SO4.
-updated: 2026-08-24
+description: Honest enumeration of what can go wrong: market volatility, contract admin roles, oracle failures, LP exposure, and interface outages.
+updated: 2026-08-31
 status: stable
 ---
 
-Using SO4 can result in partial or total loss of collateral, including through mechanisms outside the interface's control.
+Using SO4 can result in the complete loss of your deposited collateral. Leveraged positions amplify price volatility and can be liquidated rapidly when market prices move against you, while protocol dependencies on external oracles, Stellar network validators, and smart contracts introduce operational and systemic risks that no interface can eliminate.
 
-A leveraged position can cross its <Term id="maintenance-margin">maintenance margin</Term> as prices move and be closed near its <Term id="liquidation-price">liquidation price</Term>. Other risks include volatile prices, adverse price impact, funding, unavailable liquidity, stale or incorrect oracle data, smart-contract defects, Stellar or RPC disruption, wallet compromise, and interface outages.
+This page provides an unhedged enumeration of the risks inherent in using SO4 as a trader or liquidity provider.
 
-The interface prepares transactions; your wallet authorises them and the protocol executes them. Review the [terms and plain-language disclosure](/resources/terms) before using the interface.
+## Audit status
+
+**The SO4 smart contracts have not been audited by an independent security firm.** No external audit has been completed, and current deployments on Stellar are in testnet release phases.
+
+If you interact with the contracts, you are using unaudited software. You should never deposit assets you cannot afford to lose. For disclosure instructions and security contacts, review [Security](/resources/security).
+
+## Market and trading risks
+
+### Leverage and liquidation
+
+Leverage multiplies both potential gains and losses. When you deposit collateral to open a leveraged position, even small adverse price movements consume your margin equity:
+
+- If your position equity drops below the maintenance margin requirement (typically 1.0% of position size), off-chain keepers or liquidators trigger a liquidation (see [Liquidation](/concepts/liquidation)).
+- In a liquidation, your remaining position collateral is seized to cover pool losses and pay liquidation fees.
+
+### Gap moves and slippage
+
+During periods of extreme market volatility or thin liquidity, prices can gap abruptly from one price level to another without executing intermediate trades:
+
+- A stop-loss or trigger order does not guarantee execution at your exact trigger price. If the market gaps through your stop level, the keeper executes at the next available oracle price, resulting in greater slippage than anticipated (see [Order types](/concepts/order-types)).
+- If market prices gap past your liquidation price before a stop-loss executes, the position liquidates immediately.
+
+### Funding costs over time
+
+Perpetual markets use recurring funding fees to balance long and short open interest:
+
+- If you hold a position on the majority side of an unbalanced market (for example, holding long when open interest is predominantly long), you continuously pay funding fees to the minority side (see [Funding and fees](/concepts/funding-and-fees)).
+- Funding fees accrue on every settlement epoch and reduce your collateral equity over time, which can pull your liquidation price closer even if the spot market price does not change.
+
+## Protocol and contract risks
+
+### Smart contract bugs
+
+SO4's core logic runs across Soroban smart contracts on Stellar, including [ExchangeRouter](/reference/exchange-router), [OrderVault](/reference/order-vault), [DataStore](/reference/data-store), and [SyntheticsReader](/reference/synthetics-reader):
+
+- Unforeseen defects, arithmetic precision errors, or logic oversights in contract code can lead to stuck collateral, failed order execution, or unintended token transfers.
+- Soroban execution environments enforce strict CPU and memory resource limits; transactions exceeding footprint or resource budgets revert on-chain.
+
+### Admin capabilities and upgrade authority
+
+The protocol architecture separates parameter control and contract execution:
+
+- **DataStore roles**: Parameter changes (including base fee rates, maximum leverage caps, liquidation execution fees, and market enable flags) are restricted to addresses holding the `CONTROLLER` role in [DataStore](/reference/data-store).
+- **Upgrade authority**: Soroban contracts are upgradeable by updating their executable WASM bytecode hashes. The contract admin keys hold the authority to execute contract upgrades or modify protocol role assignments.
+- **Custody boundary**: Collateral deposited for active orders is locked in `OrderVault`. While `OrderVault` restricts withdrawals to validated contract operations, administrative authority over protocol routing contracts represents a centralized governance trust assumption.
+
+## Oracle risks
+
+SO4 relies on price oracles to value positions, determine liquidation eligibility, and validate order execution prices (see [Oracles](/concepts/oracles)):
+
+1. **Source fallback**: Prices are fetched in priority order from the SO4 oracle proxy, Pyth Hermes, Binance REST, and GMX v2 feeds.
+2. **Staleness**: If all networked oracle endpoints fail, the client falls back to static dummy prices, and keepers cannot settle trades on-chain.
+3. **Price manipulation**: If an attacker manipulates the primary price source on an external venue, artificial price spikes could trigger unwarranted liquidations before normal market parity restores.
+
+## Liquidity provider risks
+
+Depositing assets into SO4 GM liquidity pools carries distinct risk factors:
+
+- **Counterparty to trader PnL**: Liquidity providers act as the direct counterparty to platform traders. When traders make net profits, pool collateral decreases to pay those gains (see [Pools guide](/guides/pools)).
+- **Asset exposure**: GM pool tokens represent a blended basket of index and collateral assets. Deposition subjects liquidity providers to underlying asset price declines.
+- **Two-step withdrawal queue**: Liquidity withdrawals require a two-step process: submitting a withdrawal request followed by keeper execution on Stellar. You cannot exit instantly during extreme congestion.
+
+## Operational and infrastructure risks
+
+### RPC and indexer availability
+
+- The interface relies on Stellar Horizon and Soroban RPC nodes to simulate transactions and broadcast signed envelopes. RPC outages prevent order submission or balance refreshing.
+- If the SubQuery indexer (`apps/s03-indexer`) becomes unavailable, historical order and trade charts pause, although live contract data can still be read through RPC calls.
+
+### What to do if the interface is down
+
+The web application at `so4.market` is an open-source client for the underlying Soroban contracts:
+
+- If the hosted website goes down, **your open positions and collateral remain safely recorded on the Stellar ledger.**
+- **Recovery path**: Because SO4 contracts are fully permissionless on-chain, you can interact with them directly without the web UI:
+  1. Run the interface locally by cloning the public repository and executing `bun run --cwd apps/web dev`.
+  2. Use the Stellar CLI or Soroban SDK (`packages/contracts`) to invoke [ExchangeRouter](/reference/exchange-router) functions directly from your terminal (`create_order` to close positions, `cancel_order` to withdraw unexecuted collateral, or `claim_funding_fees` to extract accrued fees).
+
+## Worked example
+
+A trader opens a 10x leveraged Long position on `BTC/USD` with 100 USDC collateral at an entry price of 60,000 USD (position size = 1,000 USD):
+
+- **Normal liquidation**: With a 1.0% maintenance margin ($10 minimum equity), liquidation occurs if BTC drops 9.0% to 54,600 USD.
+- **Gap risk scenario**: A sudden market shock causes the oracle price to gap directly from 56,000 USD to 52,000 USD (a 13.33% drop) without intermediate quotes.
+- **Loss outcome**: The position equity is completely wiped out (-$133.33 loss exceeds the $100.00 collateral). The position liquidates immediately at the gap price, leaving 0 USDC remaining.
+
+## Related
+
+- [Liquidation](/concepts/liquidation) — Detailed maintenance margin mathematics and liquidation process.
+- [Funding and fees](/concepts/funding-and-fees) — Fee calculation formulas and funding rate mechanics.
+- [Oracles](/concepts/oracles) — The multi-tier oracle hierarchy and staleness handling.
+- [Security](/resources/security) — Vulnerability reporting policies and audit disclosures.
+- [Terms of use](/resources/terms) — Legal terms and risk disclosures.

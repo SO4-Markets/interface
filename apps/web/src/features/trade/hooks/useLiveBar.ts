@@ -18,16 +18,15 @@ type BinanceKlineMsg = {
 const BINANCE_WS = "wss://stream.binance.com:9443/ws"
 const POLL_MS = 1500
 const RECONNECT_MS = 2000
+import { useEffect, useState } from "react"
+import type { OhlcBar } from "../lib/oracle"
+import { marketSubscriptionManager } from "../lib/market-data-stream"
 
 /**
  * Real-time bar feed for the chart.
  *
- * Primary:  Binance WebSocket (@kline stream) — updates within ~200 ms of each trade.
- * Fallback: GMX oracle polled every 1.5 s (auto-activates if WS fails within 4 s).
- *
- * Uses a per-effect `mounted` closure variable (not a shared ref) so that
- * when symbol/period changes, the old effect's callbacks are silenced immediately
- * and cannot race with the new effect instance.
+ * Consumes from the centralized marketSubscriptionManager so connection,
+ * polling fallback, and timer resources are shared across chart and other consumers.
  */
 export function useLiveBar(symbol: string | undefined, period: string): LiveBarUpdate | null {
   const [liveBar, setLiveBar] = useState<LiveBarUpdate | null>(null)
@@ -37,6 +36,11 @@ export function useLiveBar(symbol: string | undefined, period: string): LiveBarU
   const wsRef = useRef<WebSocket | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isHiddenRef = useRef(false)
+export function useLiveBar(symbol: string | undefined, period: string): OhlcBar | null {
+  const [liveBar, setLiveBar] = useState<OhlcBar | null>(() => {
+    if (!symbol) return null
+    return marketSubscriptionManager.getOrCreate(symbol).getLiveBar(period)
+  })
 
   useEffect(() => {
     // ── Per-instance mounted flag ─────────────────────────────────────────
@@ -77,6 +81,8 @@ export function useLiveBar(symbol: string | undefined, period: string): LiveBarU
               })
             }
             firstPoll = false
+            const res = await fetchOracleCandles(symbol!, period, 1)
+            if (res.candles.length > 0) setLiveBar(res.candles[res.candles.length - 1])
           } catch { /* silent retry */ }
         }
         pollTimerRef.current = setTimeout(tick, POLL_MS)
@@ -159,16 +165,13 @@ export function useLiveBar(symbol: string | undefined, period: string): LiveBarU
       }
     }
 
-    document.addEventListener("visibilitychange", handleVisibility)
-    connect()
+    const shared = marketSubscriptionManager.getOrCreate(symbol)
+    const unsubscribe = shared.subscribeLiveBar(period, (bar) => {
+      setLiveBar(bar)
+    })
 
     return () => {
-      mounted = false
-      document.removeEventListener("visibilitychange", handleVisibility)
-      wsRef.current?.close(); wsRef.current = null
-      stopPolling()
-      if (reconnectTimer) clearTimeout(reconnectTimer)
-      if (firstMsgTimeout) clearTimeout(firstMsgTimeout)
+      unsubscribe()
     }
   }, [symbol, period])
 

@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test"
 
+const landingAudit = process.env.PLAYWRIGHT_LANDING_AUDIT === "1"
+const recordMotionEvidence = process.env.PLAYWRIGHT_MOTION_EVIDENCE === "1"
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -7,6 +10,7 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
+    video: recordMotionEvidence ? "on" : "off",
   },
   projects: [
     {
@@ -21,9 +25,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "bun run --cwd apps/web dev -- --host 127.0.0.1",
+    command: landingAudit
+      ? "bun run --cwd apps/web build -- --mode testnet && bun run --cwd apps/web preview -- --host 127.0.0.1 --port 3000"
+      : "bun run --cwd apps/web dev -- --host 127.0.0.1 --mode testnet",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    reuseExistingServer: !process.env.CI && !landingAudit,
+    timeout: landingAudit ? 240_000 : 120_000,
   },
 })

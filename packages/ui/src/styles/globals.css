@@ -176,6 +176,13 @@
     --height-default: 1.75rem;       /* 28px  — h-7 equivalent */
     --height-comfortable: 2.5rem;    /* 40px  — h-10 equivalent */
 
+    /* Trading density/state roles (OB-006). */
+    --trading-panel-padding: 0.75rem;
+    --trading-row-height: 1.75rem;
+    --trading-divider: var(--border);
+    --trading-depth-buy: var(--long-subtle);
+    --trading-depth-sell: var(--short-subtle);
+
     /*
      * Page gutters — responsive horizontal padding at layout edges.
      *
@@ -187,6 +194,31 @@
     --gutter-page-sm: 1rem;          /* 16px — mobile */
     --gutter-page-md: 1.5rem;        /* 24px — tablet */
     --gutter-page-lg: 2rem;          /* 32px — desktop */
+
+    /*
+     * Motion duration tokens (OB-011 motion design system).
+     *
+     * Duration scale from restrained (feedback) to expressive (landing).
+     * Prefer shorter durations for trading UI; use longer for landing motion.
+     */
+    --duration-fast: 100ms;          /* Feedback: selection, status changes */
+    --duration-base: 150ms;          /* Standard: transitions, overlays */
+    --duration-moderate: 200ms;      /* Emphasis: section reveals, expansions */
+    --duration-slow: 300ms;          /* Landing: hero motion, marquees */
+    --duration-slowest: 400ms;       /* Landing: extended sequences */
+
+    /*
+     * Motion easing tokens — consistent timing functions across the UI.
+     *
+     * - in-out: default for most interactions (symmetrical acceleration/deceleration)
+     * - out: entry animations (quick to final position)
+     * - in: exit animations (slowing into rest)
+     * - bounce: playful emphasis for non-critical feedback
+     */
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /*
@@ -354,6 +386,22 @@
         display: none;
     }
 }
+/* Motion transition utilities (OB-011). Named transitions for consistent state feedback. */
+@utility transition-opacity {
+    transition-property: opacity;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-in-out);
+}
+@utility transition-transform {
+    transition-property: transform;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-in-out);
+}
+@utility transition-all-subtle {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-in-out);
+}
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
@@ -361,8 +409,8 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.5 0.134 242.749);
-    --primary-foreground: oklch(0.977 0.013 236.62);
+    --primary: oklch(0.52 0.19 286);
+    --primary-foreground: oklch(0.985 0.01 286);
     --secondary: oklch(0.967 0.001 286.375);
     --secondary-foreground: oklch(0.21 0.006 285.885);
     --muted: oklch(0.97 0 0);
@@ -373,7 +421,7 @@
     --destructive-foreground: oklch(0.985 0 0);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --ring: oklch(0.62 0.18 286);
     --chart-1: var(--long);
     --chart-2: var(--short);
     --chart-3: var(--liquidation);
@@ -454,7 +502,7 @@
     --card-foreground: oklch(1 0 0);
     --popover: var(--color-gmx-slate-800);
     --popover-foreground: oklch(1 0 0);
-    --primary: var(--color-gmx-blue-400);
+    --primary: oklch(0.72 0.18 190);
     --primary-foreground: oklch(1 0 0);
     --secondary: var(--color-gmx-slate-700);
     --secondary-foreground: oklch(1 0 0);
@@ -465,7 +513,7 @@
     --destructive-foreground: oklch(1 0 0);
     --border: var(--color-gmx-stroke-primary);
     --input: var(--color-gmx-stroke-primary);
-    --ring: var(--color-gmx-blue-400);
+    --ring: oklch(0.72 0.18 190);
 
     --surface-canvas: var(--color-gmx-slate-900);
     --surface-sunken: var(--color-gmx-slate-950);
@@ -477,7 +525,7 @@
     --text-secondary: var(--color-gmx-slate-400);
     --text-tertiary: var(--color-gmx-slate-500);
     --text-inverse: oklch(1 0 0);
-    --text-link: var(--color-gmx-blue-400);
+    --text-link: oklch(0.78 0.15 190);
 
     --info: var(--color-gmx-blue-400);
     --sidebar-primary: var(--color-gmx-blue-400);

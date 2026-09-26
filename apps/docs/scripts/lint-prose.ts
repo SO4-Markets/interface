@@ -29,10 +29,10 @@ const REQUIRED_CAPITALIZATIONS = [
   { wrong: /\bstellar\b/g, correct: "Stellar" },
   { wrong: /\bfreighter\b/g, correct: "Freighter" },
   { wrong: /\bturborepo\b/g, correct: "Turborepo" },
-  { wrong: /\border-vault\b/i, correct: "OrderVault" },
-  { wrong: /\bexchange-router\b/i, correct: "ExchangeRouter" },
-  { wrong: /\bsynthetics-reader\b/i, correct: "SyntheticsReader" },
-  { wrong: /\bdata-store\b/i, correct: "DataStore" },
+  { wrong: /\border-vault\b/gi, correct: "OrderVault" },
+  { wrong: /\bexchange-router\b/gi, correct: "ExchangeRouter" },
+  { wrong: /\bsynthetics-reader\b/gi, correct: "SyntheticsReader" },
+  { wrong: /\bdata-store\b/gi, correct: "DataStore" },
 ]
 
 const PASSIVE_VOICE_PATTERNS = [
@@ -42,6 +42,19 @@ const PASSIVE_VOICE_PATTERNS = [
   /\bcan be executed by\b/i,
   /\bwill be processed by\b/i,
 ]
+
+/** Blanks out inline code spans and link targets/path-shaped labels, keeping
+ * every other character's column position intact. The correct-capitalization
+ * rule exists to catch prose mentions of these proper nouns; a route like
+ * `/reference/synthetics-reader` or a URL like `stellar.expert` is neither —
+ * it is required to be lowercase-kebab to work as a link or an identifier. */
+function maskCodeAndLinks(line: string): string {
+  const blank = (match: string) => " ".repeat(match.length)
+  return line
+    .replace(/`[^`]*`/g, blank)
+    .replace(/\[(\/[^\]]*)\]/g, (_m, inner: string) => `[${" ".repeat(inner.length)}]`)
+    .replace(/\]\(([^)]*)\)/g, (_m, inner: string) => `](${" ".repeat(inner.length)})`)
+}
 
 export function lintMarkdownContent(file: string, source: string): LintResult {
   const errors: LintMessage[] = []
@@ -67,9 +80,15 @@ export function lintMarkdownContent(file: string, source: string): LintResult {
     }
     if (inCodeBlock) continue
 
+    // Mask inline code spans, link targets, and HTML tags/elements with spaces to preserve column indices
+    const proseLine = line
+      .replace(/`[^`]+`/g, (m) => " ".repeat(m.length))
+      .replace(/\]\([^)]+\)/g, (m) => "]" + " ".repeat(m.length - 1))
+      .replace(/<[^>]+>/g, (m) => " ".repeat(m.length))
+
     // 1. Exclamation marks check (Error)
-    const exclamIdx = line.indexOf("!")
-    if (exclamIdx !== -1 && !line.match(/!\[.*?\]\(.*?\)/) && !line.match(/!=\s*/)) {
+    const exclamIdx = proseLine.indexOf("!")
+    if (exclamIdx !== -1 && !proseLine.match(/!=\s*/)) {
       errors.push({
         file,
         line: lineNum,
@@ -84,7 +103,7 @@ export function lintMarkdownContent(file: string, source: string): LintResult {
     for (const { word, reason } of BANNED_WORDS) {
       const regex = new RegExp(`\\b${word}\\b`, "gi")
       let match: RegExpExecArray | null
-      while ((match = regex.exec(line)) !== null) {
+      while ((match = regex.exec(proseLine)) !== null) {
         errors.push({
           file,
           line: lineNum,
@@ -97,11 +116,13 @@ export function lintMarkdownContent(file: string, source: string): LintResult {
     }
 
     // 3. Product & protocol capitalization check (Error)
+    const lineForCapsCheck = maskCodeAndLinks(line)
     for (const { wrong, correct } of REQUIRED_CAPITALIZATIONS) {
       let match: RegExpExecArray | null
       wrong.lastIndex = 0
-      while ((match = wrong.exec(line)) !== null) {
-        // Skip if matched inside link or code snippet if case matches correct
+      while ((match = wrong.exec(lineForCapsCheck)) !== null) {
+        // Matches inside a code span or a link target/path-shaped label are
+        // already blanked out by maskCodeAndLinks above.
         if (match[0] !== correct) {
           errors.push({
             file,
@@ -117,7 +138,7 @@ export function lintMarkdownContent(file: string, source: string): LintResult {
 
     // 4. Passive voice check (Warning)
     for (const pattern of PASSIVE_VOICE_PATTERNS) {
-      const match = pattern.exec(line)
+      const match = pattern.exec(proseLine)
       if (match) {
         warnings.push({
           file,
@@ -131,7 +152,7 @@ export function lintMarkdownContent(file: string, source: string): LintResult {
     }
 
     // 5. Sentence length threshold (> 30 words) (Warning)
-    const sentences = line.split(/(?<=[.!?])\s+/)
+    const sentences = proseLine.split(/(?<=[.!?])\s+/)
     for (const sentence of sentences) {
       const words = sentence.trim().split(/\s+/).filter(Boolean)
       if (words.length > 30) {

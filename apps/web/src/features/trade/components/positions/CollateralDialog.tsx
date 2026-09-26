@@ -12,7 +12,7 @@ import { Input } from "@workspace/ui/components/input"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 import { createDecreaseOrder, createIncreaseOrder } from "../../lib/stellar"
-import { queryKeys } from "../../lib/query-keys"
+import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import type { Position } from "../../hooks/usePositions"
 import { formatUsd } from "@/shared/lib/format"
 import { useTokenBalances } from "@/features/wallet/hooks/useTokenBalances"
@@ -23,9 +23,10 @@ type Props = {
   mode: "add" | "remove" | null
   open: boolean
   onClose: () => void
+  onSubmit?: (amount: number) => Promise<string | null>
 }
 
-export function CollateralDialog({ position, mode, open, onClose }: Props) {
+export function CollateralDialog({ position, mode, open, onClose, onSubmit }: Props) {
   const [amount, setAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -97,6 +98,12 @@ export function CollateralDialog({ position, mode, open, onClose }: Props) {
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
+      if (onSubmit) {
+        const hash = await onSubmit(amountNum)
+        if (hash) onClose()
+        return
+      }
+
       // 1% slippage buffer so price fluctuation between submit and execution doesn't fail the order
       const addAcceptable  = pos.isLong ? pos.markPrice * 1.01 : pos.markPrice * 0.99
       const removeAcceptable = pos.isLong ? pos.markPrice * 0.99 : pos.markPrice * 1.01
@@ -130,7 +137,7 @@ export function CollateralDialog({ position, mode, open, onClose }: Props) {
       
       // Invalidate queries to refresh list
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.positions("stellar-mainnet", account),
+        queryKey: queryKeys.positions(activeQueryNetwork(), account),
       })
       onClose()
     } catch (e) {

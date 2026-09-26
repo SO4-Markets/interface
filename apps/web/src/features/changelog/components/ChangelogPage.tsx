@@ -58,16 +58,6 @@ export function ChangelogPage() {
     }
   }, [])
 
-interface ChangelogPageProps {
-  search?: ChangelogSearch
-  onSearchChange?: (search: ChangelogSearch) => void
-}
-
-export function ChangelogPage({
-  search = {},
-  onSearchChange = () => {},
-}: ChangelogPageProps) {
-  const changelog = useChangelog()
   const { message, announcementKey, announce } = useAnnouncer()
 
   const activeFilterCount = [
@@ -78,6 +68,27 @@ export function ChangelogPage({
   ].filter(Boolean).length
 
   const isFiltered = activeFilterCount > 0
+
+  const handleFilterChange = useCallback(
+    (next: Partial<ChangelogSearch>) => {
+      void navigate({
+        search: (prev) => {
+          const updated: ChangelogSearch = { ...prev, ...next }
+          const clean: ChangelogSearch = {}
+          if (updated.type) clean.type = updated.type
+          if (updated.area) clean.area = updated.area
+          if (updated.q) clean.q = updated.q
+          if (updated.showInternal) clean.showInternal = updated.showInternal
+          return clean
+        },
+      })
+    },
+    [navigate]
+  )
+
+  useEffect(() => {
+    void fetchChangelog()
+  }, [fetchChangelog])
 
   // DX-012: a filtered view that silently omits history is wrong — pull the
   // archive in automatically whenever any filter or search is active.
@@ -158,30 +169,72 @@ export function ChangelogPage({
       )
       announce(`${resultCount} result${resultCount !== 1 ? "s" : ""} found`)
     }, 300)
-
-  useReleaseHash(changelog.isSuccess)
+    return () => clearTimeout(timer)
+  }, [announce, filteredReleases])
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="px-[var(--gutter-page-sm)] md:px-[var(--gutter-page-md)] lg:px-[var(--gutter-page-lg)] pt-6 md:pt-8 lg:pt-10 pb-4 md:pb-6 border-b border-border">
-          <div className="max-w-4xl mx-auto flex flex-col gap-2">
-            <div className="h-10 w-48 bg-muted rounded animate-pulse" />
-            <div className="h-4 w-96 bg-muted rounded animate-pulse" />
+        <div className="border-b border-border px-[var(--gutter-page-sm)] pt-6 pb-4 md:px-[var(--gutter-page-md)] md:pt-8 md:pb-6 lg:px-[var(--gutter-page-lg)] lg:pt-10">
+          <div className="mx-auto flex max-w-4xl flex-col gap-2">
+            <div className="h-10 w-48 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-96 animate-pulse rounded bg-muted" />
           </div>
         </div>
-        <div className="px-[var(--gutter-page-sm)] md:px-[var(--gutter-page-md)] lg:px-[var(--gutter-page-lg)] py-6 md:py-8 max-w-4xl mx-auto">
+        <div className="mx-auto max-w-4xl px-[var(--gutter-page-sm)] py-6 md:px-[var(--gutter-page-md)] md:py-8 lg:px-[var(--gutter-page-lg)]">
           <ChangelogSkeleton />
         </div>
       </div>
     )
-    const timer = window.setTimeout(
-      () =>
-        announce(`${resultCount} result${resultCount === 1 ? "" : "s"} found`),
-      300
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border px-[var(--gutter-page-sm)] pt-6 pb-4 md:px-[var(--gutter-page-md)] md:pt-8 md:pb-6 lg:px-[var(--gutter-page-lg)] lg:pt-10">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-2 text-display-sm font-bold text-foreground md:text-display">
+              Changelog
+            </h1>
+            <p className="text-body text-text-secondary">
+              Everything that shipped, newest first.
+            </p>
+          </div>
+        </div>
+        <div className="mx-auto max-w-4xl px-[var(--gutter-page-sm)] py-6 md:px-[var(--gutter-page-md)] md:py-8 lg:px-[var(--gutter-page-lg)]">
+          <ErrorState
+            title="Failed to load changelog"
+            description={error}
+            onRetry={fetchChangelog}
+            retryLabel="Try again"
+          />
+        </div>
+      </div>
     )
-    return () => window.clearTimeout(timer)
-  }, [announce, changelog.isSuccess, filteredReleases])
+  }
+
+  if (!data || data.releases.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border px-[var(--gutter-page-sm)] pt-6 pb-4 md:px-[var(--gutter-page-md)] md:pt-8 md:pb-6 lg:px-[var(--gutter-page-lg)] lg:pt-10">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-2 text-display-sm font-bold text-foreground md:text-display">
+              Changelog
+            </h1>
+            <p className="text-body text-text-secondary">
+              Everything that shipped, newest first.
+            </p>
+          </div>
+        </div>
+        <div className="mx-auto max-w-4xl px-[var(--gutter-page-sm)] py-6 md:px-[var(--gutter-page-md)] md:py-8 lg:px-[var(--gutter-page-lg)]">
+          <EmptyState
+            title="No releases yet"
+            description="The changelog is empty. Releases will appear here as they ship."
+          />
+        </div>
+      </div>
+    )
+  }
 
   const showLoadOlder = Boolean(data.hasArchive) && archiveStatus !== "loaded"
 

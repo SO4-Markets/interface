@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { generateSeoTags } from "../src/lib/seo"
-import { generateOgSvg } from "../../scripts/lib/og-generator"
+import { generateOgSvg } from "../../../scripts/lib/og-generator.ts"
 
 describe("SEO metadata and social preview generator (DX-047)", () => {
   test("generates unique title suffix, description, OG/Twitter tags, and TechArticle schema", () => {

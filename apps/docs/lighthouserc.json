@@ -1,0 +1,43 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "startServerCommand": "bun run dev",
+      "startServerReadyPattern": "Listening on http://localhost:3000",
+      "url": [
+        "http://localhost:3000/",
+        "http://localhost:3000/concepts/risk",
+        "http://localhost:3000/guides/trading",
+        "http://localhost:3000/developers/architecture",
+        "http://localhost:3000/reference/errors"
+      ],
+      "settings": {
+        "preset": "desktop",
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "cpuSlowdownMultiplier": 1
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "chromeFlags": "--no-sandbox --headless"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.8 }],
+        "categories:accessibility": ["error", { "minScore": 0.9 }],
+        "categories:best-practices": ["warn", { "minScore": 0.9 }]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

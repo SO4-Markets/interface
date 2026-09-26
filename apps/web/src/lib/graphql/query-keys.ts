@@ -1,16 +1,9 @@
 /**
- * apps/web/src/lib/graphql/query-keys.ts
+ * Compatibility export for indexer consumers.
  *
- * Query key factory for indexer queries.
- * Ensures consistent cache isolation by network and account.
- *
- * Usage:
- *   import { indexerQueryKeys } from "@/lib/graphql/query-keys"
- *
- *   useQuery({
- *     queryKey: indexerQueryKeys.positions.byAccount(address),
- *     queryFn: ...
- *   })
+ * The implementation lives in shared/lib/query-keys. Keeping this module as a
+ * re-export avoids a risky import-path migration while eliminating the
+ * previously independent indexer registry.
  */
 
 import { INDEXER_CONFIG } from "@/app/config/indexer"
@@ -79,3 +72,4 @@ export const indexerQueryKeys = {
     byAccount: (account: string) => [...indexerQueryKeys.fees.all(), account] as const,
   },
 }
+export { indexerQueryKeys } from "@/shared/lib/query-keys"

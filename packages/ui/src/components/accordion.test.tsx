@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -90,8 +90,12 @@ describe("Accordion", () => {
       </Accordion>
     )
 
-    const openLink = screen.getByRole("link", { name: "Link in the open panel" })
-    const closedLink = screen.queryByRole("link", { name: "Link in the closed panel" })
+    const openLink = screen.getByRole("link", {
+      name: "Link in the open panel",
+    })
+    const closedLink = screen.queryByRole("link", {
+      name: "Link in the closed panel",
+    })
 
     // The open panel's link stays in the accessibility tree and tab order.
     expect(openLink).toBeVisible()
@@ -114,6 +118,26 @@ describe("Accordion", () => {
 
     expect(first).toHaveAttribute("aria-expanded", "false")
     expect(second).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("uses the latest state for toggles delivered in one batch", () => {
+    render(
+      <Accordion type="single">
+        <AccordionItem value="first">
+          <AccordionTrigger>First question</AccordionTrigger>
+          <AccordionContent>First answer</AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    )
+
+    const trigger = screen.getByRole("button", { name: "First question" })
+    act(() => {
+      trigger.click()
+      trigger.click()
+      trigger.click()
+    })
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
   })
 
   it("allows multiple items to stay open in multiple mode", async () => {

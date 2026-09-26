@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { ViewportReveal } from "../viewport-reveal"
 import { PoolCard } from "./pool-card"
 import { useLandingStats } from "./use-landing-stats"
 import { cleanFormatUsd } from "./utils/formatters"
@@ -19,7 +20,7 @@ export function LiquiditySection() {
 
   return (
     <section className="bg-gmx-light-150 px-4 py-20 text-gmx-slate-900 sm:px-10 sm:py-30">
-      <div className="mx-auto max-w-300">
+      <ViewportReveal className="mx-auto max-w-300">
         <h2 className="text-heading-2">
           {stats.liquidityTotal === null ? "-" : cleanFormatUsd(stats.liquidityTotal)} in liquidity
         </h2>
@@ -36,7 +37,7 @@ export function LiquiditySection() {
             <PoolCard key={pool.name} {...pool} />
           ))}
         </div>
-      </div>
+      </ViewportReveal>
     </section>
   )
 }

@@ -1,0 +1,110 @@
+---
+title: Positions and orders
+description: Monitor and manage active perpetual positions, resting limit and trigger orders, trade history, and claimable funding fees in SO4.
+updated: 2026-08-31
+status: stable
+---
+
+The bottom panel of the SO4 trade page at `/trade` gives traders full visibility over active exposure, resting orders, past trade executions, and accrued funding claims. It comprises four primary tabs: **Positions**, **Orders**, **Trades**, and **Claims**.
+
+All table data is indexed from Stellar ledgers by SubQuery (`apps/s03-indexer`) and supplemented with live contract reads from [SyntheticsReader](/reference/synthetics-reader) when the indexer is paused.
+
+## Positions tab
+
+The **Positions** tab lists all currently open perpetual positions for the connected wallet address.
+
+### Columns
+
+Every column maps directly to contract and indexer state:
+
+| Column | Header | Description |
+| --- | --- | --- |
+| `market` | **Market** | Displays the base token icon, the market pair name (such as `BTC/USD`), and a direction badge (`Long` in green or `Short` in red). |
+| `size` | **Size** | The total notional value of the position in USD (collateral multiplied by leverage). |
+| `collateral` | **Collateral** | The current collateral value deposited in the position in USD. |
+| `entry` | **Entry** | The volume-weighted average entry price at which the position was established. |
+| `mark` | **Mark** | The latest oracle mark price used for valuation and margin checks. |
+| `liq` | **Liq.** | The estimated liquidation price. When mark price comes within 10% of this value, the text turns red as a risk warning. |
+| `pnl` | **PnL** | Net unrealised profit or loss in USD and percentage after accounting for opening fees, closing fees, and accumulated funding. Green indicates profit; red indicates loss. |
+| `funding-fee` | **Funding Fee** | Accrued claimable funding fees in USD earned from holding a position on the minority side of the pool, or an em-dash (`—`) if non-positive. |
+| `next-funding` | **Next Funding** | A real-time countdown timer (for example, `42m` or `1h 15m`) showing the time remaining until the next funding settlement epoch. |
+| `actions` | *(Actions)* | Interactive buttons to manage or exit the position. |
+
+### Position action buttons
+
+The action buttons at the right of each row provide immediate management options:
+
+- **Share**: Generates a shareable URL containing the market and direction (`/trade?market=...&type=...`) and copies it to your clipboard.
+- **+ Collateral**: Opens the collateral modification dialog in deposit mode. Adding collateral increases margin equity, lowers effective leverage, and moves your liquidation price further from the current mark price.
+- **- Collateral**: Opens the collateral modification dialog in withdrawal mode to extract excess margin. The interface prevents withdrawals that would push effective leverage beyond the 50x protocol ceiling.
+- **Claim**: Appears when positive funding fees have accumulated (`fundingFeeUsd > 0`). Calls `ExchangeRouter.claim_funding_fees` to withdraw fees directly to your wallet.
+- **Close**: Submits a `MarketDecrease` order via `ExchangeRouter` with a 1.0% slippage tolerance to fully exit the position, realise final PnL, and return remaining collateral to your wallet.
+
+### Chart position lines
+
+When you hold an open position in the selected market, the chart draws real-time reference lines:
+
+- **Entry line**: Marked `${Side} Entry` (for example, `Long Entry`) as a green or red dashed line at your average entry price.
+- **Liquidation line**: Marked `${Side} Liq.` as an amber large-dashed line at your liquidation price.
+
+## Orders tab
+
+The **Orders** tab tracks all unexecuted, resting, or conditional orders submitted by your account.
+
+### Columns
+
+| Column | Header | Description |
+| --- | --- | --- |
+| `market` | **Market** | The market pair name, direction badge (`Long` / `Short`), and an optional yellow `Frozen` badge if execution failed. |
+| `type` | **Type** | The specific order type string: `MarketIncrease`, `LimitIncrease`, `MarketDecrease`, `LimitDecrease`, `StopLossDecrease`, `MarketSwap`, or `LimitSwap`. |
+| `size` | **Size** | The requested position size delta in USD. |
+| `trigger` | **Trigger** | The specified trigger price threshold for limit and stop orders in USD. |
+| `created` | **Created** | The local timestamp when the order was submitted on Stellar. |
+| `actions` | *(Actions)* | Includes a **Cancel** button to cancel resting orders and unlock reserved collateral. |
+
+### Order status lifecycle
+
+Orders move through explicit lifecycle states defined in the contracts and tracked by the indexer:
+
+1. `CREATED`: The order has been written to [DataStore](/reference/data-store) and collateral is reserved in [OrderVault](/reference/order-vault).
+2. `ACTIVE`: The order is live and awaiting keeper execution once trigger and price constraints are met.
+3. `FROZEN`: The keeper attempted execution, but the fill price violated the order's `acceptablePrice` slippage limit, or pool capacity was exceeded. A frozen banner notifies you to cancel or resubmit.
+4. `EXECUTED`: Off-chain keepers submitted the fill transaction on Stellar, updating the underlying position.
+5. `CANCELLED`: You cancelled the order, returning reserved collateral from `OrderVault` to your wallet.
+
+## Trades tab
+
+The **Trades** tab displays historical records of filled orders, closed positions, liquidations, and token swaps executed by your account.
+
+- Displays execution price, realised PnL, paid fees, and transaction timestamps.
+- When no trade history exists or the indexer is syncing, an empty state card notifies the user.
+
+## Claims tab
+
+The **Claims** tab aggregates all positive funding fee balances accumulated across your positions across all markets:
+
+- **Total claimable**: Displays the combined USD value of all accrued funding fee rewards.
+- **Claim All**: Submits a single batch transaction calling `claimFundingFees` across every market with a positive balance.
+- **Market & Fee table**: Lists each individual market alongside its claimable USD fee amount.
+
+## Worked example
+
+A trader holds an open `Long BTC/USD` position:
+
+- **Position size**: 1,000.00 USD.
+- **Current collateral**: 100.00 USDC (effective leverage: 10.0x).
+- **Entry price**: 60,000.00 USD.
+- **Estimated liquidation price**: 54,610.92 USD.
+
+The trader clicks **+ Collateral** and deposits an additional 50.00 USDC:
+
+- **New collateral**: 150.00 USDC.
+- **New effective leverage**: `1,000.00 / 150.00 = 6.67x`.
+- **New liquidation price**: With 10.00 USD maintenance margin, the position can now tolerate a loss of `150.00 - 10.00 = 140.00 USD` (a 14.0% adverse price drop). The updated liquidation price moves down to `60,000.00 × (1 - 0.14) = 51,600.00 USD`, increasing the buffer against market drops by 3,010.92 USD.
+
+## Related
+
+- [Trading guide](/guides/trading) — Placing orders, using leverage, and configuring slippage.
+- [Order types](/concepts/order-types) — Execution mechanics for market, limit, and stop orders.
+- [Liquidation](/concepts/liquidation) — How maintenance margin and liquidation triggers work.
+- [Funding and fees](/concepts/funding-and-fees) — How funding rates accrue and how to claim fee rewards.

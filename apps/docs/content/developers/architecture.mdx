@@ -1,7 +1,7 @@
 ---
 title: SO4 architecture
 description: The monorepo map, data flow from contracts to screen, state locations, and repository invariants explained.
-updated: 2026-08-25
+updated: 2026-09-04
 status: stable
 ---
 
@@ -26,16 +26,12 @@ Most trading logic lives in `apps/web`. The indexer watches contracts and makes 
 
 Market data, position state, and order history flow through four stops:
 
-```
-Soroban contracts (on-chain state)
-         ↓
-   RPC nodes (live reads)
-         ↓
-  s03-indexer (database sync)
-         ↓
-  web app (TanStack Query + Zustand)
-         ↓
-  trader screen
+```mermaid caption="SO4 architecture data flow from on-chain contracts to the trader screen"
+graph TD
+  Contracts[Soroban contracts<br/>on-chain state] --> RPC[RPC nodes<br/>live reads]
+  RPC --> Indexer[s03-indexer<br/>database sync]
+  Indexer --> WebApp[web app<br/>TanStack Query + Zustand]
+  WebApp --> Screen[trader screen]
 ```
 
 ### 1. Contracts

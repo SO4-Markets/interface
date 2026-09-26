@@ -1,0 +1,19 @@
+{
+  "initialJsKb": 400,
+  "initialCssKb": 160,
+  "maxHtmlKb": 120,
+  "searchIndexKb": 1100,
+  "measured": {
+    "initialJsKb": 291,
+    "initialCssKb": 119,
+    "maxHtmlKb": 53,
+    "searchIndexKb": 814
+  },
+  "headroom": {
+    "initialJsKb": 109,
+    "initialCssKb": 41,
+    "maxHtmlKb": 67,
+    "searchIndexKb": 286
+  },
+  "comment": "Budgets committed with measured current values + headroom. Adding a large client library (e.g. 500KB chart lib) to a docs page will exceed initialJsKb and fail CI. Update budgets intentionally by editing this file and documenting rationale in BUDGET.md."
+}

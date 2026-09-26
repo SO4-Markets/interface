@@ -1,7 +1,7 @@
 ---
-title: Scaffold docs workspace
-category: docs
+type: added
+area: docs
+pr: 538
+breaking: false
 ---
-
-Adds the initial `apps/docs` workspace, content validation command, keyboard
-shortcut shell, and accessibility coverage for representative docs states.
+Added the initial docs workspace, content validation command, keyboard shortcut shell, and accessibility coverage for representative docs states.

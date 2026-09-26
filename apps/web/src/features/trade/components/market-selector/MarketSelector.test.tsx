@@ -10,11 +10,11 @@ const FIXTURE_MARKETS: Array<MarketItem> = [
   { id: "addr-xlm", name: "XLM/USD" },
 ]
 
-function setup(activeMarketId?: string) {
+function setup(activeMarketId?: string, markets = FIXTURE_MARKETS) {
   const onSelect = vi.fn()
   render(
     <MarketSelector
-      markets={FIXTURE_MARKETS}
+      markets={markets}
       activeMarketId={activeMarketId}
       onSelect={onSelect}
     />,
@@ -127,5 +127,36 @@ describe("MarketSelector", () => {
     await user.click(screen.getByRole("button", { name: "Select Market" }))
     await user.keyboard("{Escape}")
     expect(screen.queryByPlaceholderText("Search markets...")).not.toBeInTheDocument()
+  })
+
+  // ── Disabled markets ──────────────────────────────────────────────────────
+
+  it("filters out disabled markets from the list", async () => {
+    const user = userEvent.setup()
+    const disabledMarkets: Array<MarketItem> = [
+      { id: "addr-btc", name: "BTC/USD" },
+      { id: "addr-eth", name: "ETH/USD", disabled: true },
+      { id: "addr-xlm", name: "XLM/USD" },
+    ]
+    setup(undefined, disabledMarkets)
+    await user.click(screen.getByRole("button", { name: "Select Market" }))
+    expect(screen.getByRole("button", { name: "BTC/USD" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "XLM/USD" })).toBeInTheDocument()
+    // ETH is disabled, so it shouldn't appear in the list
+    expect(screen.queryByRole("button", { name: "ETH/USD" })).not.toBeInTheDocument()
+  })
+
+  it("searches by name and address", async () => {
+    const user = userEvent.setup()
+    setup()
+    await user.click(screen.getByRole("button", { name: "Select Market" }))
+    await user.type(screen.getByRole("textbox"), "addr-btc")
+    expect(screen.getByRole("button", { name: "BTC/USD" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "XLM/USD" })).not.toBeInTheDocument()
+  })
+
+  it("handles empty markets array gracefully", () => {
+    setup(undefined, [])
+    expect(screen.getByRole("button", { name: "Select Market" })).toBeInTheDocument()
   })
 })

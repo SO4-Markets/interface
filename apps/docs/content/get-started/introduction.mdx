@@ -1,0 +1,24 @@
+---
+title: Introduction
+description: What SO4 is: a unified-liquidity perpetuals DEX on Stellar/Soroban, settling on the public ledger while the oracle and indexer serve prices and history.
+updated: 2026-08-30
+status: beta
+---
+
+SO4 is a perpetuals exchange built on Stellar's Soroban smart-contract platform. A perpetual (perp) is a derivative that tracks an asset's market price without requiring you to own the asset. SO4 runs one shared liquidity pool per market and uses self-custodied collateral: your wallet signs every transaction, and the protocol contracts hold only what you post as margin.
+
+If you know perps from a centralised venue, the difference is where your money sits and what settling means. On a centralised venue your balance is a row in the venue's database, and a trade settles when the venue updates its own ledger. On SO4 your wallet holds your keys, and settling a trade means the Soroban contracts on the Stellar network executing it — visible to anyone on the public ledger. The web interface builds transactions and submits the signed ones; it never holds your assets or your keys.
+
+If you know Stellar but have not traded a perp: you deposit collateral, choose a market and a direction (long or short), and your position gains or loses value as the market price moves. Leverage lets you control a larger position than your collateral alone would allow, and it multiplies losses as much as gains. Funding periodically transfers value between longs and shorts to keep a perp price near the underlying asset's price. The mechanics live on the concept pages: [funding and fees](/concepts/funding-and-fees), [liquidation](/concepts/liquidation), and the [risk overview](/concepts/risk) cover them, and the `/concepts/perpetuals` concept page explains the instrument itself.
+
+What is on-chain versus what is served off-chain decides what you have to trust.
+
+**On-chain.** Your orders, positions, and token balances are ledger state managed by the Soroban contracts deployed on Stellar testnet: ExchangeRouter routes orders, DataStore holds market configuration, and SyntheticsReader reads positions, orders, and prices back. The interface builds transactions against these contracts and submits them through the public Stellar RPC once your wallet signs. Anyone can read the ledger and verify a trade.
+
+**Served off-chain.** The prices you see come from the SO4 oracle (primary) with Pyth, Binance, and GMX as fallbacks. The indexer is a separate service that watches the ledger and stores historical data in a database for fast queries. Neither the oracle nor the indexer holds funds or settles a trade. You trust them for accurate price data; you trust the contracts to settle correctly.
+
+## Current status
+
+Active development on Stellar testnet. The interface builds, signs, and submits real Soroban transactions to the deployed testnet contracts — ExchangeRouter, DataStore, and SyntheticsReader — and streams live prices through the SO4 oracle with Pyth, Binance, and GMX fallbacks. Three markets are live: TETH/TUSDC, TWBTC/TUSDC, and TXLM/TUSDC, funded by the testnet faucet. The OrderVault client is a placeholder awaiting integration, and the staking, GLV, and vesting contracts are not yet deployed on testnet. Testnet tokens have no real value.
+
+To place a first trade, follow the `/get-started/quickstart` page. To understand perps from first principles, start at the `/concepts/perpetuals` concept page.

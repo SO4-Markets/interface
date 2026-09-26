@@ -1,9 +1,15 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": ["bun"],
+    "types": ["bun", "vite/client"],
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["scripts/**/*.ts", "src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "*.d.ts",
+    "scripts/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ]
 }

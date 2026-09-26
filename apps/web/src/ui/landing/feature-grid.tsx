@@ -60,34 +60,34 @@ export function FeatureGrid() {
           without this, since h1 → h3 skips a level. */}
       <h2 className="sr-only">Why trade on SO4</h2>
 
-      {/* Guaranteed liquidity */}
+      {/* Market-making pools */}
       <div className="rounded-20 border border-hairline border-gmx-slate-600 bg-gmx-slate-800 p-9">
         <IconBox>
           <GearsIcon />
         </IconBox>
         <div className="mt-9 border-t border-hairline border-gmx-slate-600 pt-6">
-          <p className="text-12 uppercase tracking-[0.864px] text-gmx-slate-500">Trade with confidence</p>
-          <h3 className="mt-2 text-heading-4 text-white">Guaranteed liquidity</h3>
+          <p className="text-12 uppercase tracking-[0.864px] text-gmx-slate-500">Verified settlement</p>
+          <h3 className="mt-2 text-heading-4 text-white">Stellar order book</h3>
           <p className="mt-3 text-description">
-            Benefit from up to 50x leverage and guaranteed on-chain liquidity that&apos;s not dependent
-            on order book depth.
+            Trade on a real-time order book with on-chain settlement backed by Stellar Soroban.
+            Every order executes and settles directly on-chain.
           </p>
         </div>
       </div>
 
-      {/* Stay safe from liquidations — blue card, spans 2 rows */}
+      {/* Sub-5-second finality — blue card, spans 2 rows */}
       <div className="relative overflow-hidden rounded-20 bg-gmx-blue-400 p-9 lg:row-span-2">
         <IconBox>
           <ShieldIcon />
         </IconBox>
         <div className="mt-9">
-          <h3 className="text-heading-4 text-white">Stay safe from liquidations</h3>
+          <h3 className="text-heading-4 text-white">Fast, predictable settlement</h3>
           {/* white/70 on this blue card measured 3.86:1 (Lighthouse
               color-contrast audit) against the WCAG AA 4.5:1 minimum;
               white/85 clears it with margin. */}
           <p className="mt-3 text-16 text-white/85">
-            Avoid price wicks with live price feeds, sourced from Binance and backed by a GMX oracle
-            fallback.
+            Stellar's network provides sub-5-second finality with fixed, predictable fees.
+            Know your costs before you trade.
           </p>
         </div>
         {/* Decorative shield-and-pulse mark, not a data illustration —
@@ -123,7 +123,7 @@ export function FeatureGrid() {
         </svg>
       </div>
 
-      {/* Support for numerous assets — spans 2 rows */}
+      {/* Markets live on Stellar — spans 2 rows */}
       <div className="rounded-20 border border-hairline border-gmx-slate-600 bg-gmx-slate-800 p-9 lg:row-span-2">
         <IconBox>
           <svg
@@ -142,8 +142,8 @@ export function FeatureGrid() {
           </svg>
         </IconBox>
         <div className="mt-9">
-          <h3 className="text-heading-4 text-white">Support for numerous assets</h3>
-          <p className="mt-3 text-description">Use your preferred token to pay and collateralize positions.</p>
+          <h3 className="text-heading-4 text-white">Stellar native assets</h3>
+          <p className="mt-3 text-description">Trade major assets with liquidity from Stellar-based pools and market makers.</p>
         </div>
         {/* Three asset marks (BTC · ETH · XLM) — matches the markets SO4
             actually lists (README.md), not a generic multi-chain claim. */}
@@ -160,16 +160,16 @@ export function FeatureGrid() {
         </div>
       </div>
 
-      {/* Save on costs */}
+      {/* Minimal fees */}
       <div className="rounded-20 border border-hairline border-gmx-slate-600 bg-gmx-slate-800 p-9">
         <IconBox>
           <ShieldIcon />
         </IconBox>
         <div className="mt-9 border-t border-hairline border-gmx-slate-600 pt-6">
-          <p className="text-12 uppercase tracking-[0.864px] text-gmx-slate-500">Keep more of what you earn</p>
-          <h3 className="mt-2 text-heading-4 text-white">Save on costs</h3>
+          <p className="text-12 uppercase tracking-[0.864px] text-gmx-slate-500">Network efficiency</p>
+          <h3 className="mt-2 text-heading-4 text-white">Minimal fees</h3>
           <p className="mt-3 text-description">
-            Trade at scale without worrying about thin order books or slippage.
+            Trade on Stellar with fixed, predictable network fees. No surprises at settlement.
           </p>
         </div>
       </div>
@@ -190,15 +190,15 @@ export function FeatureGrid() {
         </div>
       </div>
 
-      {/* Seamless trading — wide CTA card, spans 2 cols */}
+      {/* Order book trading — wide CTA card, spans 2 cols */}
       <div className="relative overflow-hidden rounded-20 bg-linear-to-br from-gmx-slate-800 to-gmx-slate-650 p-9 sm:col-span-2">
-        <h3 className="text-heading-4 max-w-[420px] text-white">Seamless trading</h3>
+        <h3 className="text-heading-4 max-w-[420px] text-white">Order book trading</h3>
         <p className="mt-3 max-w-[420px] text-description">
-          Market, limit, and trigger orders with live position tracking — no wallet pop-up per
-          click, sub-second chart updates, and instant fills against the pool.
+          View live depth, place limit and market orders, track your fills in real time.
+          Every trade settles immediately on Stellar.
         </p>
         <Link to="/trade" className="btn-landing mt-6 inline-flex rounded-8 px-4 py-2.5 text-14">
-          Trade now
+          Start trading
         </Link>
       </div>
     </div>

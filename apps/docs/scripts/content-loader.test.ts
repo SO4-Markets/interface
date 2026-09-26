@@ -11,6 +11,12 @@ describe("content loader — kebab-case validation", () => {
     expect(isKebabCase("a-b-c")).toBe(true)
   })
 
+  test("generated page basenames remain valid after removing their suffix", () => {
+    expect(isKebabCase("tokens.generated".replace(/\.generated$/, ""))).toBe(
+      true
+    )
+  })
+
   test("isKebabCase rejects non-kebab-case names", () => {
     expect(isKebabCase("My Page")).toBe(false)
     expect(isKebabCase("myPage")).toBe(false)

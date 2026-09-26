@@ -11,6 +11,7 @@ import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { GET_ACCOUNT_POSITIONS } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { queryPolicy } from "@/shared/lib/query-policies"
 
 export type UseAccountPositionsResult = {
   data: Array<Position>
@@ -28,16 +29,15 @@ export type UseAccountPositionsResult = {
 export function useAccountPositions(account: string | null): UseAccountPositionsResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.positions.byAccount(account ?? ""),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled || !account) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_ACCOUNT_POSITIONS, { account })
+      const result = await executeGraphQLQuery(GET_ACCOUNT_POSITIONS, { account }, { signal })
       return result.positions.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!account,
-    retry: 3,
-    staleTime: 10_000, // 10 seconds - positions update frequently
+    ...queryPolicy("positions"),
   })
 
   if (!INDEXER_CONFIG.enabled) {

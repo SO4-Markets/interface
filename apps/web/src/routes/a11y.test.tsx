@@ -1,9 +1,10 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HttpResponse, http } from "msw";
-import { setupServer } from "msw/node";
+import { server } from "../../test/msw/server";
 import { FaucetPage } from "../features/faucet/components/faucet-page";
 import { TradePage } from "../features/trade/components/TradePage";
 import { ReferralsPage } from "../features/referrals/components/referrals-page";

@@ -157,6 +157,9 @@ Violating these silently breaks the build for everyone.
 - **Docs content is validated centrally.** Run
   `bun run --cwd apps/docs check:content` or the root `bun run check:content`
   before changing docs content, manifests, or docs assets.
+  [`apps/docs/CONTRIBUTING.md`](./apps/docs/CONTRIBUTING.md) is the contract for
+  documentation pull requests: the frontmatter rules, the manifest, the concept
+  / guide / reference page templates, and the checks that gate them.
 
 ---
 

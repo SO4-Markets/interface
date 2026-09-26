@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import { axe } from "vitest-axe"
 import { Button, buttonVariants } from "./button"
@@ -85,5 +85,50 @@ describe("Button variants and sizes", () => {
       </Button>
     )
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument()
+  })
+})
+
+describe("Button pending state", () => {
+  it("renders pending state without violations", async () => {
+    const { container } = render(<Button pending>Submit</Button>)
+    expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("disables the button when pending is true", () => {
+    render(<Button pending>Submit</Button>)
+    const button = screen.getByRole("button")
+    expect(button).toBeDisabled()
+  })
+
+  it("sets aria-busy when pending", () => {
+    render(<Button pending>Submit</Button>)
+    const button = screen.getByRole("button")
+    expect(button).toHaveAttribute("aria-busy", "true")
+  })
+
+  it("displays loading indicator when pending", () => {
+    const { container } = render(<Button pending>Submit</Button>)
+    const spinner = container.querySelector("span[aria-hidden='true']")
+    expect(spinner).toBeInTheDocument()
+  })
+
+  it("prevents duplicate submissions while pending", () => {
+    const handleClick = vi.fn()
+    const { rerender } = render(
+      <Button onClick={handleClick}>Submit</Button>
+    )
+    const button = screen.getByRole("button")
+    button.click()
+    expect(handleClick).toHaveBeenCalledTimes(1)
+
+    rerender(<Button pending onClick={handleClick}>Submit</Button>)
+    button.click()
+    expect(handleClick).toHaveBeenCalledTimes(1) // No additional call due to disabled state
+  })
+
+  it("applies opacity reduction to content when pending", () => {
+    const { container } = render(<Button pending>Submit</Button>)
+    const contentSpan = container.querySelector("span[class*='opacity-50']")
+    expect(contentSpan).toBeInTheDocument()
   })
 })

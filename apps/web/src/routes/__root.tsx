@@ -12,9 +12,9 @@ import { AppProviders } from "../app/providers"
 import { RouteAnnouncer } from "../shared/components/RouteAnnouncer"
 
 // Update this to your production domain before going live.
-const SITE_URL = "https://so4.market"
-const SITE_NAME = "so4.market"
-const TITLE = "SO4 · On-chain perpetuals"
+const SITE_URL = "https://levee.market"
+const SITE_NAME = "levee.market"
+const TITLE = "Levee · On-chain perpetuals"
 const DESCRIPTION =
   "A unified-liquidity perp DEX. Deep books, sub-second matching, and self-custodied risk — built for traders who care where their fills come from."
 // TODO(GF3-003): apply the dot-separator convention (no em dashes as list
@@ -33,7 +33,7 @@ const JSON_LD = {
     {
       "@type": "WebApplication",
       "@id": `${SITE_URL}/#app`,
-      name: "SO4",
+      name: "Levee",
       url: SITE_URL,
       description: DESCRIPTION,
       applicationCategory: "FinanceApplication",
@@ -47,7 +47,7 @@ const JSON_LD = {
     {
       "@type": "Organization",
       "@id": `${SITE_URL}/#org`,
-      name: "so4 labs",
+      name: "Levee Labs",
       url: SITE_URL,
       logo: `${SITE_URL}/favicon.svg`,
       sameAs: [
@@ -80,12 +80,12 @@ export const Route = createRootRoute({
         content:
           "perpetual DEX, on-chain perps, crypto derivatives, DeFi trading, BTC perp, ETH perp, low fee perp, self-custodied trading, unified liquidity",
       },
-      { name: "author", content: "so4 labs" },
+      { name: "author", content: "Levee Labs" },
       { name: "robots", content: "index, follow, max-image-preview:large" },
       // ds-allow: <meta content> requires a literal color string for
       // mobile browser chrome tinting — can't reference a CSS custom
       // property here, so it can't be sourced from the token system.
-      { name: "theme-color", content: "#0A0B0D" },
+      { name: "theme-color", content: "#111126" },
       { name: "color-scheme", content: "dark light" },
       // Prevents phone number detection on iOS / Android WebView
       { name: "format-detection", content: "telephone=no" },
@@ -104,7 +104,7 @@ export const Route = createRootRoute({
       {
         property: "og:image:alt",
         content:
-          "SO4 · On-chain perpetuals DEX · $8.42B 24h volume · 184 markets",
+          "Levee · On-chain perpetuals DEX · unified liquidity for modern markets",
       },
 
       // ── Twitter / X Card ────────────────────────────────────────
@@ -117,7 +117,7 @@ export const Route = createRootRoute({
       {
         name: "twitter:image:alt",
         content:
-          "SO4 · On-chain perpetuals DEX · $8.42B 24h volume · 184 markets",
+          "Levee · On-chain perpetuals DEX · unified liquidity for modern markets",
       },
     ],
     links: [
@@ -129,6 +129,26 @@ export const Route = createRootRoute({
 
       // ── Canonical ───────────────────────────────────────────────
       { rel: "canonical", href: SITE_URL },
+
+      // ── DNS Prefetch ────────────────────────────────────────────
+      { rel: "dns-prefetch", href: "//indexer.example.com" },
+      { rel: "dns-prefetch", href: "//rpc.example.com" },
+
+      // ── Preload Critical Assets ─────────────────────────────────
+      {
+        rel: "preload",
+        as: "font",
+        href: "/fonts/inter-400.woff2",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        as: "font",
+        href: "/fonts/inter-600.woff2",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
 
       // ── App CSS ─────────────────────────────────────────────────
       { rel: "stylesheet", href: appCss },

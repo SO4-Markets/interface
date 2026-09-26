@@ -35,7 +35,7 @@ afterEach(() => {
 })
 
 describe("ChangelogPage - States", () => {
-  it("renders skeleton while loading", () => {
+  it("renders skeleton while loading", async () => {
     server.use(
       http.get("*/changelog.json", async () => {
         await new Promise((resolve) => setTimeout(resolve, 100))

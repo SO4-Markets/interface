@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import {
   Tabs,
   TabsContent,
@@ -9,6 +10,7 @@ import { Input } from "@workspace/ui/components/input"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Numeric } from "@workspace/ui/components/numeric"
+import { toast } from "@workspace/ui/components/toast"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useTradeFees } from "../../hooks/useTradeFees"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
@@ -28,6 +30,11 @@ import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { TokenIcon } from "@/shared/components/TokenIcon"
 import { formatAddress } from "@/shared/lib/format"
 import { clampLeverage, estimatePositionRisk } from "../../lib/risk"
+import {
+  validateAmount,
+  validatePrice,
+  validateBalance,
+} from "@/lib/input-validation"
 
 type TradeController = ReturnType<typeof useTradeState>
 
@@ -38,6 +45,8 @@ type TradePanelProps = {
 export function TradePanel({ trade }: TradePanelProps) {
   const { getMidPrice, isStale } = useTokenPrices()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [priceValidationError, setPriceValidationError] = useState<string | null>(null)
+  const [previousMode, setPreviousMode] = useState<TradeMode>(trade.tradeMode)
   const account = useWalletStore((state) => state.address)
 
   const {
@@ -106,6 +115,32 @@ export function TradePanel({ trade }: TradePanelProps) {
   const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale &&
     (tradeFlags.isSwap || marketRisk.state === "available")
 
+  // Detect mode changes and notify user about discarded fields
+  useEffect(() => {
+    if (tradeMode === previousMode) return
+
+    const wasPriceMode = previousMode === "Limit" || previousMode === "Trigger"
+    const isPriceMode = tradeMode === "Limit" || tradeMode === "Trigger"
+
+    if (wasPriceMode && !isPriceMode) {
+      // Switching from Limit/Trigger to Market — price is discarded
+      toast.show({
+        variant: "info",
+        message: "Limit price cleared",
+        description: `Switched to ${tradeMode} order. Limit price field has been cleared.`,
+      })
+    } else if (!wasPriceMode && isPriceMode) {
+      // Switching from Market to Limit/Trigger — will need to enter price
+      toast.show({
+        variant: "info",
+        message: `${tradeMode} price required`,
+        description: `Enter ${tradeMode === "Limit" ? "limit" : "trigger"} price to proceed.`,
+      })
+    }
+
+    setPreviousMode(tradeMode)
+  }, [tradeMode, previousMode])
+
   return (
     <div className="flex min-w-0 flex-col gap-3 p-4">
       {/* ── Trade type tabs: Long / Short / Swap ───────────────────── */}
@@ -133,9 +168,9 @@ export function TradePanel({ trade }: TradePanelProps) {
 
         {/* ── Order mode: Market / Limit / Trigger ─────────────────── */}
         <Tabs value={tradeMode} onValueChange={(v) => setTradeMode(v as TradeMode)}>
-          <TabsList variant="line" className="w-full">
+          <TabsList variant="line" className="w-full transition-all duration-base">
             {availableTradeModes.map((mode) => (
-              <TabsTrigger key={mode} value={mode} className="flex-1">
+              <TabsTrigger key={mode} value={mode} className="flex-1 transition-colors duration-fast">
                 {mode}
               </TabsTrigger>
             ))}
@@ -155,21 +190,34 @@ export function TradePanel({ trade }: TradePanelProps) {
 
       {/* ── Trigger price input (Limit / Stop-Loss only) ─────────── */}
       {(tradeMode === "Limit" || tradeMode === "Trigger") && (
-        <div className="space-y-1">
+        <div className="space-y-1 animate-in fade-in duration-base">
           <label className="text-xs text-muted-foreground">
             {tradeMode === "Trigger" ? "Trigger price" : "Limit price"}
           </label>
           <div className="relative">
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               placeholder="0.00"
               className="pe-12 font-mono text-sm"
-              onChange={(e) => setTriggerPrice(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setTriggerPrice(value)
+                if (value) {
+                  const validation = validatePrice(value)
+                  setPriceValidationError(validation.error)
+                } else {
+                  setPriceValidationError(null)
+                }
+              }}
             />
             <span className="absolute top-1/2 inset-inline-end-3 -translate-y-1/2 text-xs text-muted-foreground">
               USD
             </span>
           </div>
+          {priceValidationError && (
+            <p className="text-xs text-red-500">{priceValidationError}</p>
+          )}
         </div>
       )}
 
@@ -186,6 +234,9 @@ export function TradePanel({ trade }: TradePanelProps) {
             Leverage unavailable until current market risk parameters are available.
           </p>
         )
+        <div className="animate-in fade-in duration-base">
+          <LeverageSlider value={leverage} onChange={setLeverage} />
+        </div>
       )}
 
       {/* ── Size summary ─────────────────────────────────────────── */}
@@ -269,7 +320,7 @@ export function TradePanel({ trade }: TradePanelProps) {
               ? "bg-red-600 text-white hover:bg-red-700"
               : ""
         }`}
-        disabled={!canTrade}
+        disabled={!canTrade || priceValidationError !== null}
         onClick={() => setConfirmOpen(true)}
       >
         {tradeType} {!tradeFlags.isSwap && toTokenLabel}
@@ -297,6 +348,7 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
   const { fromAmount, fromTokenAddress, toTokenAddress, collateralAddress, tradeFlags, setFromAmount, switchTokens } = trade
   const { getMidPrice } = useTokenPrices()
   const { data: balances } = useTokenBalances()
+  const [amountValidationError, setAmountValidationError] = useState<string | null>(null)
 
   const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress!
   const fromPrice = getMidPrice(activeInputTokenAddress)
@@ -304,6 +356,20 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
   const walletBalance = balances?.[activeInputTokenAddress]
   const fromTokenLabel = formatTokenLabel(activeInputTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
+
+  const handleAmountChange = (value: string) => {
+    setFromAmount(value)
+    if (value) {
+      const validation = validateAmount(value, { maxAmount: walletBalance })
+      setAmountValidationError(validation.error)
+      if (!validation.error && walletBalance !== undefined) {
+        const balance = validateBalance(parseFloat(value), walletBalance)
+        setAmountValidationError(balance.error)
+      }
+    } else {
+      setAmountValidationError(null)
+    }
+  }
 
   return (
     <div className="mt-3 min-w-0 space-y-2">
@@ -325,14 +391,17 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
         </div>
         <NumberInput
           value={fromAmount}
-          onValueChange={setFromAmount}
+          onValueChange={handleAmountChange}
           placeholder="0.00"
           className="font-mono text-sm"
-          onMax={walletBalance !== undefined ? () => setFromAmount(walletBalance.toString()) : undefined}
+          onMax={walletBalance !== undefined ? () => {
+            const maxStr = walletBalance.toString()
+            handleAmountChange(maxStr)
+          } : undefined}
           usdValue={fromUsd > 0 ? fromUsd : undefined}
         />
-        {validationError && (
-          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{validationError}</p>
+        {(validationError || amountValidationError) && (
+          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{validationError || amountValidationError}</p>
         )}
       </div>
 

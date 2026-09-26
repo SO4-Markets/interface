@@ -26,7 +26,8 @@
     "check:errors:generated": "bun run scripts/generate-errors-reference.ts --check",
     "changelog:validate": "bun run scripts/changelog/validate.ts",
     "changelog:release": "bun run scripts/changelog/release.ts",
-    "changelog:build": "bun run scripts/changelog/build.ts"
+    "changelog:build": "bun run scripts/changelog/build.ts",
+    "changelog:verify-tag": "bun run scripts/changelog/verify-tag.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

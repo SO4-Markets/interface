@@ -19,12 +19,23 @@ export function ReleaseSection({
   isFiltered,
   highlight,
 }: ReleaseSectionProps) {
-  const anchorId = versionToAnchorId(release.version)
-  const origin =
-    typeof window === "undefined"
-      ? "https://so4.market"
-      : window.location.origin
-  const permalink = releasePermalink(release.version, origin)
+  const [copied, setCopied] = useState(false)
+  const anchor = createAnchor(release.version)
+
+  const handleCopyPermalink = async () => {
+    const origin =
+      typeof window === "undefined"
+        ? "https://so4.market"
+        : window.location.origin
+    const permalink = `${origin}/changelog${anchor}`
+    try {
+      await navigator.clipboard.writeText(permalink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // ignore
+    }
+  }
 
   return (
     // Yanked releases keep their permanent anchor but render muted — the

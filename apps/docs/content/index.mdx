@@ -1,11 +1,54 @@
 ---
 title: SO4 Docs
-description: Documentation for SO4 Markets, including concepts, developer references, and operational guides.
+description: Documentation for SO4, a perpetuals exchange on Stellar. Three starting points, one for traders, liquidity providers, and integrators.
+updated: 2026-08-31
 status: stable
-updated: 2026-08-27
 ---
 
-# SO4 Docs
+SO4 is a perpetual-futures exchange built on Stellar and Soroban. Traders take
+leveraged long or short positions on a handful of markets; a single pool per
+market provides the liquidity for both sides. These docs explain how that
+works, including the parts that can lose you money.
 
-This placeholder page keeps the documentation workspace buildable while content
-and navigation are added in follow-up DX issues.
+## Pick your path
+
+### I want to trade
+
+Start with the [quickstart](/get-started/quickstart): install Freighter,
+connect it to testnet, claim test tokens, and place one small order. Before you
+use leverage, read [liquidation](/concepts/liquidation) — it is the mechanic
+that decides what happens to your collateral when a position moves against you.
+
+For: anyone opening a position.
+
+### I want to provide liquidity
+
+Read the [pools guide](/guides/pools). It covers adding and removing liquidity,
+and — more importantly — what a deposit is exposed to: a GM pool is the
+counterparty to every trader on its market, so you take on their net profit and
+loss, not a fixed yield.
+
+For: anyone considering a deposit into a GM or GLV pool.
+
+### I want to integrate
+
+Start with the [architecture overview](/developers/architecture) for the
+monorepo map, then [local setup](/developers/local-setup) to get the stack
+running. The [oracles](/concepts/oracles) page traces the price path from
+source to liquidation check, which most integrations need to reason about.
+
+For: anyone calling the contracts or running the stack locally.
+
+## Popular pages
+
+- [Quickstart](/get-started/quickstart) — wallet to first trade in about ten minutes.
+- [Liquidation](/concepts/liquidation) — maintenance margin and the liquidation price.
+- [Faucet](/guides/faucet) — getting testnet assets and the claim cooldown.
+- Contract addresses per network are in the generated reference at `/reference/contracts.generated`.
+
+## Elsewhere
+
+- **Search** the docs from the button in the header, or press Cmd/Ctrl + K.
+- **Changelog:** [/resources/changelog](/resources/changelog).
+- **Source:** [github.com/SO4-Markets/interface](https://github.com/SO4-Markets/interface).
+- **Error codes:** [/reference/errors](/reference/errors) if you have an on-screen message.

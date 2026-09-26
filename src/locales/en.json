@@ -1,0 +1,22 @@
+{
+  "chrome": {
+    "sidebar": {
+      "overview": "Overview",
+      "documentation": "Documentation",
+      "apiReference": "API Reference"
+    },
+    "pager": {
+      "previous": "Previous Page",
+      "next": "Next Page"
+    },
+    "search": {
+      "placeholder": "Search documentation..."
+    },
+    "feedback": {
+      "question": "Was this page helpful?",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "fallbackNotice": "This page is not available in your requested language. Showing the original English version."
+  }
+}

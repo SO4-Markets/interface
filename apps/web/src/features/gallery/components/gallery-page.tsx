@@ -6,6 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Callout } from "@workspace/ui/components/callout"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card"
 import { Input } from "@workspace/ui/components/input"
+import { InterruptiblePresence } from "@workspace/ui/components/interruptible-presence"
 import { KeyboardShortcut } from "@workspace/ui/components/keyboard-shortcut"
 import { LiveRegion } from "@workspace/ui/components/live-region"
 import { PageHeader } from "@workspace/ui/components/page-header"
@@ -92,6 +93,7 @@ export function GalleryPage() {
   const { direction, setDirection } = useDirection()
   const [sliderValue, setSliderValue] = useState<Array<number>>([40])
   const [announceCount, setAnnounceCount] = useState(0)
+  const [presenceOpen, setPresenceOpen] = useState(true)
 
   return (
     <main className="mx-auto max-w-4xl space-y-10 p-6">
@@ -103,14 +105,14 @@ export function GalleryPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Every packages/ui primitive, all variants. See{" "}
             <a
-              href="https://github.com/SO4-Markets/interface/blob/main/DESIGN.md"
+              href="https://github.com/Levee-HQ/interface/blob/main/DESIGN.md"
               className="text-primary underline underline-offset-2"
             >
               DESIGN.md
             </a>{" "}
             and{" "}
             <a
-              href="https://github.com/SO4-Markets/interface/blob/main/packages/ui/CONTRIBUTING.md"
+              href="https://github.com/Levee-HQ/interface/blob/main/packages/ui/CONTRIBUTING.md"
               className="text-primary underline underline-offset-2"
             >
               packages/ui/CONTRIBUTING.md
@@ -152,6 +154,21 @@ export function GalleryPage() {
               {variant}
             </Badge>
           ))}
+        </div>
+      </Section>
+
+      <Section title="Trading density and interruptible presence">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-1 rounded-md border border-border p-2 text-11-5 font-mono">
+            <span className="bg-long-subtle p-2 text-long">BUY 1.25</span>
+            <span className="bg-short-subtle p-2 text-short">SELL 1.25</span>
+          </div>
+          <button type="button" className="rounded-sm border border-border px-3 py-1.5 text-13" onClick={() => setPresenceOpen(value => !value)}>
+            {presenceOpen ? "Close" : "Open"} panel
+          </button>
+          <InterruptiblePresence present={presenceOpen} className="rounded-md border border-border bg-surface-raised p-3 text-sm">
+            Reversible panel content remains mounted during exit and cannot receive focus.
+          </InterruptiblePresence>
         </div>
       </Section>
 
@@ -743,6 +760,173 @@ export function GalleryPage() {
             <Button variant="default" className="h-10 btn-landing px-5 text-sm">
               Launch trading app
             </Button>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Order Book Workspace (OB-009)">
+        <div className="space-y-6">
+          <div>
+            <p className="mb-3 text-13 text-muted-foreground">
+              Populated state — typical order book with depth
+            </p>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">BTC/USD</h3>
+                  <span className="text-13 text-muted-foreground">
+                    Mid: $43000.00
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">
+                      Bids
+                    </div>
+                    <div className="space-y-1 text-13 font-mono">
+                      <div className="flex justify-between text-short">
+                        <span>42999.98</span>
+                        <span>0.50</span>
+                      </div>
+                      <div className="flex justify-between text-short">
+                        <span>42999.50</span>
+                        <span>1.20</span>
+                      </div>
+                      <div className="flex justify-between text-short">
+                        <span>42998.00</span>
+                        <span>2.00</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">
+                      Asks
+                    </div>
+                    <div className="space-y-1 text-13 font-mono">
+                      <div className="flex justify-between text-long">
+                        <span>43000.00</span>
+                        <span>0.50</span>
+                      </div>
+                      <div className="flex justify-between text-long">
+                        <span>43000.50</span>
+                        <span>1.20</span>
+                      </div>
+                      <div className="flex justify-between text-long">
+                        <span>43002.00</span>
+                        <span>2.00</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-13 text-muted-foreground">
+              Loading state — skeleton with pulse animation
+            </p>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[...Array(2)].map((_, col) => (
+                    <div key={col} className="space-y-2">
+                      <Skeleton className="h-4 w-12" />
+                      <div className="space-y-1">
+                        {[...Array(3)].map((_, row) => (
+                          <Skeleton
+                            key={row}
+                            className="h-5 w-full"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-13 text-muted-foreground">
+              Empty state — no liquidity available
+            </p>
+            <div className="rounded-lg border border-dashed border-border bg-muted/5 p-8 text-center">
+              <div className="flex justify-center">
+                <Spinner />
+              </div>
+              <p className="mt-3 text-13 text-muted-foreground">
+                Waiting for market data...
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-13 text-muted-foreground">
+              Disconnected/error state
+            </p>
+            <div className="rounded-lg border border-dashed border-danger bg-danger-subtle p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 h-2 w-2 rounded-full bg-danger shrink-0" />
+                <div>
+                  <p className="text-13 font-semibold text-danger">
+                    Connection lost
+                  </p>
+                  <p className="mt-1 text-13 text-muted-foreground">
+                    Order book feed is temporarily unavailable. Reconnecting...
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-13 text-muted-foreground">
+              Stale data indicator
+            </p>
+            <div className="rounded-lg border border-warning bg-warning-subtle p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 h-2 w-2 rounded-full bg-warning shrink-0" />
+                <div>
+                  <p className="text-13 font-semibold text-warning">
+                    Data may be outdated
+                  </p>
+                  <p className="mt-1 text-13 text-muted-foreground">
+                    Market feed last updated 2 minutes ago
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-13 text-muted-foreground">
+              Transaction feedback — different stages
+            </p>
+            <div className="space-y-3">
+              <Callout variant="note">
+                <p className="font-semibold">Order submitted</p>
+                <p className="mt-1 text-13">
+                  Your market buy order for 0.5 BTC is being processed.
+                </p>
+              </Callout>
+              <Callout variant="tip">
+                <p className="font-semibold">Order accepted</p>
+                <p className="mt-1 text-13">
+                  Order confirmed by the network at price $42,999.98.
+                </p>
+              </Callout>
+              <Callout variant="caution">
+                <p className="font-semibold">Partially filled</p>
+                <p className="mt-1 text-13">
+                  0.25 of 0.5 BTC filled. Remaining order active.
+                </p>
+              </Callout>
+            </div>
           </div>
         </div>
       </Section>

@@ -28,7 +28,13 @@ const SCAN_DIRS = ["apps/web/src", "apps/docs/src", "packages/ui/src"]
 const SCAN_EXTENSIONS = [".tsx", ".ts", ".css"]
 
 // Directories to skip entirely regardless of extension.
-const IGNORE_DIR_SEGMENTS = ["node_modules", "dist", "generated", ".turbo", "__fixtures__"]
+const IGNORE_DIR_SEGMENTS = [
+  "node_modules",
+  "dist",
+  "generated",
+  ".turbo",
+  "__fixtures__",
+]
 
 /**
  * Explicit, reviewed exceptions. Each entry is a relative path (from repo
@@ -43,6 +49,8 @@ const ALLOWLIST: Record<string, string> = {
     "Uses #000 as a mask-image radial-gradient stop (an opacity/luminance value, not a visible color) — plain CSS gradient functions can't take a Tailwind color token here.",
   "apps/web/src/features/trade/components/chart/TVChartContainer.tsx":
     "Configures the lightweight-charts library's imperative JS API (chart series colors, price-line colors), which requires literal color strings — there is no Tailwind-class equivalent for a third-party canvas-rendering library's config object.",
+  "apps/docs/src/lib/mermaid.ts":
+    "Serialises two pre-rendered SVG theme variants (lightSvg/darkSvg) at build time, which needs literal fill/stroke values in the markup: the DS role tokens these mirror (--surface-*, --text-*, --border, --primary) are only declared under `.dark` in globals.css, so a var() reference would leave the light diagram uncoloured. Same constraint as chart-theme.ts below — the palettes are confined to the two `colors` objects in buildFlowchartSvg/buildSequenceSvg.",
   "apps/web/src/features/trade/lib/chart-theme.ts":
     "sRGB fallback mirrors of the globals.css tokens, plus a canvas-based color parser sentinel. lightweight-charts parses colors itself and only understands hex/rgb/hsl/named values, so these cannot be oklch() token references; they are needed for SSR, unit tests, and first paint before the stylesheet applies.",
 }
@@ -65,7 +73,8 @@ const HEX_COLOR_RE = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g
 const ARBITRARY_TEXT_SIZE_RE = /(?:^|[\s"'`])(?:[a-z-]+:)*text-\[[^\]]+\]/g
 
 // Matches Tailwind arbitrary-value radius utilities: rounded-[...], rounded-t-[...], etc.
-const ARBITRARY_RADIUS_RE = /(?:^|[\s"'`])(?:[a-z-]+:)*rounded(?:-[trblse]{1,2})?-\[[^\]]+\]/g
+const ARBITRARY_RADIUS_RE =
+  /(?:^|[\s"'`])(?:[a-z-]+:)*rounded(?:-[trblse]{1,2})?-\[[^\]]+\]/g
 
 function isAllowlisted(relPath: string): string | undefined {
   for (const [prefix, reason] of Object.entries(ALLOWLIST)) {
@@ -93,7 +102,10 @@ function walk(dir: string, out: string[]): void {
     if (entry.isDirectory()) {
       if (shouldSkipDir(entry.name)) continue
       walk(path.join(dir, entry.name), out)
-    } else if (SCAN_EXTENSIONS.includes(path.extname(entry.name)) && !isTestFile(entry.name)) {
+    } else if (
+      SCAN_EXTENSIONS.includes(path.extname(entry.name)) &&
+      !isTestFile(entry.name)
+    ) {
       out.push(path.join(dir, entry.name))
     }
   }
@@ -123,7 +135,10 @@ function checkFile(absPath: string): Violation[] {
         // often wraps onto its own line(s) rather than being squeezed onto
         // the same line as the code it's explaining.
         const NEARBY_LOOKBACK = 5
-        const nearbyLines = lines.slice(Math.max(0, idx - NEARBY_LOOKBACK), idx + 1)
+        const nearbyLines = lines.slice(
+          Math.max(0, idx - NEARBY_LOOKBACK),
+          idx + 1
+        )
         if (nearbyLines.some((l) => l.includes("ds-allow:"))) continue
 
         // CSS keyword values (`rounded-[inherit]`, `text-[inherit]`, etc.)
@@ -168,11 +183,15 @@ function main(): void {
   const allViolations = files.flatMap(checkFile)
 
   if (allViolations.length === 0) {
-    console.log(`✓ Design token check passed — scanned ${files.length} files, 0 violations.`)
+    console.log(
+      `✓ Design token check passed — scanned ${files.length} files, 0 violations.`
+    )
     return
   }
 
-  console.error(`✗ Design token check failed — ${allViolations.length} violation(s):\n`)
+  console.error(
+    `✗ Design token check failed — ${allViolations.length} violation(s):\n`
+  )
   for (const v of allViolations) {
     console.error(`  ${v.file}:${v.line}:${v.column}  [${v.rule}]  ${v.value}`)
     console.error(`    ${v.context}`)
@@ -180,7 +199,7 @@ function main(): void {
   console.error(
     `\nFix by using an existing token (see packages/ui/src/styles/globals.css), or if the` +
       `\nvalue is genuinely intentional, either add a "// ds-allow: <reason>" comment on the` +
-      `\nsame line, or add the file to ALLOWLIST in scripts/check-design-tokens.ts with a reason.`,
+      `\nsame line, or add the file to ALLOWLIST in scripts/check-design-tokens.ts with a reason.`
   )
   process.exit(1)
 }

@@ -37,9 +37,9 @@ SO4 is a unified-liquidity perpetuals DEX built on Stellar/Soroban. Deep order b
 
 ## Overview
 
-SO4 Market is the front-end interface for the SO4 perpetuals protocol. It connects to Stellar Soroban smart contracts (ExchangeRouter, DataStore, SyntheticsReader, OrderVault) and streams live prices from Binance (primary) with GMX oracle as automatic fallback.
+SO4 Market is the front-end interface for the SO4 perpetuals protocol. It connects to Stellar Soroban smart contracts (ExchangeRouter, DataStore, SyntheticsReader) and streams live prices from the SO4 oracle (primary) with Pyth, Binance, and GMX as fallbacks.
 
-> **Status:** Active development. On-chain contract integration is in progress — the current build uses mock transactions with real UI and live price feeds.
+> **Status:** Active development on Stellar testnet. The interface builds, signs, and submits real Soroban transactions to the deployed testnet contracts (ExchangeRouter, DataStore, SyntheticsReader) and streams live prices through the SO4 oracle with Pyth, Binance, and GMX fallbacks. The OrderVault client is stubbed pending integration; staking, GLV, and vesting contracts are not deployed on testnet.
 
 ---
 
@@ -68,9 +68,9 @@ SO4 Market is the front-end interface for the SO4 perpetuals protocol. It connec
 | Styling | [Tailwind CSS v4](https://tailwindcss.com) |
 | UI components | [shadcn/ui](https://ui.shadcn.com) (via `packages/ui` workspace) |
 | Charts | [lightweight-charts v5](https://tradingview.github.io/lightweight-charts/) |
-| Notifications | [Sonner](https://sonner.emilkowal.ski) |
+| Notifications | Custom toast in `packages/ui` (`@workspace/ui/components/toast`) |
 | Blockchain | [Stellar](https://stellar.org) / [Soroban](https://soroban.stellar.org) |
-| Oracle | Binance REST (primary) · GMX oracle (fallback) |
+| Oracle | SO4 oracle (primary) · Pyth · Binance REST · GMX oracle (fallback) |
 | Type safety | TypeScript 5.9 |
 
 ---
@@ -246,18 +246,13 @@ handlers in `apps/web/test/msw/handlers.ts` or test-specific handlers with
 
 ### Oracle / Price feeds
 
-Live candle data and token prices are fetched from the Binance public REST API. If Binance is unavailable or rate-limited, the oracle module automatically retries against the GMX oracle endpoint. Both sources are normalised into a shared `OhlcBar` type (oldest-first, prices as numbers, time in Unix seconds).
+The SO4 oracle is the primary price source (`apps/web/src/features/trade/lib/oracle.ts`). If it is unavailable, prices fall back to Pyth Hermes, then Binance REST, then the GMX oracle. Live candle data for the chart is fetched from the Binance public REST API with a Pyth Benchmarks fallback. Sources are normalised into a shared `OhlcBar` type (oldest-first, prices as numbers, time in Unix seconds).
 
 ### Contract integration
 
-The `lib/stellar.ts`, `lib/earn.ts`, and `lib/referrals.ts` files define the full contract call surface. Each function is currently a **stub** that simulates latency and shows a toast — the real Stellar SDK + Soroban RPC calls are documented inline with `TODO` comments. Contracts to integrate:
+The real Soroban transaction paths live in `apps/web/src/features/trade/lib/stellar.ts`, `apps/web/src/features/earn/lib/earn.ts`, and `apps/web/src/features/pools/lib/pool-transactions.ts`. Each builds a transaction through `apps/web/src/lib/contracts.ts` (for example `buildCreateOrderTransaction`, `buildCreateDepositTransaction`), prepares and signs it with the connected wallet via `apps/web/src/lib/soroban/tx-builder.ts`, then submits and polls it through `apps/web/src/lib/tx-builder.ts`. Account and market reads go through `SyntheticsReader` over Soroban RPC, falling back to contract-only data when the indexer is disabled (`apps/web/src/app/config/indexer.ts`).
 
-- `ExchangeRouter` — `createOrder` (increase / decrease / swap)
-- `DataStore` — on-chain key-value protocol config
-- `SyntheticsReader` — `getMarketInfo`, `getPositionInfo`, `getOrderInfo` (batched)
-- `OrderVault` — holds collateral between order creation and execution
-- `StakingRouter` — `stakeSO4`, `unstakeSO4`
-- `ReferralsRouter` — `setTraderReferralCodeByUser`, `registerCode`
+The OrderVault client (`packages/contracts/src/clients/order-vault.ts`) is a stub awaiting integration. `StakingRouter`, the GLV router, and `VestingRouter` are not deployed on testnet and their features are disabled in `apps/web/.env.testnet`. Referral codes are served by `ReferralStorage` (`apps/web/src/features/referrals/`).
 
 ### Theme system
 

@@ -28,11 +28,11 @@ export type UsePoolBalanceSnapshotsResult = {
 export function usePoolBalanceSnapshots(marketKey: string): UsePoolBalanceSnapshotsResult {
   const { data, error, isLoading } = useQuery({
     queryKey: indexerQueryKeys.pools.snapshots(marketKey),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!INDEXER_CONFIG.enabled) {
         return []
       }
-      const result = await executeGraphQLQuery(GET_POOL_BALANCE_SNAPSHOTS, { marketKey })
+      const result = await executeGraphQLQuery(GET_POOL_BALANCE_SNAPSHOTS, { marketKey }, { signal })
       return result.poolBalanceSnapshots.nodes
     },
     enabled: INDEXER_CONFIG.enabled && !!marketKey,

@@ -1,26 +1,37 @@
-/* Reduced motion: disable non-essential animations while preserving critical state changes */
+.landing-mobile-menu {
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s 180ms;
+}
+.landing-mobile-menu[data-open="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s;
+}
+.landing-mobile-menu[data-instant="true"] {
+  transition: none;
+}
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  
-  /* Preserve focus and state change animations for accessibility */
-  :focus,
-  :focus-visible,
-  [data-state="open"],
-  [data-state="closed"],
-  [aria-expanded="true"],
-  [aria-expanded="false"] {
-    transition-duration: var(--duration-fast) !important;
+  .landing-mobile-menu {
+    transform: none;
+    transition: none;
   }
 }
 
 /* Geist Mono with numeric tabular figures */
 .font-mono-num {
   font-family: "Geist Mono", ui-monospace, monospace;
-  font-feature-settings: "tnum" 1, "zero" 1;
+  font-feature-settings:
+    "tnum" 1,
+    "zero" 1;
 }

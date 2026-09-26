@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 description: Symptom-first fixes for stuck transactions, wallet and network problems, and stale data — and what to include in a bug report.
-updated: 2026-08-25
+updated: 2026-09-04
 status: stable
 ---
 
@@ -18,11 +18,11 @@ Likely causes, in order:
 1. **The signature dialog is still open or was missed.** A Soroban transaction only leaves "pending" once your wallet returns a signed envelope. Check the wallet extension for a pending approval popup — it can open behind the browser window.
 2. **The transaction expired before inclusion** (`tx_too_late` in [/reference/errors#tx-too-late](/reference/errors#tx-too-late)). Slow signing or a busy network can push the transaction past its time bounds.
 3. **The submitted fee was too low for current network conditions** (`tx_insufficient_fee`). More likely during periods of high testnet/mainnet load.
-4. **The RPC node is degraded.** If every submission from your session hangs, not just one, the endpoint itself may be slow — see "Network is busy" in [/reference/errors#timeout-or-try-again](/reference/errors#timeout-or-try-again).
+4. **The RPC node is degraded.** If every submission from your session hangs, not only one, the endpoint itself may be slow — see "Network is busy" in [/reference/errors#timeout-or-try-again](/reference/errors#timeout-or-try-again).
 
 **Checks:**
 - Look for a wallet popup, including behind other windows.
-- Reload the page and check whether the transaction hash (if you have one) appears on [Stellar Expert](https://stellar.expert) — if it does, it succeeded and the UI simply didn't confirm; if it doesn't after a few minutes, it did not land and is safe to resubmit.
+- Reload the page and check whether the transaction hash (if you have one) appears on [Stellar Expert](https://stellar.expert) — if it does, it succeeded and the UI failed to confirm; if it doesn't after a few minutes, it did not land and is safe to resubmit.
 - Retry once. Soroban transactions are not resubmitted automatically by design — see [Write SO4 transactions](/developers/writing-transactions).
 
 ## Wallet will not connect
@@ -72,11 +72,11 @@ Likely causes, in order:
 Likely causes, in order:
 
 1. **Indexer lag**, same as "Balance not updating" above — positions listed through the indexer reflect its current sync height, not the chain tip.
-2. **The order hasn't executed yet.** Opening a position through a limit or trigger order creates an *order* first; it only becomes a *position* once that order executes. Check the orders list, not just positions.
+2. **The order hasn't executed yet.** Opening a position through a limit or trigger order creates an *order* first; it only becomes a *position* once that order executes. Check the orders list, not only positions.
 3. **The transaction that would have created it failed.** Check `TxStatus` for a failure state and the message against [/reference/errors](/reference/errors) — a position that never opened has nothing to display.
 
 **Checks:**
-- Confirm the transaction hash on Stellar Expert actually invoked `exchange-router` successfully.
+- Confirm the transaction hash on Stellar Expert actually invoked `ExchangeRouter` successfully.
 - Check the orders list for a pending order with the same parameters.
 - Confirm you're on the same network and market you traded on.
 
@@ -88,7 +88,7 @@ Likely causes, in order:
 
 1. **An oracle read failed or is stale.** SO4 sources prices from more than one oracle; a temporarily stale or unavailable feed can leave the chart without fresh data rather than showing wrong data.
 2. **A market data subscription dropped.** Realtime chart updates depend on a live connection; a network blip can leave the chart showing the last received point without visibly erroring.
-3. **The selected market has no recent activity.** A thinly-traded market can look "stuck" simply because there's nothing new to plot.
+3. **The selected market has no recent activity.** A thinly-traded market can look "stuck" because there is nothing new to plot.
 
 **Checks:**
 - Switch to a different, more active market and confirm its chart updates — this isolates whether the problem is connection-wide or market-specific.

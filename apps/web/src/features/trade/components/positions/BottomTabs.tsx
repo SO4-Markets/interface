@@ -10,16 +10,18 @@ import { claimFundingFees } from "../../lib/stellar"
 import { OrderExecutionFrozenBanner } from "./OrderExecutionFrozenBanner"
 import { PositionsList } from "./PositionsList"
 import { OrdersList } from "./OrdersList"
+import { OrderHistoryList } from "./OrderHistoryList"
+import { TradeHistoryList } from "./TradeHistoryList"
 import type { Position } from "../../hooks/usePositions"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
-// TODO: Add Trades and Claims tabs once tradeHistory + claimFundingFees are wired up
-
 type Props = {
   onSelectPosition?: (position: Position) => void
+  value?: "positions" | "orders" | "history" | "trades" | "claims"
+  onValueChange?: (value: "positions" | "orders" | "history" | "trades" | "claims") => void
 }
 
-export function BottomTabs({ onSelectPosition }: Props) {
+export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
   const { data: positions = [] } = usePositions()
   const { data: orders = [] } = useOrders()
   const account = useWalletStore((state) => state.address)
@@ -41,7 +43,7 @@ export function BottomTabs({ onSelectPosition }: Props) {
   }
 
   return (
-    <Tabs defaultValue="positions">
+    <Tabs value={value} defaultValue="positions" onValueChange={(next) => onValueChange?.(next as NonNullable<Props["value"]>)}>
       <OrderExecutionFrozenBanner visible={hasFrozenOrders(orders)} />
       <TabsList className="border-b border-border bg-transparent px-4">
         <TabsTrigger value="positions">
@@ -50,9 +52,9 @@ export function BottomTabs({ onSelectPosition }: Props) {
         <TabsTrigger value="orders">
           Orders {orders.length > 0 && `(${orders.length})`}
         </TabsTrigger>
+        <TabsTrigger value="history">Order history</TabsTrigger>
         <TabsTrigger value="trades">
           Trades
-          {/* TODO: Show count from useTradeHistory once implemented */}
         </TabsTrigger>
         <TabsTrigger value="claims">
           Claims
@@ -68,11 +70,12 @@ export function BottomTabs({ onSelectPosition }: Props) {
         <OrdersList />
       </TabsContent>
 
+      <TabsContent value="history">
+        <OrderHistoryList />
+      </TabsContent>
+
       <TabsContent value="trades">
-        <EmptyState
-          title="Trade history coming soon"
-          description="Your completed trades will appear here once the feature is enabled."
-        />
+        <TradeHistoryList />
       </TabsContent>
 
       <TabsContent value="claims">

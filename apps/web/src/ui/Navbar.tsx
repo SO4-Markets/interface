@@ -14,6 +14,8 @@ import {
 } from "./nav/primitives"
 import { ConnectButton } from "@/features/wallet/components/ConnectButton"
 import { WhatsNew } from "@/features/changelog/components/WhatsNew"
+import { WhatsNewDot } from "@/features/changelog/components/WhatsNewDot"
+import { useWhatsNewIndicator } from "@/features/changelog/whats-new"
 
 const LANDING_LINKS = [
   { label: "Trade", href: "/trade" },
@@ -25,7 +27,8 @@ const LANDING_LINKS = [
 
 const APP_LINKS: Array<{
   label: string
-  to: "/trade" | "/pools" | "/earn" | "/referrals" | "/faucet" | null
+  to: "/trade" | "/pools" | "/earn" | "/referrals" | "/faucet" | "/changelog" | null
+  whatsNew?: boolean
 }> = [
   { label: "Trade", to: "/trade" },
   { label: "Pools", to: "/pools" },

@@ -1,5 +1,5 @@
 import type { PoolMarketConfig } from "../data/markets"
-import { queryClient } from "@/app/providers/QueryProvider"
+import { getQueryClient } from "@/app/providers/QueryProvider"
 import { CONTRACTS } from "@/app/config/contracts"
 import { NETWORK } from "@/app/config/network"
 import {
@@ -90,10 +90,10 @@ async function approveIfNeeded(args: {
 }
 
 function invalidatePoolQueries(market: PoolMarketConfig, account: string) {
-  queryClient.invalidateQueries({
+  getQueryClient().invalidateQueries({
     queryKey: queryKeys.pools.row(market.marketToken, account),
   })
-  queryClient.invalidateQueries({ queryKey: ["tokenBalances", account] })
+  getQueryClient().invalidateQueries({ queryKey: queryKeys.wallet.tokenBalances(account) })
 }
 
 export async function submitPoolDeposit(args: {

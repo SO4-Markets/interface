@@ -1,0 +1,113 @@
+---
+title: Order types
+description: Execution mechanics, lifecycle states, and guarantee limits for market, limit, and trigger stop-loss orders in SO4.
+updated: 2026-08-31
+status: stable
+---
+
+SO4 supports market orders, limit orders, trigger orders (take-profit and stop-loss), and spot swaps. Every order is recorded on Stellar via Soroban smart contracts and executed by off-chain keepers when price and slippage conditions are satisfied.
+
+The execution guarantee differs between order types: a market order prioritises immediate execution over price certainty, whereas a limit or trigger order guarantees a price condition but carries no guarantee of execution.
+
+## Supported order types
+
+The protocol distinguishes between order types based on position direction and execution triggers:
+
+| Protocol Order Type | Interface Name | Purpose | Execution Trigger |
+| --- | --- | --- | --- |
+| `MarketIncrease` | Market Long / Short | Open or expand a leveraged position immediately | Executed in the next ledger at current mark price |
+| `LimitIncrease` | Limit Long / Short | Open or expand a position at a better price | Executed when mark price reaches or improves the limit |
+| `MarketDecrease` | Market Close | Reduce or fully close an existing position | Executed in the next ledger at current mark price |
+| `LimitDecrease` | Take-Profit (TP) | Close a position at a profitable price threshold | Executed when mark price crosses the profit target |
+| `StopLossDecrease` | Stop-Loss (SL) | Cut losses when market moves against a position | Executed when mark price drops/rises to the stop price |
+| `MarketSwap` / `LimitSwap` | Spot Swap | Exchange long/short tokens without leverage | Executed immediately or at target swap limit |
+
+## Execution mechanics and guarantees
+
+### Market orders (`MarketIncrease` / `MarketDecrease`)
+
+- **What it does**: Requests immediate execution against current pool liquidity.
+- **When it executes**: Keepers pick up the transaction in the next confirmed Stellar ledger (typically 3 to 5 seconds).
+- **What is not guaranteed**: The exact fill price is **not guaranteed**. The fill price equals the oracle mark price at the ledger when the keeper executes the transaction, plus price impact. To protect against adverse moves between submission and execution, orders enforce an `acceptablePrice` parameter calculated from your slippage tolerance.
+
+### Limit orders (`LimitIncrease` / `LimitDecrease`)
+
+- **What it does**: Sits in [DataStore](/reference/data-store) until market prices meet the limit condition. For a long limit buy, the mark price must be less than or equal to the limit price; for a short limit sell, the mark price must be greater than or equal to the limit price.
+- **When it executes**: Keepers monitor oracle feeds and submit execution transactions when the limit threshold is crossed.
+- **What is not guaranteed**: Execution is **not guaranteed**. If the market touches your limit price briefly without sufficient keeper throughput or immediately reverses, the order remains unfilled.
+
+### Trigger orders (`StopLossDecrease` / `StopIncrease`)
+
+- **What it does**: Sits dormant in `DataStore` until the oracle mark price crosses the specified trigger threshold, at which point it converts into a market order to close or increase the position.
+- **Trigger price versus execution price**: The **trigger price** is the activation condition that signals keepers to execute the order. The **execution price** is the market price at the moment the keeper transaction confirms on Stellar. In volatile markets, the execution price is often worse than the trigger price.
+- **When a stop does not protect a position**:
+  1. **Gap risk**: If an asset price gaps downward across blocks without intermediate trades (for example, falling from 60,000 USD to 54,000 USD), a stop set at 58,000 USD executes at 54,000 USD, not 58,000 USD.
+  2. **Liquidation precedence**: If market price drops so quickly that position equity falls below maintenance margin before the keeper executes the stop, the position undergoes [Liquidation](/concepts/liquidation). Liquidation takes precedence over resting stop orders.
+  3. **Slippage freeze**: If the execution price exceeds the order's `acceptablePrice` limit, the contract freezes the order rather than filling it, leaving the position open until manually cancelled or liquidated.
+
+## Order lifecycle and states
+
+Orders follow a deterministic lifecycle implemented across the smart contracts and tracked by the indexer:
+
+```text
+       ┌──────────────┐
+       │   CREATED    │ ◀── Order written to DataStore & OrderVault
+       └──────┬───────┘
+              │
+              ▼
+       ┌──────────────┐      Keeper fill succeeds
+       │    ACTIVE    │ ───────────────────────────▶ ┌──────────────┐
+       └──────┬───────┘                              │   EXECUTED   │
+              │                                      └──────────────┘
+              │ Price violates acceptablePrice
+              ▼
+       ┌──────────────┐      User cancels order
+       │    FROZEN    │ ───────────────────────────▶ ┌──────────────┐
+       └──────────────┘                              │  CANCELLED   │
+                                                     └──────────────┘
+```
+
+### State mapping
+
+The order states match implementation in `apps/s03-indexer/src/mappings/mappingHandlers.ts` and `apps/web/src/features/trade/hooks/useOrdersWithIndexer.ts`:
+
+- `CREATED` (`ord_crt` event): The order is validated by [ExchangeRouter](/reference/exchange-router), collateral is locked in [OrderVault](/reference/order-vault), and parameters are stored in [DataStore](/reference/data-store).
+- `ACTIVE` / `UPDATED` (`ord_upd` event): The order is pending in the keeper queue awaiting trigger conditions.
+- `FROZEN` (`ord_frz` event): A keeper attempted execution, but the transaction reverted (for example, mark price exceeded `acceptablePrice` slippage limit). Frozen orders require manual cancellation to return reserved collateral.
+- `EXECUTED` (`ord_exe` event): A keeper successfully filled the order on-chain, updating the position balance and emitting a position event.
+- `CANCELLED` (`ord_can` event): The user called `ExchangeRouter.cancel_order`, returning reserved collateral from `OrderVault` to the user's wallet.
+
+## Slippage and acceptable price
+
+Every order sent to `ExchangeRouter` specifies an `acceptablePrice` parameter (scaled to 30 decimals):
+
+- **Long increase / Short decrease**: `acceptablePrice = markPrice × (1 + slippagePct)`
+- **Short increase / Long decrease**: `acceptablePrice = markPrice × (1 - slippagePct)`
+
+If the oracle price at keeper execution is worse than `acceptablePrice`, the contract rejects the fill. This prevents front-running and catastrophic execution during sudden oracle spikes.
+
+## Contract mapping
+
+Orders map directly to functions on the SO4 core contracts:
+
+- **Create order**: Invokes `ExchangeRouter.create_order` (see [ExchangeRouter reference](/reference/exchange-router#create_order)) with `CreateOrderParams`.
+- **Cancel order**: Invokes `ExchangeRouter.cancel_order(caller, order_key)`.
+- **Collateral custody**: Collateral tokens are transferred directly from the user's address to the [OrderVault](/reference/order-vault) contract.
+
+## Worked example
+
+A trader holds a 10x Long on `BTC/USD` entered at 60,000.00 USD with 100 USDC collateral (position size = 1,000.00 USD, 0.016667 BTC).
+
+The trader sets a Stop-Loss trigger order at 57,000.00 USD with 1.0% slippage tolerance:
+
+- **Trigger price**: 57,000.00 USD.
+- **Acceptable price**: `57,000.00 × (1 - 0.01) = 56,430.00 USD`.
+- **Scenario A (Normal execution)**: BTC price trends downward and reaches 56,950.00 USD. The keeper triggers and executes the stop at 56,920.00 USD (within the 56,430.00 USD limit). The loss is `0.016667 × (60,000.00 - 56,920.00) = 51.33 USD`. The remaining collateral of 48.67 USD is returned to the trader's wallet.
+- **Scenario B (Gap move)**: BTC price gaps from 57,500.00 USD directly to 56,000.00 USD on an external exchange shock. When the keeper attempts execution at 56,000.00 USD, the price is below the 56,430.00 USD acceptable price. The order freezes. The trader must cancel the frozen order and market-close or risk subsequent liquidation.
+
+## Related
+
+- [Trading guide](/guides/trading) — How to place market, limit, and stop orders in the interface.
+- [Positions guide](/guides/positions) — Managing open orders, tracking status, and modifying margin.
+- [Liquidation](/concepts/liquidation) — Liquidation mechanics and precedence over resting stops.
+- [Risk](/concepts/risk) — Gap risk, oracle staleness, and contract execution considerations.
