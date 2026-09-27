@@ -186,7 +186,7 @@ describe("OrderBookPanel", () => {
   it("does not leak orderbook view state between panel instances", async () => {
     const user = userEvent.setup()
 
-    const { unmount, rerender } = render(
+    const { unmount } = render(
       <OrderBookPanel symbol="BTC" />,
     )
 

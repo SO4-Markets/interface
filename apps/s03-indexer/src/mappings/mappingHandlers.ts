@@ -443,6 +443,9 @@ async function handleMarketCreated(event: DecodedEvent): Promise<void> {
     marketId: market.id,
     key: market.key,
     version: parseOptionalNumber(fieldString(event, ["version"], 4)),
+    maxLeverage: serializeOptional(
+      event.values.named.max_leverage ?? event.values.named.maxLeverage,
+    ),
     rawConfig: JSON.stringify(event.values.named),
     ledger: event.ledger,
     timestamp: event.timestamp,

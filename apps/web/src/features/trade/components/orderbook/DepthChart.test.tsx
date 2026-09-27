@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen } from "@testing-library/react"
 import { DepthChart } from "./DepthChart"
 import type { OrderBookLevel } from "../../hooks/useOrderBook"
@@ -187,8 +187,6 @@ describe("DepthChart", () => {
     mockSeriesMethods.setData.mockClear()
 
     const { rerender } = render(<DepthChart {...defaultProps} />)
-
-    const firstCallCount = mockSeriesMethods.setData.mock.calls.length
 
     const newBids = [...SAMPLE_BIDS, { price: 98, size: 3, total: 6, depth: 1 }]
     mockSeriesMethods.setData.mockClear()

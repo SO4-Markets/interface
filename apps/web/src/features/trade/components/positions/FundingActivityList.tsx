@@ -22,11 +22,11 @@ import { StatusBadge } from "@workspace/ui/components/status-badge"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAccountFeeClaims } from "../../hooks/useAccountFeeClaims"
 import { claimFundingFees } from "../../lib/stellar"
-import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import type { FeeClaim } from "@/lib/graphql/types"
 import type { Column } from "@workspace/ui/components/data-table"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,5 @@
 import { CandlestickSeries, LineStyle, createChart } from "lightweight-charts"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
@@ -14,10 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@workspace/ui/components/table"
-import { cn } from "@workspace/ui/lib/utils"
 import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
 import { usePositions } from "../../hooks/usePositions"
+import { useOrders } from "../../hooks/useOrders"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import {
   buildCandleOptions,
   buildChartOptions,
@@ -98,18 +98,16 @@ function toChartBar(bar: OhlcBar): CandlestickData<UTCTimestamp> {
   }
 }
 
-
-
 export function TVChartContainer({ symbol, period }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null)
   const priceLineRefs = useRef<Map<string, IPriceLine>>(new Map())
+  const hasRenderedHistoryRef = useRef(false)
   // True only after setData() has been called for the current symbol+period.
   // Prevents series.update() from firing against an empty or stale series.
   const hasDataRef = useRef(false)
-
-  const queryClient = useQueryClient()
+  const fittedRef = useRef(false)
 
   const {
     data: candleData,
@@ -127,6 +125,8 @@ export function TVChartContainer({ symbol, period }: Props) {
 
   const liveBar = useLiveBar(symbol, period)
   const { data: positions = [] } = usePositions()
+  const { data: orders = [] } = useOrders()
+  const account = useWalletStore((state) => state.address)
 
   const [showTable, setShowTable] = useState(false)
   const lastAnnounceRef = useRef(0)
@@ -140,7 +140,6 @@ export function TVChartContainer({ symbol, period }: Props) {
   const isStale = isPlaceholderData || (isFetching && hasData)
   const isNoHistory = !isLoading && !hasData && !isError && !isStale
   const isFailed = isError && !hasData
-  const isIdle = !isLoading && !hasData && !isError
 
   const summary = useMemo(() => getChartSummary(candles, liveBar, symbol, period), [candles, liveBar, symbol, period])
   const tableRows = useMemo(() => getRepresentativeRows(candles), [candles])
@@ -201,56 +200,65 @@ export function TVChartContainer({ symbol, period }: Props) {
       chartRef.current = null
       seriesRef.current = null
       priceLineRefs.current.clear()
+      hasRenderedHistoryRef.current = false
     }
   }, []) // mount once — symbol/period changes handled by separate effects below
 
   // ── Handle symbol / period changes ──────────────────────────────────────────
   useEffect(() => {
+    if (currentSymbolRef.current === symbol && currentPeriodRef.current === period) {
+      return
+    }
     const symbolChanged = currentSymbolRef.current !== symbol
     currentSymbolRef.current = symbol
     currentPeriodRef.current = period
 
     if (!seriesRef.current) return
+    seriesRef.current.setData([])
+    hasDataRef.current = false
+    hasRenderedHistoryRef.current = false
+    // Remove all price lines — they belong to the previous symbol
+    priceLineRefs.current.forEach((pl) => seriesRef.current!.removePriceLine(pl))
+    priceLineRefs.current.clear()
 
-    // On market switch, clear price lines immediately since they belong to the previous market
     if (symbolChanged) {
-      priceLineRefs.current.forEach((pl) => seriesRef.current!.removePriceLine(pl))
-      priceLineRefs.current.clear()
       fittedRef.current = false
-
-      // When switching markets, if placeholder data is not active (i.e. not same market timeframe switch),
-      // clear the series immediately so old-market candles are never presented under a different market.
-      if (!isPlaceholderData && candles.length === 0) {
-        seriesRef.current.setData([])
-        hasDataRef.current = false
-      }
     }
-  }, [symbol, period, isPlaceholderData, candles.length])
+  }, [symbol, period])
 
   // ── Load historical candles ────────────────────────────────────────────────
-  const fittedRef = useRef(false)
   useEffect(() => {
     if (!seriesRef.current) return
     if (candles.length === 0) {
-      seriesRef.current.setData([])
-      hasDataRef.current = false
-      fittedRef.current = false
+      if (hasDataRef.current) {
+        seriesRef.current.setData([])
+        hasDataRef.current = false
+        fittedRef.current = false
+      }
       return
     }
+    const timeScale = chartRef.current?.timeScale()
+    const visibleRange = hasRenderedHistoryRef.current && timeScale &&
+      typeof timeScale.getVisibleLogicalRange === "function"
+      ? timeScale.getVisibleLogicalRange()
+      : null
+
     seriesRef.current.setData(candles.map(toChartBar))
     hasDataRef.current = true
-    // Only fit content once per symbol/period load, not on every candle update
     if (!fittedRef.current) {
       chartRef.current?.timeScale().fitContent()
       fittedRef.current = true
+    } else if (visibleRange && timeScale && typeof timeScale.setVisibleLogicalRange === "function") {
+      timeScale.setVisibleLogicalRange(visibleRange)
     }
+    hasRenderedHistoryRef.current = true
   }, [candles])
 
   // ── Push live bar updates ─────────────────────────────────────────────────
   // Only allowed after historical data is loaded (hasDataRef guards the race
   // where a live bar arrives before the first setData call completes).
   useEffect(() => {
-    if (!seriesRef.current || !liveBar || !hasDataRef.current.current) return
+    if (!seriesRef.current || !liveBar || !hasDataRef.current) return
     try {
       seriesRef.current.update(toChartBar(liveBar))
     } catch {
@@ -258,7 +266,7 @@ export function TVChartContainer({ symbol, period }: Props) {
     }
   }, [liveBar])
 
-  // ── Draw position entry + liquidation price lines ─────────────────────────
+  // ── Draw position entry + liquidation price lines + order lines (OB-066) ───
   useEffect(() => {
     if (!seriesRef.current) return
 
@@ -289,6 +297,21 @@ export function TVChartContainer({ symbol, period }: Props) {
         return lines
       })
 
+    // OB-066: Add resting order lines (account-aware)
+    if (account) {
+      orders
+        .filter((order) => order.account === account && order.marketName === symbol && order.status === "active")
+        .forEach((order) => {
+          desiredLines.push({
+            id: `${order.key}-order`,
+            title: `${order.isLong ? "Long" : "Short"} Order`,
+            price: order.triggerPrice,
+            color: order.isLong ? palette.long : palette.down,
+            lineStyle: LineStyle.Dotted,
+          })
+        })
+    }
+
     const desiredIds = new Set(desiredLines.map((l) => l.id))
 
     // Remove stale lines
@@ -317,7 +340,7 @@ export function TVChartContainer({ symbol, period }: Props) {
       })
       priceLineRefs.current.set(line.id, priceLine)
     })
-  }, [positions, symbol, themeVersion])
+  }, [positions, orders, symbol, account, themeVersion])
 
   // ── Throttled live-price announcements ────────────────────────────────────
   const THROTTLE_MS = 5000

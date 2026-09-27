@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
+  
+  
   buildOrderHistoryRows,
   dedupeOrderHistoryRows,
   filterOrderHistoryRows,
-  summariseFills,
-  type FillRecord,
-  type OrderHistorySource,
+  summariseFills
 } from "./order-history"
 import {
   deriveOrderLifecycleStage,
@@ -13,6 +13,7 @@ import {
   orderRowKey,
   reconcilePendingOrders,
 } from "./order-lifecycle"
+import type {FillRecord, OrderHistorySource} from "./order-history";
 
 /**
  * OB-090: simultaneous fill, cancel, and balance changes while a user is

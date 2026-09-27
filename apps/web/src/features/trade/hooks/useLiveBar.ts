@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import type { OhlcBar } from "../lib/oracle"
 import { marketSubscriptionManager } from "../lib/market-data-stream"
+import type { OhlcBar } from "../lib/oracle"
 
 /**
  * Real-time bar feed for the chart.

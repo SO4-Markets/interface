@@ -48,6 +48,7 @@ export type Market = {
   createdLedger: number
   createdTimestamp: Date
   createdTransactionHash: string
+  latestConfigSnapshot?: MarketConfigSnapshot | null
 }
 
 export type MarketConfigSnapshot = {

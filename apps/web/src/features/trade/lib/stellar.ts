@@ -10,12 +10,14 @@ import {
 import { activeQueryNetwork } from "./query-keys"
 import { registerPendingOrder } from "./pending-orders"
 import {
+  
+  
   foldAmendReplaceOutcome,
   resolveAmendReplaceSteps,
-  validateAmendPayload,
-  type AmendPayload,
-  type AmendReplaceOutcome,
+  validateAmendPayload
 } from "./order-amendment"
+import { validateExecutionRequest } from "./execution-support"
+import type {AmendPayload, AmendReplaceOutcome} from "./order-amendment";
 import type { CreateOrderParams, OrderKey } from "@/lib/contracts"
 import type { OrderType } from "../hooks/useOrders"
 import { NETWORK } from "@/app/config/network"
@@ -349,7 +351,7 @@ export async function amendOrderViaReplace(
         loadingMessage: "Creating replacement order...",
         successMessage: "Replacement order submitted (back of queue)",
         successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
-        onSuccess: (hash) => {
+        onSuccess: async (hash) => {
           trackPendingOrder(
             account,
             {
@@ -361,15 +363,15 @@ export async function amendOrderViaReplace(
             },
             hash,
           )
-          return invalidateTradeQueries(account)
+          await refreshMutation("create", account, createStep.marketAddress)
         },
         onError: parseSorobanError,
       },
     )
-    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    await refreshMutation("create", account, createStep.marketAddress)
     return foldAmendReplaceOutcome({ cancelTxHash, createTxHash })
   } catch (error) {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    await refreshMutation("cancel", account)
     return foldAmendReplaceOutcome({
       cancelTxHash,
       createError: error instanceof Error ? error.message : "Replacement order failed",
@@ -450,17 +452,22 @@ export async function sendBatchOrderTxn(
 }
 
 /**
- * Create a TP/SL sidecar order as a real decrease order with a trigger price.
- *
- * takeProfit → LimitDecrease  (executes when price moves favourably)
- * stopLoss   → StopLossDecrease (executes to cap downside)
- *
- * sizePct% of parentSizeUsd is closed. For full close pass sizePct=100.
+ * Kept as a defensive boundary for callers that still hold an old sidecar
+ * draft. The current gateway does not verify attached TP/SL semantics.
  */
 export async function createSidecarOrder(params: SidecarOrderParams): Promise<string> {
   if (!isValidAccount(params.account)) {
     throw new Error("Connect your wallet before placing a TP/SL order.")
   }
+
+  const support = validateExecutionRequest({
+    attachedOrders: [{
+      type: params.type,
+      triggerPrice: String(params.triggerPrice),
+      sizePct: params.sizePct,
+    }],
+  })
+  if (!support.valid) throw new Error(support.reason)
 
   const sizeDeltaUsd = params.parentSizeUsd * (params.sizePct / 100)
   const orderType: CreateOrderParams["orderType"] =

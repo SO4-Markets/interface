@@ -138,6 +138,26 @@ export const GET_MARKETS = gql<{ markets: { nodes: Array<Market> } }, Record<str
         indexToken { address symbol }
         longToken { address symbol }
         shortToken { address symbol }
+        latestConfigSnapshot { maxLeverage timestamp ledger }
+      }
+    }
+  }
+`)
+
+export const GET_MARKET_RISK_PARAMS = gql<
+  { markets: { nodes: Array<Pick<Market, "key" | "status" | "latestConfigSnapshot">> } },
+  { marketKey: string }
+>(`
+  query GetMarketRiskParams($marketKey: String!) {
+    markets(filter: { key: { equalTo: $marketKey } }, first: 1) {
+      nodes {
+        key
+        status
+        latestConfigSnapshot {
+          maxLeverage
+          timestamp
+          ledger
+        }
       }
     }
   }

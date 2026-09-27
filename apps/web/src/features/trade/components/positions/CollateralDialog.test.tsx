@@ -31,6 +31,15 @@ vi.mock("@/features/trade/hooks/useTokenPrices", () => ({
   }),
 }))
 
+vi.mock("../../hooks/useMarketRiskParams", () => ({
+  useMarketRiskParams: () => ({
+    params: { maxLeverage: 50, maintenanceMarginRateBps: null, updatedAt: Date.now() },
+    state: "available",
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 const mockBalances: { data: Record<string, number> | undefined } = { data: undefined }
 
 vi.mock("@/features/wallet/hooks/useTokenBalances", () => ({

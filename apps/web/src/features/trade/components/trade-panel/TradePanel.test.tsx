@@ -50,6 +50,14 @@ vi.mock("../../hooks/useTradeFees", () => ({
     feesBreakdown: [],
   }),
 }))
+vi.mock("../../hooks/useMarketRiskParams", () => ({
+  useMarketRiskParams: () => ({
+    params: { maxLeverage: 50, maintenanceMarginRateBps: null, updatedAt: Date.now() },
+    state: "available",
+    isLoading: false,
+    isError: false,
+  }),
+}))
 
 // ── Wallet balances: USDC balance of 500 (the default collateral token) ──────
 // Hoisted because the `vi.mock` factory below closes over it.
@@ -177,8 +185,7 @@ describe("TradePanel input validation (#226)", () => {
 })
 
 describe("TradePanel mode transitions (OB-071)", () => {
-  it("preserves compatible mode when switching trade types", async () => {
-    const user = userEvent.setup()
+  it("preserves compatible mode when switching trade types", () => {
     render(<TradePanelHarness />)
 
     // Long trade should have all three modes available
@@ -237,9 +244,6 @@ describe("TradePanel mode transitions (OB-071)", () => {
   it("shows trigger price input when switching to Limit mode", async () => {
     const user = userEvent.setup()
     render(<TradePanelHarness />)
-
-    // Start with Market (no trigger price)
-    let triggerInput = screen.queryByPlaceholderText("0.00", { selector: "input[type='text']" })
 
     // Switch to Limit
     const limitButton = screen.getByRole("button", { name: /Limit/i })

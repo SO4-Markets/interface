@@ -5,4 +5,5 @@
  * re-export avoids a risky import-path migration while eliminating the
  * previously independent indexer registry.
  */
+
 export { indexerQueryKeys } from "@/shared/lib/query-keys"
