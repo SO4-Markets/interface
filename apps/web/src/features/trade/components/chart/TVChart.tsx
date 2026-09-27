@@ -1,11 +1,9 @@
 import { useRef } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import { queryKeys } from "../../lib/query-keys"
+import { cn } from "@workspace/ui/lib/utils"
 import { useChartPreferencesStore } from "../../store/chart-preferences-store"
-import type { Period } from "../../store/chart-preferences-store"
 import { ChartHeader } from "./ChartHeader"
 import { TVChartContainer } from "./TVChartContainer"
-import { cn } from "@workspace/ui/lib/utils"
+import type { Period } from "../../store/chart-preferences-store"
 
 const PERIODS = ["1m", "5m", "15m", "1h", "4h", "1D"] as const
 
@@ -17,7 +15,6 @@ type Props = {
 export function TVChart({ symbol, onSelectToken }: Props) {
   const period = useChartPreferencesStore((s) => s.period)
   const setPeriod = useChartPreferencesStore((s) => s.setPeriod)
-  const queryClient = useQueryClient()
   const buttonRefs = useRef<Map<Period, HTMLButtonElement>>(new Map())
 
   // When the period changes, persist preference and invalidate the candles cache
@@ -35,7 +32,7 @@ export function TVChart({ symbol, onSelectToken }: Props) {
 
     if (e.key === "ArrowLeft") {
       nextIndex = currentIndex > 0 ? currentIndex - 1 : PERIODS.length - 1
-    } else if (e.key === "ArrowRight") {
+    } else {
       nextIndex = currentIndex < PERIODS.length - 1 ? currentIndex + 1 : 0
     }
 

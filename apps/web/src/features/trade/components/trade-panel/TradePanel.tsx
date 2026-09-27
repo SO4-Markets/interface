@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react"
-import { useMemo, useState, useEffect } from "react"
 import {
   Tabs,
   TabsContent,
@@ -20,6 +19,8 @@ import { useTokenBalances } from "../../../wallet/hooks/useTokenBalances"
 // validate the entered amount against the wallet balance before submit.
 import { sizeFromCollateralAndLeverage } from "../../lib/trade-math"
 import { getToken } from "../../data/tokens"
+import { clampLeverage, estimatePositionRisk } from "../../lib/risk"
+import { EXECUTION_SUPPORT } from "../../lib/execution-support"
 import { TradeInfoRows } from "./TradeInfoRows"
 import { ConfirmationDialog } from "./ConfirmationDialog"
 import { ApplyReferralCodePrompt } from "./ApplyReferralCodePrompt"
@@ -29,13 +30,11 @@ import { NumberInput } from "@/shared/components/NumberInput"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { TokenIcon } from "@/shared/components/TokenIcon"
 import { formatAddress } from "@/shared/lib/format"
-import { clampLeverage, estimatePositionRisk } from "../../lib/risk"
 import {
   validateAmount,
-  validatePrice,
   validateBalance,
+  validatePrice,
 } from "@/lib/input-validation"
-import { EXECUTION_SUPPORT } from "../../lib/execution-support"
 
 type TradeController = ReturnType<typeof useTradeState>
 
@@ -225,19 +224,18 @@ export function TradePanel({ trade }: TradePanelProps) {
       {/* ── Leverage slider (positions only) ─────────────────────── */}
       {tradeFlags.isPosition && (
         marketRisk.state === "available" ? (
-          <LeverageSlider
-            value={boundedLeverage}
-            max={maxLeverage}
-            onChange={setLeverage}
-          />
+          <div className="animate-in fade-in duration-base">
+            <LeverageSlider
+              value={boundedLeverage}
+              max={maxLeverage}
+              onChange={setLeverage}
+            />
+          </div>
         ) : (
           <p role="status" className="text-xs text-muted-foreground">
             Leverage unavailable until current market risk parameters are available.
           </p>
         )
-        <div className="animate-in fade-in duration-base">
-          <LeverageSlider value={leverage} onChange={setLeverage} />
-        </div>
       )}
 
       {/* ── Size summary ─────────────────────────────────────────── */}

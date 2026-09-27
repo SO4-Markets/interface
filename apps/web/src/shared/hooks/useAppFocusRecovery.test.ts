@@ -4,8 +4,8 @@
  * OB-114: Tests for the hidden-tab, offline, and focus recovery coordinator.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { renderHook, act } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { act, renderHook } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import React from "react"
 import { useAppFocusRecovery } from "./useAppFocusRecovery"

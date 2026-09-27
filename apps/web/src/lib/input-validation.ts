@@ -4,7 +4,7 @@
  * Keeps editable strings separate from parsed values used to build transactions.
  */
 
-import { parseAmount, MAX_DECIMALS } from "./amount"
+import { MAX_DECIMALS, parseAmount } from "./amount"
 
 export type ValidationResult = {
   isValid: boolean
@@ -78,9 +78,9 @@ export function validateTick(value: number, tickSize: number): ValidationResult 
     return { isValid: false, error: "Invalid tick validation" }
   }
 
-  const remainder = value % tickSize
-  // Allow small floating-point errors
-  if (Math.abs(remainder) > tickSize * 1e-10 && Math.abs(remainder - tickSize) > tickSize * 1e-10) {
+  const factor = Math.round(value / tickSize)
+  const diff = Math.abs(value - factor * tickSize)
+  if (diff > tickSize * 1e-5 && diff > 1e-9) {
     return { isValid: false, error: `Must be a multiple of ${tickSize}` }
   }
 
@@ -96,9 +96,9 @@ export function validateLot(value: number, lotSize: number): ValidationResult {
     return { isValid: false, error: "Invalid lot validation" }
   }
 
-  const remainder = value % lotSize
-  // Allow small floating-point errors
-  if (Math.abs(remainder) > lotSize * 1e-10 && Math.abs(remainder - lotSize) > lotSize * 1e-10) {
+  const factor = Math.round(value / lotSize)
+  const diff = Math.abs(value - factor * lotSize)
+  if (diff > lotSize * 1e-5 && diff > 1e-9) {
     return { isValid: false, error: `Must be a multiple of ${lotSize}` }
   }
 

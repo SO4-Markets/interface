@@ -6,7 +6,7 @@ export type LiveBarUpdate = {
   source: "stream" | "poll" | "backfill"
 }
 
-export const PERIOD_SECONDS: Record<string, number> = {
+export const PERIOD_SECONDS: Record<string, number | undefined> = {
   "1m": 60,
   "5m": 5 * 60,
   "15m": 15 * 60,

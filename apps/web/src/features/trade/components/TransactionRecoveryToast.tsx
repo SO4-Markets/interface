@@ -1,10 +1,11 @@
-import React from "react"
-import { toast, type ToastAction } from "@workspace/ui/components/toast"
+import {  toast } from "@workspace/ui/components/toast"
 import {
-  getRecoveryActions,
+  
   executeRecoveryAction,
-  type TransactionRecoveryContext,
+  getRecoveryActions
 } from "../lib/transaction-explorer"
+import type {ToastAction} from "@workspace/ui/components/toast";
+import type {TransactionRecoveryContext} from "../lib/transaction-explorer";
 
 interface TransactionRecoveryToastProps {
   toastId: string

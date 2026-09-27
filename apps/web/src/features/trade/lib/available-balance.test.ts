@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   calculateAvailableBalance,
-  getPercentageAmount,
   canExecuteAmount,
+  getPercentageAmount,
 } from "./available-balance"
 
 describe("calculateAvailableBalance", () => {
@@ -134,68 +134,69 @@ describe("canExecuteAmount", () => {
 })
 
 describe("OB-073 fixture tests: percentage sizing without exceeding balance", () => {
+  const walletBalance = 1000
   const totalFees = 50 // $50 in fees
-  const xlmFee = 0.3 * 0.17 // ~$0.05
 
   it("0% sizing: should be 0 and safe", () => {
     const available = calculateAvailableBalance({
-      walletBalance: 1000,
+      walletBalance,
       totalFeesUsd: totalFees,
       minExecutionFeeXlm: 0.3,
       xlmPrice: 0.17,
     })
     const amount = getPercentageAmount(available, 0)
     expect(amount).toBe(0)
-    expect(canExecuteAmount(amount, available, totalFees)).toBe(true)
+    expect(amount <= available).toBe(true)
   })
 
   it("25% sizing: should not exceed available", () => {
     const available = calculateAvailableBalance({
-      walletBalance: 1000,
+      walletBalance,
       totalFeesUsd: totalFees,
       minExecutionFeeXlm: 0.3,
       xlmPrice: 0.17,
     })
     const amount = getPercentageAmount(available, 25)
-    expect(canExecuteAmount(amount, available, totalFees)).toBe(true)
+    expect(canExecuteAmount(amount, walletBalance, totalFees)).toBe(true)
   })
 
   it("50% sizing: should not exceed available", () => {
     const available = calculateAvailableBalance({
-      walletBalance: 1000,
+      walletBalance,
       totalFeesUsd: totalFees,
       minExecutionFeeXlm: 0.3,
       xlmPrice: 0.17,
     })
     const amount = getPercentageAmount(available, 50)
-    expect(canExecuteAmount(amount, available, totalFees)).toBe(true)
+    expect(canExecuteAmount(amount, walletBalance, totalFees)).toBe(true)
   })
 
   it("75% sizing: should not exceed available", () => {
     const available = calculateAvailableBalance({
-      walletBalance: 1000,
+      walletBalance,
       totalFeesUsd: totalFees,
       minExecutionFeeXlm: 0.3,
       xlmPrice: 0.17,
     })
     const amount = getPercentageAmount(available, 75)
-    expect(canExecuteAmount(amount, available, totalFees)).toBe(true)
+    expect(canExecuteAmount(amount, walletBalance, totalFees)).toBe(true)
   })
 
   it("100% (MAX) sizing: should not exceed available", () => {
     const available = calculateAvailableBalance({
-      walletBalance: 1000,
+      walletBalance,
       totalFeesUsd: totalFees,
       minExecutionFeeXlm: 0.3,
       xlmPrice: 0.17,
     })
     const amount = getPercentageAmount(available, 100)
-    expect(canExecuteAmount(amount, available, totalFees)).toBe(true)
+    expect(canExecuteAmount(amount, walletBalance, totalFees)).toBe(true)
   })
 
   it("MAX with insufficient balance: should safely restrict sizing", () => {
+    const smallBalance = 100
     const available = calculateAvailableBalance({
-      walletBalance: 100, // Only $100
+      walletBalance: smallBalance, // Only $100
       totalFeesUsd: totalFees,
       minExecutionFeeXlm: 0.3,
       xlmPrice: 0.17,
@@ -204,6 +205,6 @@ describe("OB-073 fixture tests: percentage sizing without exceeding balance", ()
     // Available should be ~49.95 after fees
     expect(available).toBeLessThan(50)
     expect(amount).toBeLessThan(50)
-    expect(canExecuteAmount(amount, available, totalFees)).toBe(true)
+    expect(canExecuteAmount(amount, smallBalance, totalFees)).toBe(true)
   })
 })

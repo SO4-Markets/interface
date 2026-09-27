@@ -57,7 +57,7 @@ export const useWalletStore = create<WalletStore>()(
         pendingTransactionTimestamp: state.pendingTransactionTimestamp,
       }),
       merge: (persistedState, currentState) => {
-        const persisted = (persistedState as Partial<WalletStore>) || {}
+        const persisted = (persistedState && typeof persistedState === "object" ? persistedState : {}) as Partial<WalletStore>
         let pendingXdr = persisted.pendingTransactionXdr ?? null
         const txTimestamp = persisted.pendingTransactionTimestamp ?? null
 

@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react"
+import {  useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
 import { Numeric } from "@workspace/ui/components/numeric"
+import type {ReactNode} from "react";
 import type { StatusVariant } from "@workspace/ui/components/status-badge"
 
 /**

@@ -1,7 +1,7 @@
 import { scValToNative } from "@stellar/stellar-sdk"
+import { queryKeys } from "./query-keys"
 import type { QueryClient } from "@tanstack/react-query"
 import type { ContractEvent } from "@/lib/soroban/events"
-import { queryKeys } from "./query-keys"
 
 export type OrderEventType =
   | "OrderCreated"
@@ -16,15 +16,8 @@ export type DecodedOrderEvent = {
   orderId?: string | null
 }
 
-const KNOWN_ORDER_EVENTS = new Set([
-  "ordercreated",
-  "orderexecuted",
-  "ordercancelled",
-  "orderupdated",
-])
-
 function extractEventName(event: ContractEvent): OrderEventType | null {
-  if (!event.topics || event.topics.length === 0) return null
+  if (event.topics.length === 0) return null
 
   try {
     const raw = scValToNative(event.topics[0])
@@ -43,7 +36,7 @@ function extractEventName(event: ContractEvent): OrderEventType | null {
 
 function extractAccount(event: ContractEvent): string | null {
   // 1. Check topic[1] (indexed account address)
-  if (event.topics && event.topics.length > 1) {
+  if (event.topics.length > 1) {
     try {
       const topic1 = scValToNative(event.topics[1])
       if (typeof topic1 === "string" && (topic1.startsWith("G") || topic1.startsWith("C"))) {
@@ -53,22 +46,22 @@ function extractAccount(event: ContractEvent): string | null {
   }
 
   // 2. Check value payload (record fields)
-  if (event.value) {
-    try {
-      const val = scValToNative(event.value)
-      if (val && typeof val === "object") {
-        const record = val as Record<string, unknown>
-        const candidate = record.account ?? record.receiver ?? record.user ?? record.trader
-        if (typeof candidate === "string") return candidate
-      }
-    } catch {}
-  }
+  try {
+    const val = scValToNative(event.value)
+    if (val && typeof val === "object") {
+      const record = val as Record<string, unknown>
+      const candidate = record.account ?? record.receiver ?? record.user ?? record.trader
+      if (typeof candidate === "string") return candidate
+    }
+  } catch {}
 
   return null
 }
 
-export function decodeOrderEvent(event: ContractEvent): DecodedOrderEvent | null {
-  if (!event || !event.id) return null
+export function decodeOrderEvent(
+  event: ContractEvent | null | undefined,
+): DecodedOrderEvent | null {
+  if (!event?.id) return null
 
   const name = extractEventName(event)
   if (!name) return null

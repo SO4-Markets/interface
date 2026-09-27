@@ -20,7 +20,7 @@
  * fires exactly one invalidation batch per recovery event.
  */
 
-import { useEffect, useRef, useCallback } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
 import { activeQueryNetwork, queryKeys as tradeQueryKeys } from "@/features/trade/lib/query-keys"

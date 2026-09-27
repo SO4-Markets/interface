@@ -9,7 +9,6 @@ import type {
   Deposit,
   FeeClaim,
   Market,
-  MarketConfigSnapshot,
   Order,
   PoolBalanceSnapshot,
   Position,

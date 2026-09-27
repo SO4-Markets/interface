@@ -34,8 +34,8 @@ export interface TransactionRecoveryContext {
   canCancel: boolean
 }
 
-export function getRecoveryActions(context: TransactionRecoveryContext): TransactionRecoveryAction[] {
-  const actions: TransactionRecoveryAction[] = []
+export function getRecoveryActions(context: TransactionRecoveryContext): Array<TransactionRecoveryAction> {
+  const actions: Array<TransactionRecoveryAction> = []
 
   if (context.canRetry) actions.push("retry")
   if (context.canCancel) actions.push("cancel")

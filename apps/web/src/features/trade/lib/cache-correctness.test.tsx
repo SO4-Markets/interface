@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { QueryClient } from "@tanstack/react-query"
-import { boundQueryCache, CACHE_POLICIES } from "./cache-policy"
+import { CACHE_POLICIES, boundQueryCache } from "./cache-policy"
 import { queryKeys } from "./query-keys"
 
 describe("Cache Correctness & Request Deduplication Regression (OB-110, OB-109)", () => {
