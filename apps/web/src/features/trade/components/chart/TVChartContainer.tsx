@@ -16,6 +16,8 @@ import {
 import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
 import { usePositions } from "../../hooks/usePositions"
+import { useOrders } from "../../hooks/useOrders"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import {
   buildCandleOptions,
   buildChartOptions,
@@ -123,6 +125,8 @@ export function TVChartContainer({ symbol, period }: Props) {
 
   const liveBar = useLiveBar(symbol, period)
   const { data: positions = [] } = usePositions()
+  const { data: orders = [] } = useOrders()
+  const account = useWalletStore((state) => state.address)
 
   const [showTable, setShowTable] = useState(false)
   const lastAnnounceRef = useRef(0)
@@ -262,7 +266,7 @@ export function TVChartContainer({ symbol, period }: Props) {
     }
   }, [liveBar])
 
-  // ── Draw position entry + liquidation price lines ─────────────────────────
+  // ── Draw position entry + liquidation price lines + order lines (OB-066) ───
   useEffect(() => {
     if (!seriesRef.current) return
 
@@ -293,6 +297,21 @@ export function TVChartContainer({ symbol, period }: Props) {
         return lines
       })
 
+    // OB-066: Add resting order lines (account-aware)
+    if (account) {
+      orders
+        .filter((order) => order.account === account && order.marketName === symbol && order.status === "active")
+        .forEach((order) => {
+          desiredLines.push({
+            id: `${order.key}-order`,
+            title: `${order.isLong ? "Long" : "Short"} Order`,
+            price: order.triggerPrice,
+            color: order.isLong ? palette.long : palette.down,
+            lineStyle: LineStyle.Dotted,
+          })
+        })
+    }
+
     const desiredIds = new Set(desiredLines.map((l) => l.id))
 
     // Remove stale lines
@@ -321,7 +340,7 @@ export function TVChartContainer({ symbol, period }: Props) {
       })
       priceLineRefs.current.set(line.id, priceLine)
     })
-  }, [positions, symbol, themeVersion])
+  }, [positions, orders, symbol, account, themeVersion])
 
   // ── Throttled live-price announcements ────────────────────────────────────
   const THROTTLE_MS = 5000

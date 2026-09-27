@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -60,6 +60,16 @@ export function ConfirmationDialog({
   const [estimatingFee, setEstimatingFee] = useState(false)
   const account = useWalletStore((state: { address: string | null }) => state.address)
 
+  // OB-077: Track input snapshot to detect material changes requiring review
+  const inputSnapshotRef = useRef<{
+    sizeUsd: number
+    entryPrice: number
+    leverage: number
+    triggerPrice: string
+    collateralAmount: string
+  } | null>(null)
+  const [isStale, setIsStale] = useState(false)
+
   const {
     tradeFlags,
     toTokenAddress,
@@ -109,6 +119,41 @@ export function ConfirmationDialog({
       ? `Maximum position size for ${tradeState.toTokenAddress}/USD is $${feeConfig.maxPositionSizeUsd.toLocaleString()}.`
       : null
   const executionValidation = validateExecutionRequest({ attachedOrders: sidecarOrders })
+
+  // OB-077: Detect material input changes that invalidate the preview
+  useEffect(() => {
+    if (!open) {
+      inputSnapshotRef.current = null
+      setIsStale(false)
+      return
+    }
+
+    const currentInputs = {
+      sizeUsd,
+      entryPrice,
+      leverage,
+      triggerPrice: triggerPrice ?? "",
+      collateralAmount: fromAmount ?? "",
+    }
+
+    if (!inputSnapshotRef.current) {
+      // First open — capture snapshot
+      inputSnapshotRef.current = currentInputs
+      setIsStale(false)
+    } else {
+      // Check for material changes (>1% for prices/size, exact match for others)
+      const prev = inputSnapshotRef.current
+      const sizeChanged = Math.abs(currentInputs.sizeUsd - prev.sizeUsd) / Math.max(prev.sizeUsd, 1) > 0.01
+      const priceChanged = Math.abs(currentInputs.entryPrice - prev.entryPrice) / Math.max(prev.entryPrice, 1) > 0.01
+      const leverageChanged = currentInputs.leverage !== prev.leverage
+      const triggerChanged = currentInputs.triggerPrice !== prev.triggerPrice
+      const collateralChanged = currentInputs.collateralAmount !== prev.collateralAmount
+
+      if (sizeChanged || priceChanged || leverageChanged || triggerChanged || collateralChanged) {
+        setIsStale(true)
+      }
+    }
+  }, [open, sizeUsd, entryPrice, leverage, triggerPrice, fromAmount])
 
   const sidecarCreateOrders = useMemo((): Array<DecreaseOrderParams> => {
     if (!account || sidecarOrders.length === 0) return []
@@ -206,6 +251,9 @@ export function ConfirmationDialog({
   ])
 
   async function handleConfirm() {
+    // OB-077: Prevent rapid double-clicks from creating duplicate orders
+    if (isSubmitting) return
+
     setIsSubmitting(true)
     try {
       if (!executionValidation.valid) {
@@ -280,7 +328,22 @@ export function ConfirmationDialog({
           <DialogTitle className="max-w-full pe-8 [overflow-wrap:anywhere]">
             Confirm {typeLabel} {!tradeFlags.isSwap && formatAddress(toTokenAddress)}
           </DialogTitle>
+          {/* OB-077: Display network for clarity */}
+          <p className="text-xs text-muted-foreground font-mono mt-1">
+            Network: {ENV.NETWORK}
+          </p>
         </DialogHeader>
+
+        {/* OB-077: Staleness warning */}
+        {isStale && (
+          <div role="alert" className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-600">
+            <p className="font-medium">Inputs changed — review required</p>
+            <p className="mt-1 text-amber-600/80">
+              Price, size, or execution parameters have changed since this dialog opened.
+              Please review the updated values before confirming.
+            </p>
+          </div>
+        )}
 
         <div className="min-w-0 space-y-1.5 text-sm">
           {!tradeFlags.isSwap && (

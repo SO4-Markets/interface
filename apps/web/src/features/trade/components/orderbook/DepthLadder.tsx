@@ -2,6 +2,8 @@ import { cn } from "@workspace/ui/lib/utils"
 import {  useOrderBook } from "../../hooks/useOrderBook"
 import type {OrderBookLevel} from "../../hooks/useOrderBook";
 import { formatUsd } from "@/shared/lib/format"
+import { useRecentTrades } from "../../hooks/useRecentTrades"
+import { useState } from "react"
 
 type Props = {
   symbol: string | undefined
@@ -14,9 +16,10 @@ type RowProps = {
   level: OrderBookLevel
   side: "bid" | "ask"
   compact: boolean
+  onHover?: (level: OrderBookLevel | null) => void
 }
 
-function DepthRow({ level, side, compact }: RowProps) {
+function DepthRow({ level, side, compact, onHover }: RowProps) {
   const isBid = side === "bid"
   const depthPct = `${(level.depth * 100).toFixed(1)}%`
 
@@ -24,9 +27,16 @@ function DepthRow({ level, side, compact }: RowProps) {
     <div
       role="row"
       className={cn(
-        "relative flex items-center font-mono text-[11px] select-none", // ds-allow: dense orderbook row font size
+        "relative flex items-center font-mono text-[11px] select-none cursor-pointer transition-colors", // ds-allow: dense orderbook row font size
         compact ? "h-[18px]" : "h-[22px]",
+        "hover:bg-muted/30 focus-within:bg-muted/30",
       )}
+      onMouseEnter={() => onHover?.(level)}
+      onMouseLeave={() => onHover?.(null)}
+      onFocus={() => onHover?.(level)}
+      onBlur={() => onHover?.(null)}
+      tabIndex={0}
+      aria-label={`${isBid ? "Bid" : "Ask"} at ${formatUsd(level.price, { decimals: 2 })}, size ${level.size.toFixed(4)}, cumulative ${level.total.toFixed(4)}`}
     >
       {/* depth fill — absolutely positioned behind text */}
       <div
@@ -76,6 +86,59 @@ function DepthRow({ level, side, compact }: RowProps) {
   )
 }
 
+// ── cumulative depth inspection tooltip ───────────────────────────────────────
+
+function DepthInspection({
+  level,
+  side,
+}: {
+  level: OrderBookLevel
+  side: "bid" | "ask"
+}) {
+  const avgPrice = level.total > 0 ? (level.price * level.size + (level.total - level.size) * level.price) / level.total : level.price
+  const notional = level.total * avgPrice
+
+  return (
+    <div
+      role="tooltip"
+      className="pointer-events-none absolute z-50 rounded-md border border-border bg-popover px-3 py-2 shadow-lg"
+      style={{
+        [side === "bid" ? "left" : "right"]: "100%",
+        top: "0",
+        marginLeft: side === "bid" ? "0.5rem" : undefined,
+        marginRight: side === "ask" ? "0.5rem" : undefined,
+      }}
+    >
+      <div className="space-y-0.5 text-[11px] font-mono whitespace-nowrap"> {/* ds-allow: tooltip detail font size */}
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Cumulative Qty:</span>
+          <span className="text-foreground font-medium">
+            {level.total.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 6,
+            })}
+          </span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Avg Price:</span>
+          <span className="text-foreground font-medium">
+            {formatUsd(avgPrice, { decimals: 4 })}
+          </span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">Notional:</span>
+          <span className="text-foreground font-medium">
+            {formatUsd(notional, { decimals: 2 })}
+          </span>
+        </div>
+        <div className="mt-1 pt-1 border-t border-border text-[10px] text-muted-foreground italic"> {/* ds-allow: tooltip disclaimer font size */}
+          Snapshot estimate
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── column headers ────────────────────────────────────────────────────────────
 
 function ColumnHeaders({ compact }: { compact: boolean }) {
@@ -100,10 +163,14 @@ function SpreadRow({
   spread,
   spreadPct,
   midPrice,
+  referencePrice,
+  referencePriceLabel,
 }: {
   spread: number | null
   spreadPct: number | null
   midPrice: number | null
+  referencePrice: number | null
+  referencePriceLabel: string
 }) {
   return (
     <div
@@ -120,17 +187,23 @@ function SpreadRow({
         ) : (
           "—"
         )}
+        {spreadPct !== null && <span className="ml-1">({spreadPct.toFixed(3)}%)</span>}
       </span>
-      {midPrice !== null && (
-        <span>
-          Mid{" "}
+      {referencePrice !== null && (
+        <span title={referencePriceLabel}>
+          {referencePriceLabel === "Last" && (
+            <span className="mr-0.5 opacity-60">Last</span>
+          )}
+          {referencePriceLabel === "Mid" && (
+            <span className="mr-0.5 opacity-60">Mid</span>
+          )}
+          {referencePriceLabel === "Mark" && (
+            <span className="mr-0.5 opacity-60">Mark</span>
+          )}
           <span className="text-foreground/70">
-            {formatUsd(midPrice, { decimals: 2 })}
+            {formatUsd(referencePrice, { decimals: 2 })}
           </span>
         </span>
-      )}
-      {spreadPct !== null && (
-        <span>{spreadPct.toFixed(3)}%</span>
       )}
     </div>
   )
@@ -141,6 +214,15 @@ function SpreadRow({
 export function DepthLadder({ symbol, compact = false }: Props) {
   const { bids, asks, spread, spreadPct, midPrice, status, isLoading } =
     useOrderBook(symbol)
+  const { trades } = useRecentTrades(symbol)
+
+  // OB-054: Determine reference price — prefer last trade, fall back to mid price
+  const lastTradePrice = trades[0]?.price ?? null
+  const referencePrice = lastTradePrice ?? midPrice
+  const referencePriceLabel = lastTradePrice !== null ? "Last" : midPrice !== null ? "Mid" : "Mark"
+
+  // OB-056: Cumulative depth inspection state
+  const [hoveredLevel, setHoveredLevel] = useState<{ level: OrderBookLevel; side: "bid" | "ask" } | null>(null)
 
   const isEmpty = bids.length === 0 && asks.length === 0
 
@@ -216,37 +298,53 @@ export function DepthLadder({ symbol, compact = false }: Props) {
           <div
             role="rowgroup"
             aria-label="Ask orders"
-            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden relative"
           >
             <ColumnHeaders compact={compact} />
             <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto">
               {asks.map((level) => (
-                <DepthRow
-                  key={level.price}
-                  level={level}
-                  side="ask"
-                  compact={compact}
-                />
+                <div key={level.price} className="relative">
+                  <DepthRow
+                    level={level}
+                    side="ask"
+                    compact={compact}
+                    onHover={(lvl) => setHoveredLevel(lvl ? { level: lvl, side: "ask" } : null)}
+                  />
+                  {hoveredLevel?.level === level && hoveredLevel.side === "ask" && (
+                    <DepthInspection level={level} side="ask" />
+                  )}
+                </div>
               ))}
             </div>
           </div>
 
           {/* Spread */}
-          <SpreadRow spread={spread} spreadPct={spreadPct} midPrice={midPrice} />
+          <SpreadRow 
+            spread={spread} 
+            spreadPct={spreadPct} 
+            midPrice={midPrice}
+            referencePrice={referencePrice}
+            referencePriceLabel={referencePriceLabel}
+          />
 
           {/* Bids (buys) — descending price */}
           <div
             role="rowgroup"
             aria-label="Bid orders"
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto relative"
           >
             {bids.map((level) => (
-              <DepthRow
-                key={level.price}
-                level={level}
-                side="bid"
-                compact={compact}
-              />
+              <div key={level.price} className="relative">
+                <DepthRow
+                  level={level}
+                  side="bid"
+                  compact={compact}
+                  onHover={(lvl) => setHoveredLevel(lvl ? { level: lvl, side: "bid" } : null)}
+                />
+                {hoveredLevel?.level === level && hoveredLevel.side === "bid" && (
+                  <DepthInspection level={level} side="bid" />
+                )}
+              </div>
             ))}
           </div>
         </div>
