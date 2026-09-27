@@ -18,6 +18,10 @@ import {
 } from "../../lib/order-encoding"
 import { fetchFeeConfig } from "../../lib/data-store"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
+import { clampLeverage } from "../../lib/risk"
+import { getProtectionPrice } from "../../lib/fee-preview"
+import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
+import { validateExecutionRequest } from "../../lib/execution-support"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { applyReferralCode } from "@/features/referrals/lib/referrals"
@@ -31,10 +35,6 @@ import {
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { estimateFee } from "@/lib/soroban/simulate"
 import { formatAddress } from "@/shared/lib/format"
-import { clampLeverage } from "../../lib/risk"
-import { getProtectionPrice } from "../../lib/fee-preview"
-import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
-import { validateExecutionRequest } from "../../lib/execution-support"
 
 type Props = {
   open: boolean

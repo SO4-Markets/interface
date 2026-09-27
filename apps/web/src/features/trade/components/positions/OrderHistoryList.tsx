@@ -16,13 +16,16 @@ import {
   ORDER_LIFECYCLE_LABEL,
   isCancellableStage,
 } from "../../lib/order-lifecycle"
-import { getOrderAmendCapability, type AmendPayload, type AmendReplaceOutcome } from "../../lib/order-amendment"
-import { AmendOrderDialog, type AmendTarget } from "./AmendOrderDialog"
+import {   getOrderAmendCapability } from "../../lib/order-amendment"
+import { AmendOrderDialog  } from "./AmendOrderDialog"
 import { AccountOrderCard } from "./AccountRowDetails"
 import { HistoryFilters } from "./HistoryFilters"
+import type {AmendPayload, AmendReplaceOutcome} from "../../lib/order-amendment";
+import type {AmendTarget} from "./AmendOrderDialog";
 import type {OrderHistoryFilters, OrderHistoryRow} from "../../lib/order-history";
 import type { Column } from "@workspace/ui/components/data-table"
 import type { OrderType } from "../../hooks/useOrders"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 function formatTimestamp(timestamp: number | null): string {
   return timestamp === null ? "-" : new Date(timestamp).toLocaleString()

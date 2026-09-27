@@ -9,6 +9,7 @@ import type { Query } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { normalizeQueryNetwork } from "@/shared/lib/query-keys"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import { boundQueryCache } from "@/features/trade/lib/cache-policy"
 
 function queryClientDefaults() {
   return {
@@ -33,7 +34,10 @@ export function getQueryClient(): QueryClient {
     return createQueryClient()
   }
 
-  browserQueryClient ??= createQueryClient()
+  if (!browserQueryClient) {
+    browserQueryClient = createQueryClient()
+    boundQueryCache(browserQueryClient)
+  }
   return browserQueryClient
 }
 
@@ -43,48 +47,55 @@ function isPrivateAccountQuery(
   network: string,
 ): boolean {
   const key = query.queryKey
-  return (
-    key[0] === "so4" &&
-    key[1] === normalizeQueryNetwork(network) &&
-    key.some((segment) => segment === account)
+  if (!Array.isArray(key)) return false
+  const normNetwork = normalizeQueryNetwork(network)
+  const keyNetwork = normalizeQueryNetwork(typeof key[1] === "string" ? key[1] : undefined)
+
+  // Matches any key containing the account address under the relevant network
+  const matchesAccount = key.some(
+    (segment) => typeof segment === "string" && segment.toLowerCase() === account.toLowerCase(),
   )
+  return matchesAccount && keyNetwork === normNetwork
 }
 
 export async function clearPrivateAccountQueries(
-  client: QueryClient,
+  queryClient: QueryClient,
   account: string,
   network: string,
 ): Promise<void> {
-  const predicate = (query: Query) =>
-    isPrivateAccountQuery(query, account, network)
+  const queryCache = queryClient.getQueryCache()
+  const queries = queryCache.getAll()
 
-  await client.cancelQueries({ predicate })
-  client.removeQueries({ predicate })
+  for (const query of queries) {
+    if (isPrivateAccountQuery(query, account, network)) {
+      queryClient.removeQueries({ queryKey: query.queryKey, exact: true })
+    }
+  }
 }
 
 function AccountCacheLifecycle() {
   const client = useQueryClient()
   const account = useWalletStore((state) => state.address)
   const network = useWalletStore((state) => state.network)
-  const previous = useRef({ account, network })
+  const previous = useRef<{ account: string | null; network: string | null }>({
+    account,
+    network: network ?? null,
+  })
 
   useEffect(() => {
     const old = previous.current
     const accountChanged = old.account !== account
-    const networkChanged = old.network !== network
+    const networkChanged = old.network !== (network ?? null)
 
     if (old.account && old.network && (accountChanged || networkChanged)) {
       void clearPrivateAccountQueries(client, old.account, old.network)
     }
 
-    previous.current = { account, network }
+    previous.current = { account, network: network ?? null }
   }, [account, client, network])
 
   return null
 }
-
-// Bound query cache to prevent unbounded growth across long sessions
-boundQueryCache(queryClient)
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const client =

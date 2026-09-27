@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   validateAmount,
-  validatePrice,
-  validateTick,
+  validateBalance,
   validateLot,
   validateMinNotional,
-  validateBalance,
+  validatePrice,
+  validateTick,
 } from "./input-validation"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ describe("validatePrice", () => {
   })
 
   it("respects custom decimals for price precision", () => {
-    const result = validatePrice("100.1234567", { decimals: 6 })
+    const result = validatePrice("100.1234567", 6)
     expect(result.isValid).toBe(true)
     expect(result.error).toBeNull()
   })

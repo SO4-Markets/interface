@@ -227,6 +227,8 @@ export const indexerQueryKeys = {
       [...indexerRoot(network), "markets"] as const,
     byKey: (key: string, network: string = indexerNetwork()) =>
       [...indexerRoot(network), "markets", key] as const,
+    risk: (key: string, network: string = indexerNetwork()) =>
+      [...indexerRoot(network), "markets", key, "risk"] as const,
   },
   pools: {
     all: (network: string = indexerNetwork()) =>

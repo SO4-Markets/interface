@@ -9,13 +9,13 @@
 //     once state complexity grows — see GMX's SyntheticsStateContext pattern
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { EXECUTION_SUPPORT } from "../lib/execution-support"
 import { useMarkets } from "./useMarkets"
 import { useTokenList } from "./useTokenList"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { CONTRACTS } from "@/app/config/contracts"
 import { POOL_MARKETS } from "@/features/pools/data/markets"
 import { ENV } from "@/app/config/env"
-import { EXECUTION_SUPPORT } from "../lib/execution-support"
 
 export type TradeType = "Long" | "Short" | "Swap"
 export type TradeMode = "Market" | "Limit" | "Trigger"

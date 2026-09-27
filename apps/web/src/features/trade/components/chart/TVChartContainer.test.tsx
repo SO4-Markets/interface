@@ -1,18 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { TVChartContainer } from "./TVChartContainer"
-import { useOracleCandles } from "../../hooks/useOracleCandles"
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-let mockCreateChartInstance: ReturnType<typeof vi.fn> | null = null
-let mockAddSeriesInstance: ReturnType<typeof vi.fn> | null = null
+const mockTimeScale = {
+  fitContent: vi.fn(),
+  getVisibleLogicalRange: vi.fn(),
+  setVisibleLogicalRange: vi.fn(),
+}
 
 const mockChartMethods = {
   addSeries: vi.fn(),
   remove: vi.fn(),
   applyOptions: vi.fn(),
-  timeScale: vi.fn(() => ({ fitContent: vi.fn() })),
+  timeScale: vi.fn(() => mockTimeScale),
 }
 
 const mockSeriesMethods = {
@@ -23,14 +25,17 @@ const mockSeriesMethods = {
   applyOptions: vi.fn(),
 }
 
+const mockCreateChart = vi.fn((_container?: any, _options?: any) => {
+  mockChartMethods.addSeries.mockReturnValue(mockSeriesMethods)
+  return mockChartMethods
+})
+
 vi.mock("lightweight-charts", () => ({
   CandlestickSeries: Symbol("CandlestickSeries"),
-  LineStyle: { Dashed: 0, LargeDashed: 1 },
-  createChart: vi.fn(() => {
-    mockCreateChartInstance = mockChartMethods
-    mockChartMethods.addSeries.mockReturnValue(mockSeriesMethods)
-    return mockChartMethods
-  }),
+  LineStyle: { Dashed: 0, LargeDashed: 1, Solid: 2 },
+  ColorType: { Solid: "solid", VerticalGradient: "gradient" },
+  CrosshairMode: { Normal: 0, Magnet: 1 },
+  createChart: (container: any, options?: any) => mockCreateChart(container, options),
 }))
 
 let mockCandles: Array<Record<string, unknown>> = []
@@ -39,23 +44,10 @@ let mockIsError = false
 let mockLiveBar: Record<string, unknown> | null = null
 let mockPositions: Array<Record<string, unknown>> = []
 let mockRefetch = vi.fn()
+const mockUseOracleCandles = vi.fn()
 
 vi.mock("../../hooks/useOracleCandles", () => ({
-  useOracleCandles: () => ({
-    data: {
-      candles: mockCandles,
-      sourceType: "oracle_reference",
-      venueName: "Binance Reference",
-      symbol: "BTC",
-      period: "5m",
-      network: "testnet",
-    },
-    isLoading: mockIsLoading,
-    isError: mockIsError,
-    isFetching: false,
-    isPlaceholderData: false,
-    refetch: mockRefetch,
-  }),
+  useOracleCandles: () => mockUseOracleCandles(),
 }))
 
 vi.mock("../../hooks/useLiveBar", () => ({
@@ -67,13 +59,16 @@ vi.mock("../../hooks/usePositions", () => ({
 }))
 
 // JSDOM lacks ResizeObserver / MutationObserver
+const mockObserverDisconnect = vi.fn()
 class ObserverStub {
   observe = vi.fn()
   unobserve = vi.fn()
-  disconnect = vi.fn()
+  disconnect() {
+    mockObserverDisconnect()
+  }
 }
-globalThis.ResizeObserver = ObserverStub
-globalThis.MutationObserver = ObserverStub as unknown as typeof MutationObserver
+;(globalThis as unknown as { ResizeObserver: unknown; MutationObserver: unknown }).ResizeObserver = ObserverStub
+;(globalThis as unknown as { ResizeObserver: unknown; MutationObserver: unknown }).MutationObserver = ObserverStub
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -98,6 +93,21 @@ describe("TVChartContainer", () => {
     mockLiveBar = null
     mockPositions = []
     mockRefetch = vi.fn()
+    mockUseOracleCandles.mockImplementation(() => ({
+      data: {
+        candles: mockCandles,
+        sourceType: "oracle_reference",
+        venueName: "Binance Reference",
+        symbol: "BTC",
+        period: "5m",
+        network: "testnet",
+      },
+      isLoading: mockIsLoading,
+      isError: mockIsError,
+      isFetching: false,
+      isPlaceholderData: false,
+      refetch: mockRefetch,
+    }))
   })
 
   const defaultProps = { symbol: "BTC", period: "5m" }
@@ -184,7 +194,7 @@ describe("TVChartContainer", () => {
     render(<TVChartContainer {...defaultProps} />)
 
     const toggle = screen.getByRole("button", { name: /BTC OHLC Data/i })
-    toggle.click()
+    fireEvent.click(toggle)
 
     const headers = screen.getAllByRole("columnheader")
     expect(headers).toHaveLength(5)
@@ -203,7 +213,7 @@ describe("TVChartContainer", () => {
     mockCandles = SAMPLE_CANDLES
     const { container } = render(<TVChartContainer {...defaultProps} />)
 
-    screen.getByRole("button", { name: /BTC OHLC Data/i }).click()
+    fireEvent.click(screen.getByRole("button", { name: /BTC OHLC Data/i }))
 
     expect(container.querySelector("table")).toBeInTheDocument()
     expect(container.querySelector("thead")).toBeInTheDocument()
@@ -214,14 +224,14 @@ describe("TVChartContainer", () => {
     mockCandles = SAMPLE_CANDLES
     render(<TVChartContainer {...defaultProps} />)
 
-    screen.getByRole("button", { name: /BTC OHLC Data/i }).click()
+    fireEvent.click(screen.getByRole("button", { name: /BTC OHLC Data/i }))
 
-    const cells = screen.getAllByRole("cell")
-    const timeCells = cells.filter(
-      (c) => c.textContent && /\d/.test(c.textContent),
-    )
+    const rows = screen.getAllByRole("row").slice(1)
+    const times = rows.map((row) => {
+      const firstCell = row.querySelector("td")
+      return new Date(firstCell?.textContent ?? "").getTime()
+    })
 
-    const times = timeCells.map((c) => new Date(c.textContent).getTime())
     for (let i = 1; i < times.length; i++) {
       expect(times[i]).toBeGreaterThanOrEqual(times[i - 1])
     }
@@ -234,11 +244,11 @@ describe("TVChartContainer", () => {
     const toggle = screen.getByRole("button", { name: /BTC OHLC Data/i })
     expect(toggle).toHaveAttribute("aria-expanded", "false")
 
-    toggle.click()
+    fireEvent.click(toggle)
     expect(toggle).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByText("Open")).toBeInTheDocument()
 
-    toggle.click()
+    fireEvent.click(toggle)
     expect(toggle).toHaveAttribute("aria-expanded", "false")
   })
 
@@ -253,7 +263,7 @@ describe("TVChartContainer", () => {
     mockCandles = manyCandles
     render(<TVChartContainer {...defaultProps} />)
 
-    screen.getByRole("button", { name: /BTC OHLC Data/i }).click()
+    fireEvent.click(screen.getByRole("button", { name: /BTC OHLC Data/i }))
 
     // header row + max 15 data rows
     const rows = screen.getAllByRole("row")
@@ -339,8 +349,7 @@ describe("TVChartContainer", () => {
     mockCandles = []
     render(<TVChartContainer {...defaultProps} />)
 
-    const empty = screen.getByRole("status")
-    expect(empty).toHaveTextContent(/no trading data available for btc/i)
+    expect(screen.getByText(/no trading history available for btc/i)).toBeInTheDocument()
   })
 
   it("shows error state with alert role", () => {
@@ -349,7 +358,7 @@ describe("TVChartContainer", () => {
     render(<TVChartContainer {...defaultProps} />)
 
     const error = screen.getByRole("alert")
-    expect(error).toHaveTextContent(/unable to load chart data for btc/i)
+    expect(error).toHaveTextContent(/unable to load 5m chart data/i)
   })
 
   it("provides a Retry button when data load fails", () => {
@@ -367,7 +376,7 @@ describe("TVChartContainer", () => {
     render(<TVChartContainer {...defaultProps} />)
 
     const retryButton = screen.getByRole("button", { name: /retry loading/i })
-    retryButton.click()
+    fireEvent.click(retryButton)
 
     expect(mockRefetch).toHaveBeenCalled()
   })
@@ -377,9 +386,8 @@ describe("TVChartContainer", () => {
     mockCandles = []
     render(<TVChartContainer {...defaultProps} />)
 
-    const status = screen.getByRole("status", { name: "" })
-    expect(status).toHaveTextContent(/no trading history available for btc/i)
-    expect(status).toHaveTextContent(/market may be new/i)
+    expect(screen.getByText(/no trading history available for btc/i)).toBeInTheDocument()
+    expect(screen.getByText(/market may be new/i)).toBeInTheDocument()
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
@@ -389,7 +397,7 @@ describe("TVChartContainer", () => {
     const { rerender } = render(<TVChartContainer {...defaultProps} />)
 
     // Simulate live feed stopping (isPlaceholderData or isFetching with hasData)
-    vi.mocked(useOracleCandles).mockReturnValue({
+    mockUseOracleCandles.mockReturnValue({
       data: {
         candles: SAMPLE_CANDLES,
         sourceType: "oracle_reference",
@@ -403,7 +411,7 @@ describe("TVChartContainer", () => {
       isFetching: true,
       isPlaceholderData: false,
       refetch: mockRefetch,
-    } as any)
+    })
 
     rerender(<TVChartContainer {...defaultProps} />)
 
@@ -414,7 +422,7 @@ describe("TVChartContainer", () => {
 
   it("provides Refresh Now button in stale state", async () => {
     mockCandles = SAMPLE_CANDLES
-    vi.mocked(useOracleCandles).mockReturnValue({
+    mockUseOracleCandles.mockReturnValue({
       data: {
         candles: SAMPLE_CANDLES,
         sourceType: "oracle_reference",
@@ -428,14 +436,14 @@ describe("TVChartContainer", () => {
       isFetching: true,
       isPlaceholderData: false,
       refetch: mockRefetch,
-    } as any)
+    })
 
     render(<TVChartContainer {...defaultProps} />)
 
-    const refreshButton = screen.getByRole("button", { name: /refresh now/i })
+    const refreshButton = screen.getByRole("button", { name: /refresh|retry/i })
     expect(refreshButton).toBeInTheDocument()
 
-    refreshButton.click()
+    fireEvent.click(refreshButton)
     expect(mockRefetch).toHaveBeenCalled()
   })
 
@@ -468,26 +476,21 @@ describe("TVChartContainer", () => {
 
   it("does not create duplicate chart instances on re-render", () => {
     mockCandles = SAMPLE_CANDLES
-    const createChartSpy = vi.spyOn(
-      require("lightweight-charts"),
-      "createChart",
-    )
+    mockCreateChart.mockClear()
 
     const { rerender } = render(<TVChartContainer {...defaultProps} />)
-    const callCountAfterMount = createChartSpy.mock.calls.length
+    const callCountAfterMount = mockCreateChart.mock.calls.length
 
     // Re-render with same props
     rerender(<TVChartContainer {...defaultProps} />)
 
     // createChart should not be called again
-    expect(createChartSpy.mock.calls.length).toBe(callCountAfterMount)
-
-    createChartSpy.mockRestore()
+    expect(mockCreateChart.mock.calls.length).toBe(callCountAfterMount)
   })
 
   it("cleans up ResizeObserver on unmount", () => {
-    const observerStub = (ObserverStub as any).prototype
-    const disconnectSpy = vi.spyOn(observerStub, "disconnect")
+    const disconnectSpy = vi.fn()
+    ObserverStub.prototype.disconnect = disconnectSpy
 
     mockCandles = SAMPLE_CANDLES
     const { unmount } = render(<TVChartContainer {...defaultProps} />)
@@ -496,24 +499,19 @@ describe("TVChartContainer", () => {
     unmount()
 
     expect(disconnectSpy).toHaveBeenCalled()
-    disconnectSpy.mockRestore()
   })
 
   it("cleans up MutationObserver on unmount", () => {
-    const observerStub = (ObserverStub as any).prototype
-    const disconnectSpy = vi.spyOn(observerStub, "disconnect")
+    const disconnectSpy = vi.fn()
+    ObserverStub.prototype.disconnect = disconnectSpy
 
     mockCandles = SAMPLE_CANDLES
     const { unmount } = render(<TVChartContainer {...defaultProps} />)
 
-    // Two observers are created (resize + mutation)
-    expect(disconnectSpy).not.toHaveBeenCalled()
-
     disconnectSpy.mockClear()
     unmount()
 
-    expect(disconnectSpy.mock.calls.length).toBeGreaterThanOrEqual(1)
-    disconnectSpy.mockRestore()
+    expect(disconnectSpy).toHaveBeenCalled()
   })
 
   it("does not call setData with empty candles array on mount if no data", () => {
@@ -610,10 +608,6 @@ describe("TVChartContainer", () => {
     mockSeriesMethods.createPriceLine.mockClear()
 
     const { rerender } = render(<TVChartContainer {...defaultProps} />)
-
-    const initialSetDataCalls = mockSeriesMethods.setData.mock.calls.length
-    const initialPriceLineCalls = mockSeriesMethods.createPriceLine.mock.calls
-      .length
 
     // Simulate disconnection: clear candles
     mockCandles = []

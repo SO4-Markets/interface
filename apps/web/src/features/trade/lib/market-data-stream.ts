@@ -1,4 +1,5 @@
-import { BINANCE_PERIOD, BINANCE_SYMBOL, fetchOracleCandles, type OhlcBar } from "./oracle"
+import { deduplicateAndSortTrades } from "../hooks/useRecentTrades"
+import { BINANCE_PERIOD, BINANCE_SYMBOL,  fetchOracleCandles } from "./oracle"
 import {
   DEFAULT_FRESHNESS_POLICY,
   createTelemetry,
@@ -10,10 +11,10 @@ import {
   resetSnapshot,
   toSourceHealth,
 } from "./source-freshness"
+import type {OhlcBar} from "./oracle";
 import type { FeedTelemetry, FeedTransport, FreshnessResult } from "./source-freshness"
 import type { OrderBookLevel, OrderBookState } from "../hooks/useOrderBook"
 import type { TradeItem, UseRecentTradesResult } from "../hooks/useRecentTrades"
-import { deduplicateAndSortTrades } from "../hooks/useRecentTrades"
 import type { SourceHealth } from "../hooks/useSourceHealth"
 
 export type StreamStatus = "connecting" | "connected" | "polling" | "disconnected" | "error"
@@ -616,15 +617,18 @@ class SharedMarketSubscription {
           )
         }
 
-        await Promise.allSettled(tasks)
       } finally {
-        if (!this.isDestroyed && this.usingPolling) {
+        if (this.shouldContinuePolling()) {
           this.pollTimer = setTimeout(poll, FALLBACK_POLL_INTERVAL_MS)
         }
       }
     }
 
     void poll()
+  }
+
+  private shouldContinuePolling(): boolean {
+    return !this.isDestroyed && this.usingPolling
   }
 
   private stopPollingFallback() {
@@ -722,10 +726,10 @@ class SharedMarketSubscription {
   private publishBook() {
     const bids = buildLevels(this.book.bids, false)
     const asks = buildLevels(this.book.asks, true)
-    const bestBid = bids[0]?.price ?? null
-    const bestAsk = asks[0]?.price ?? null
-    const spread = bestBid !== null && bestAsk !== null ? bestAsk - bestBid : null
-    const mid = bestBid !== null && bestAsk !== null ? (bestBid + bestAsk) / 2 : null
+    const bestBid = bids[0]?.price
+    const bestAsk = asks[0]?.price
+    const spread = typeof bestBid === "number" && typeof bestAsk === "number" ? bestAsk - bestBid : null
+    const mid = typeof bestBid === "number" && typeof bestAsk === "number" ? (bestBid + bestAsk) / 2 : null
     const pct = spread !== null && mid !== null && mid > 0 ? (spread / mid) * 100 : null
 
     this.currentBookState = {

@@ -146,9 +146,12 @@ describe("useSourceFreshness", () => {
   })
 
   it("clears the view when the symbol goes away", () => {
-    const { result, rerender } = renderHook(({ symbol }) => useSourceFreshness(symbol), {
-      initialProps: { symbol: "BTC" },
-    })
+    const { result, rerender } = renderHook(
+      ({ symbol }: { symbol: string | undefined }) => useSourceFreshness(symbol),
+      {
+        initialProps: { symbol: "BTC" as string | undefined },
+      },
+    )
     expect(result.current).not.toBeNull()
     rerender({ symbol: undefined })
     expect(result.current).toBeNull()

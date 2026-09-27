@@ -9,7 +9,7 @@
  * deposit/withdrawal UI must be disabled.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getOrderVaultCapability } from "./order-vault-capability"
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────

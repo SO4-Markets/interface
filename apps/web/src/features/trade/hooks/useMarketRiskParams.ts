@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
+import { getRiskState } from "../lib/risk"
+import type { MarketRiskParams, RiskState } from "../lib/risk"
 import { executeGraphQLQuery } from "@/lib/graphql/client"
 import { GET_MARKET_RISK_PARAMS } from "@/lib/graphql/queries"
 import { indexerQueryKeys } from "@/lib/graphql/query-keys"
-import { getRiskState } from "../lib/risk"
-import type { MarketRiskParams, RiskState } from "../lib/risk"
 
 function parsePositiveNumber(value: string | null | undefined): number | null {
   if (!value) return null
@@ -29,10 +29,13 @@ export function useMarketRiskParams(marketKey: string): MarketRiskResult {
     queryKey: indexerQueryKeys.markets.risk(marketKey),
     queryFn: async (): Promise<MarketRiskParams> => {
       const result = await executeGraphQLQuery(GET_MARKET_RISK_PARAMS, { marketKey })
-      const market = result.markets.nodes[0]
-      const snapshot = market?.latestConfigSnapshot
+      const [market] = result.markets.nodes as Array<(typeof result.markets.nodes)[number] | undefined>
+      if (!market) {
+        throw new Error("Market risk parameters are unavailable")
+      }
+      const snapshot = market.latestConfigSnapshot
       const maxLeverage = parsePositiveNumber(snapshot?.maxLeverage)
-      if (market?.status !== "ACTIVE" || !snapshot || maxLeverage === null) {
+      if (market.status !== "ACTIVE" || !snapshot || maxLeverage === null) {
         throw new Error("Market risk parameters are unavailable")
       }
 

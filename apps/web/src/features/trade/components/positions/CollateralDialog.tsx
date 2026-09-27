@@ -13,11 +13,11 @@ import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 import { createDecreaseOrder, createIncreaseOrder } from "../../lib/stellar"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
+import { getOrderVaultCapability } from "../../lib/order-vault-capability"
 import type { Position } from "../../hooks/usePositions"
 import { formatUsd } from "@/shared/lib/format"
 import { useTokenBalances } from "@/features/wallet/hooks/useTokenBalances"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
-import { getOrderVaultCapability } from "../../lib/order-vault-capability"
 
 type Props = {
   position: Position | null

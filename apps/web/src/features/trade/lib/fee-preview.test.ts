@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { calculateDepthImpact, getProtectionPrice, type VerifiedDepth } from "./fee-preview"
+import {  calculateDepthImpact, getProtectionPrice } from "./fee-preview"
+import type {VerifiedDepth} from "./fee-preview";
 
 const depth: VerifiedDepth = {
   source: "verified",

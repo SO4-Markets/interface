@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 import { fetchFeeConfig } from "../lib/data-store"
 import { activeQueryNetwork, queryKeys } from "../lib/query-keys"
+import {  calculateDepthImpact } from "../lib/fee-preview"
 import { useTokenPrices } from "./useTokenPrices"
-import { calculateDepthImpact, type VerifiedDepth } from "../lib/fee-preview"
+import type {VerifiedDepth} from "../lib/fee-preview";
 
 export type TradeFees = {
   positionFeeUsd: number | null
@@ -73,12 +74,8 @@ export function useTradeFees(params: {
     }
   }
 
-  const feeBps =
-    tradeType === "Swap"
-      ? (feeConfig?.swapFeeBps ?? 10)
-      : (feeConfig?.positionFeeBps ?? 10)
-
-  const executionFeeXlm = feeConfig?.minExecutionFeeXlm ?? 0.3
+  const feeBps = tradeType === "Swap" ? feeConfig.swapFeeBps : feeConfig.positionFeeBps
+  const executionFeeXlm = feeConfig.minExecutionFeeXlm
   const executionFeeUsd = xlmPrice > 0 ? executionFeeXlm * xlmPrice : null
 
   const positionFeeUsd = (sizeUsd * feeBps) / 10_000

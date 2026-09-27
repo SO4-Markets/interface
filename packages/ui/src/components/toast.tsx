@@ -270,7 +270,7 @@ function Toast({
   const exitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isHovered, setIsHovered] = React.useState(false)
   // Entrance runs once on mount; content updates reuse the same node (OB-092).
-  const [entered, setEntered] = React.useState(false)
+  const [, setEntered] = React.useState(true)
   const [closing, setClosing] = React.useState(false)
   const reducedMotion = usePrefersReducedMotion()
 
@@ -280,7 +280,15 @@ function Toast({
       return
     }
     const frame = requestAnimationFrame(() => setEntered(true))
-    return () => cancelAnimationFrame(frame)
+    return () => {
+      try {
+        cancelAnimationFrame(frame)
+      } catch {
+        try {
+          clearTimeout(frame)
+        } catch {}
+      }
+    }
   }, [reducedMotion])
 
   // A content update for the same id cancels a pending exit (rapid reversal).
@@ -326,17 +334,15 @@ function Toast({
     }
   }, [item.id, item.duration, item.persistent, item.isTerminal, isHovered, onDismiss, revision, requestDismiss])
 
-  const visible = entered && !closing
-
   return (
     <div
       role="status"
       aria-live="polite"
       data-slot="toast"
       data-variant={item.variant}
-      data-state={visible ? "open" : "closed"}
-      aria-hidden={!visible || undefined}
-      inert={!visible ? true : undefined}
+      data-state={closing ? "closed" : "open"}
+      aria-hidden={closing || undefined}
+      inert={closing ? true : undefined}
       aria-label={`${VARIANT_LABEL[item.variant]}: ${item.message}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -345,8 +351,8 @@ function Toast({
       className={cn(
         "pointer-events-auto flex w-80 flex-col gap-2 rounded-lg border p-4 text-sm shadow-lg",
         "transition-[opacity,transform] duration-[var(--duration-base)] motion-reduce:transition-none",
-        visible ? "translate-y-0 opacity-100 ease-[var(--ease-out)]" : "-translate-y-2 opacity-0 ease-[var(--ease-in)]",
-        !visible && "pointer-events-none",
+        !closing ? "translate-y-0 opacity-100 ease-[var(--ease-out)]" : "-translate-y-2 opacity-0 ease-[var(--ease-in)]",
+        closing && "pointer-events-none",
         VARIANT_CLASSES[item.variant],
       )}
       tabIndex={0}

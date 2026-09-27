@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { marketSubscriptionManager } from "../lib/market-data-stream"
+import type { SourceHealth } from "./useSourceHealth"
 
 export type TradeSide = "buy" | "sell" | "unknown"
 
@@ -17,6 +18,7 @@ export type UseRecentTradesResult = {
   status: "connecting" | "connected" | "disconnected" | "error" | "polling"
   error: Error | null
   isLoading: boolean
+  sourceHealth?: SourceHealth
 }
 
 const MAX_TRADES = 50
@@ -31,8 +33,7 @@ export function deduplicateAndSortTrades(
 ): Array<TradeItem> {
   const map = new Map<string, TradeItem>()
   for (const t of trades) {
-    if (!t || !t.id || typeof t.price !== "number" || typeof t.qty !== "number") continue
-    if (!Number.isFinite(t.price) || t.price <= 0 || !Number.isFinite(t.qty) || t.qty <= 0) continue
+    if (!t.id || !Number.isFinite(t.price) || t.price <= 0 || !Number.isFinite(t.qty) || t.qty <= 0) continue
     if (!Number.isFinite(t.time) || t.time <= 0) continue
     map.set(String(t.id), t)
   }

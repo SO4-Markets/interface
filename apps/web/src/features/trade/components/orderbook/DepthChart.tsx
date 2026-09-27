@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { AreaSeries, createChart } from "lightweight-charts"
-import type { IChartApi, ISeriesApi, LineSeriesData, UTCTimestamp } from "lightweight-charts"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import {
@@ -13,7 +12,8 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { cn } from "@workspace/ui/lib/utils"
-import { getChartPalette, buildChartOptions } from "../../lib/chart-theme"
+import { buildChartOptions, getChartPalette } from "../../lib/chart-theme"
+import type { AreaData, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OrderBookLevel } from "../../hooks/useOrderBook"
 import { formatUsd } from "@/shared/lib/format"
 
@@ -22,10 +22,10 @@ type Props = {
   bids: Array<OrderBookLevel>
   asks: Array<OrderBookLevel>
   isLoading: boolean
-  status: "connecting" | "connected" | "disconnected" | "error"
+  status: "connecting" | "connected" | "disconnected" | "error" | "polling"
 }
 
-function buildDepthChartData(levels: Array<OrderBookLevel>): Array<LineSeriesData> {
+function buildDepthChartData(levels: Array<OrderBookLevel>): Array<AreaData<UTCTimestamp>> {
   return levels.map((level) => ({
     time: Math.round(level.price) as UTCTimestamp,
     value: level.total,
@@ -143,24 +143,24 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
     <div className="relative flex h-full w-full flex-col">
       {/* ═══ Header with status ════════════════════════════════════════════════ */}
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5 bg-muted/20">
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="font-mono text-[11px] text-muted-foreground">{/* ds-allow: status font size */}
           {symbol ?? "Market"} Cumulative Depth
         </span>
         <div className="flex items-center gap-2">
           {status === "connected" && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-green-500">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
               Live
             </span>
           )}
           {status === "connecting" && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber-500">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
               Connecting…
             </span>
           )}
           {(status === "disconnected" || status === "error") && (
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-destructive">{/* ds-allow: status font size */}
               <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
               Disconnected
             </span>

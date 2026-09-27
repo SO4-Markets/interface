@@ -7,8 +7,8 @@
  */
 
 import { cn } from "@workspace/ui/lib/utils"
-import type { SourceHealth } from "../../hooks/useSourceHealth"
 import { formatStaleDuration } from "../../hooks/useSourceHealth"
+import type { SourceHealth } from "../../hooks/useSourceHealth"
 
 type Props = {
   health: SourceHealth

@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "@workspace/ui/components/toast"
 import { activeQueryNetwork } from "../lib/query-keys"
-import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 import type { Order } from "./useOrders"
+import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
 
 interface CancelOrderOptions {
   account: string

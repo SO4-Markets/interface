@@ -26,7 +26,7 @@ function renderProvider() {
 }
 
 function statuses() {
-  return screen.queryAllByRole("status").filter(el => el.getAttribute("aria-label"))
+  return screen.queryAllByRole("status", { hidden: true }).filter(el => el.getAttribute("aria-label"))
 }
 
 beforeEach(() => {
@@ -396,9 +396,9 @@ describe("toast motion — entrance, updates, stacking, exit (OB-092)", () => {
       id = toast.error("Boom", { duration: 0 })
     })
     const node = screen.getByText("Boom").closest("[data-slot='toast']")
-    expect(node?.className).toMatch("bg-danger-subtle")
-    expect(node?.className).toMatch("transition-\\[opacity,transform\\]")
-    expect(node?.className).toMatch("motion-reduce:transition-none")
+    expect(node?.className).toContain("bg-danger-subtle")
+    expect(node?.className).toContain("transition-[opacity,transform]")
+    expect(node?.className).toContain("motion-reduce:transition-none")
     act(() => {
       toast.dismiss(id)
     })

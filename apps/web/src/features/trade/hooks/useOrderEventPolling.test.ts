@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { xdr } from "@stellar/stellar-sdk"
-import type { QueryClient } from "@tanstack/react-query"
-import type { ContractEvent } from "@/lib/soroban/events"
 import {
-  decodeOrderEvent,
   applyOrderEventRefreshMatrix,
+  decodeOrderEvent,
 } from "../lib/order-event-decoder"
 import {
   loadPersistedCursor,
   savePersistedCursor,
 } from "./useOrderEventPolling"
+import type { QueryClient } from "@tanstack/react-query"
+import type { ContractEvent } from "@/lib/soroban/events"
 
 const TEST_ACCOUNT = "GCZXVVCZULC5NZ2V23MZWCABDGVH42DXSBVVMVX34OXQBAWIB7CFZZJ"
 const OTHER_ACCOUNT = "GBBD47UZQ2YNRGESRV37TJZWQ6HC76ZK34CSXVGBTCVRXGT7GBNXVQ34"

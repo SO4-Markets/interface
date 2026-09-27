@@ -9,12 +9,13 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import {
+  
+  
   detectFillDuringEditing,
   getOrderAmendCapability,
-  validateAmendPayload,
-  type AmendPayload,
-  type AmendReplaceOutcome,
+  validateAmendPayload
 } from "../../lib/order-amendment"
+import type {AmendPayload, AmendReplaceOutcome} from "../../lib/order-amendment";
 import type { OrderLifecycleStage } from "../../lib/order-lifecycle"
 import type { OrderType } from "../../hooks/useOrders"
 import { formatUsd } from "@/shared/lib/format"

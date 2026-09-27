@@ -10,12 +10,14 @@ import {
 import { activeQueryNetwork } from "./query-keys"
 import { registerPendingOrder } from "./pending-orders"
 import {
+  
+  
   foldAmendReplaceOutcome,
   resolveAmendReplaceSteps,
-  validateAmendPayload,
-  type AmendPayload,
-  type AmendReplaceOutcome,
+  validateAmendPayload
 } from "./order-amendment"
+import { validateExecutionRequest } from "./execution-support"
+import type {AmendPayload, AmendReplaceOutcome} from "./order-amendment";
 import type { CreateOrderParams, OrderKey } from "@/lib/contracts"
 import type { OrderType } from "../hooks/useOrders"
 import { NETWORK } from "@/app/config/network"
@@ -32,7 +34,6 @@ import { prepareAndSign } from "@/lib/soroban/tx-builder"
 import { formatUsd } from "@/shared/lib/format"
 import { submitTx } from "@/shared/hooks/useTxSubmit"
 import { invalidateMutationOutcome } from "@/shared/lib/mutation-invalidation"
-import { validateExecutionRequest } from "./execution-support"
 
 const CHAIN_ID = activeQueryNetwork()
 
@@ -350,7 +351,7 @@ export async function amendOrderViaReplace(
         loadingMessage: "Creating replacement order...",
         successMessage: "Replacement order submitted (back of queue)",
         successDescription: (hash) => `Tx: ${hash.slice(0, 8)}...`,
-        onSuccess: (hash) => {
+        onSuccess: async (hash) => {
           trackPendingOrder(
             account,
             {
@@ -362,15 +363,15 @@ export async function amendOrderViaReplace(
             },
             hash,
           )
-          return invalidateTradeQueries(account)
+          await refreshMutation("create", account, createStep.marketAddress)
         },
         onError: parseSorobanError,
       },
     )
-    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    await refreshMutation("create", account, createStep.marketAddress)
     return foldAmendReplaceOutcome({ cancelTxHash, createTxHash })
   } catch (error) {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.trade.orders(CHAIN_ID, account) })
+    await refreshMutation("cancel", account)
     return foldAmendReplaceOutcome({
       cancelTxHash,
       createError: error instanceof Error ? error.message : "Replacement order failed",

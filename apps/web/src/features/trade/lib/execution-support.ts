@@ -9,10 +9,13 @@ export type AttachedOrder = {
  * verifies these semantics. Decrease order types are supported directly by
  * the venue; attached orders and a separate reduce-only flag are not.
  */
-export const EXECUTION_SUPPORT = {
+export const EXECUTION_SUPPORT: {
+  readonly reduceOnly: boolean
+  readonly attachedTriggers: boolean
+} = {
   reduceOnly: false,
   attachedTriggers: false,
-} as const
+}
 
 export type ExecutionRequest = {
   reduceOnly?: boolean
