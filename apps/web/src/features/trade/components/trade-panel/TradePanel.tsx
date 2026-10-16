@@ -148,29 +148,35 @@ export function TradePanel({ trade }: TradePanelProps) {
         value={tradeType}
         onValueChange={(v) => setTradeType(v as TradeType)}
       >
-        <TabsList className="w-full">
+        <TabsList
+          className={cn(
+            "w-full transition-colors duration-base ease-spring-smooth",
+            tradeType === "Long" && "[&_[data-slot=tabs-indicator]]:bg-emerald-500/15 [&_[data-slot=tabs-indicator]]:border-emerald-500/30",
+            tradeType === "Short" && "[&_[data-slot=tabs-indicator]]:bg-rose-500/15 [&_[data-slot=tabs-indicator]]:border-rose-500/30"
+          )}
+        >
           <TabsTrigger
             value="Long"
-            className="flex-1 text-green-500 data-[state=active]:text-green-400"
+            className="flex-1 text-green-500 data-[state=active]:text-green-400 font-medium"
           >
             Long
           </TabsTrigger>
           <TabsTrigger
             value="Short"
-            className="flex-1 text-red-500 data-[state=active]:text-red-400"
+            className="flex-1 text-red-500 data-[state=active]:text-red-400 font-medium"
           >
             Short
           </TabsTrigger>
-          <TabsTrigger value="Swap" className="flex-1">
+          <TabsTrigger value="Swap" className="flex-1 font-medium">
             Swap
           </TabsTrigger>
         </TabsList>
 
         {/* ── Order mode: Market / Limit / Trigger ─────────────────── */}
         <Tabs value={tradeMode} onValueChange={(v) => setTradeMode(v as TradeMode)}>
-          <TabsList variant="line" className="w-full transition-all duration-base">
+          <TabsList variant="line" className="w-full">
             {availableTradeModes.map((mode) => (
-              <TabsTrigger key={mode} value={mode} className="flex-1 transition-colors duration-fast">
+              <TabsTrigger key={mode} value={mode} className="flex-1">
                 {mode}
               </TabsTrigger>
             ))}

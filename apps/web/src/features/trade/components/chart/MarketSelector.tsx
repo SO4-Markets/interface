@@ -143,8 +143,23 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   }, [open])
 
   const selectMarket = (market: Market) => {
-    onSelect(market.indexTokenAddress)
-    closeAndRestoreFocus()
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (
+      typeof document !== "undefined" &&
+      "startViewTransition" in document &&
+      !prefersReduced
+    ) {
+      // @ts-expect-error View Transitions API
+      document.startViewTransition(() => {
+        onSelect(market.indexTokenAddress)
+        closeAndRestoreFocus()
+      })
+    } else {
+      onSelect(market.indexTokenAddress)
+      closeAndRestoreFocus()
+    }
   }
 
   const moveActive = (delta: number) => {
@@ -213,9 +228,13 @@ export function MarketSelector({ symbol, onSelect }: Props) {
         aria-expanded={open}
         aria-controls={listboxId}
         onClick={handleToggle}
-        className="flex items-center gap-1.5 rounded border border-border bg-background px-2 py-1 transition-colors hover:bg-accent"
+        className="flex items-center gap-1.5 rounded border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
       >
-        <span className="text-sm font-semibold text-foreground">
+        <span
+          data-slot="market-name"
+          style={{ viewTransitionName: "market-selector-name" }}
+          className="text-sm font-semibold text-foreground transition-[transform,opacity] duration-base ease-spring-smooth motion-reduce:transition-none"
+        >
           {(activeMarket?.name ?? symbol) || "Select Market"}
         </span>
         <svg
@@ -227,7 +246,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+          className={`text-muted-foreground transition-transform duration-fast ease-spring-snappy motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
         >
           <path d="M6 9l6 6 6-6" />
         </svg>

@@ -45,17 +45,44 @@ export function TVChart({ symbol, onSelectToken }: Props) {
     }, 0)
   }
 
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null)
+
+  useEffect(() => {
+    const activeEl = buttonRefs.current.get(period)
+    const toolbar = toolbarRef.current
+    if (activeEl && toolbar) {
+      const activeRect = activeEl.getBoundingClientRect()
+      const toolbarRect = toolbar.getBoundingClientRect()
+      setIndicatorStyle({
+        left: activeRect.left - toolbarRect.left,
+        width: activeRect.width,
+      })
+    }
+  }, [period])
+
   return (
     <div className="flex h-full flex-col">
       <ChartHeader symbol={symbol} onSelectToken={onSelectToken} />
 
       {/* Period selector toolbar */}
       <div
-        className="flex gap-1 border-b border-border px-3 py-1.5"
+        ref={toolbarRef}
+        className="relative flex gap-1 border-b border-border px-3 py-1.5"
         role="group"
         aria-label="Chart timeframe selection"
         onKeyDown={handleKeyDown}
       >
+        {indicatorStyle && (
+          <div
+            role="presentation"
+            style={{
+              transform: `translateX(${indicatorStyle.left}px)`,
+              width: indicatorStyle.width,
+            }}
+            className="absolute top-1.5 bottom-1.5 left-0 rounded bg-primary transition-[transform,width] duration-base ease-spring-smooth motion-reduce:transition-none pointer-events-none"
+          />
+        )}
         {PERIODS.map((p) => (
           <button
             key={p}
@@ -68,10 +95,10 @@ export function TVChart({ symbol, onSelectToken }: Props) {
             aria-label={`${p} timeframe`}
             title={`Switch to ${p} chart (${p === period ? "current" : ""})`}
             className={cn(
-              "rounded px-2 py-0.5 font-mono text-xs transition-colors",
+              "relative z-10 rounded px-2 py-0.5 font-mono text-xs transition-colors duration-fast ease-spring-snappy",
               "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
               period === p
-                ? "bg-primary text-primary-foreground"
+                ? "text-primary-foreground font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >

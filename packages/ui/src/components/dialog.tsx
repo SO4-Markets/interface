@@ -30,9 +30,9 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/80 duration-100 supports-backdrop-filter:backdrop-blur-xs",
-        "data-open:animate-in data-open:fade-in-0",
-        "data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/80 supports-backdrop-filter:backdrop-blur-xs",
+        "data-open:duration-base data-open:ease-out data-open:animate-in data-open:fade-in-0",
+        "data-closed:duration-fast data-closed:ease-in data-closed:animate-out data-closed:fade-out-0",
         "motion-reduce:duration-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none",
         className
       )}
@@ -57,7 +57,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           // Positioning & sizing
-          "fixed top-1/2 inset-inline-start-1/2 z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2",
+          "fixed top-1/2 inset-inline-start-1/2 z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 origin-(--transform-origin)",
           // Mobile: cap height so content scrolls inside rather than overflowing the viewport
           "max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto",
           // Layout, surface, typography
@@ -67,10 +67,9 @@ function DialogContent({
           "max-sm:safe-top max-sm:safe-bottom max-sm:safe-left max-sm:safe-right",
           // Desktop max-width default
           "sm:max-w-sm",
-          // Enter / exit animations
-          "duration-100",
-          "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
-          "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // Enter / exit animations: spring in, quicker ease-out exit
+          "data-open:duration-moderate data-open:ease-spring-smooth data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+          "data-closed:duration-fast data-closed:ease-out data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           "motion-reduce:duration-0 motion-reduce:data-open:animate-none motion-reduce:data-closed:animate-none",
           className
         )}
