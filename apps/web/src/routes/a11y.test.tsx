@@ -48,6 +48,11 @@ describe("Accessibility Smoke Checks", () => {
       (v) => v.impact === "critical" || v.impact === "serious"
     )
     expect(seriousViolations).toEqual([])
+
+    const contrastViolations = results.violations.filter(
+      (v) => v.id === "color-contrast"
+    )
+    expect(contrastViolations).toEqual([])
   })
 
   it("Trade page has no critical/serious violations in disconnected state", async () => {
@@ -58,6 +63,11 @@ describe("Accessibility Smoke Checks", () => {
       (v) => v.impact === "critical" || v.impact === "serious"
     )
     expect(seriousViolations).toEqual([])
+
+    const contrastViolations = results.violations.filter(
+      (v) => v.id === "color-contrast"
+    )
+    expect(contrastViolations).toEqual([])
   })
 
   it("Referrals page has no critical/serious violations in disconnected state", async () => {
@@ -68,6 +78,11 @@ describe("Accessibility Smoke Checks", () => {
       (v) => v.impact === "critical" || v.impact === "serious"
     )
     expect(seriousViolations).toEqual([])
+
+    const contrastViolations = results.violations.filter(
+      (v) => v.id === "color-contrast"
+    )
+    expect(contrastViolations).toEqual([])
   })
 
   describe("Changelog accessibility", () => {

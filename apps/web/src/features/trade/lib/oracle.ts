@@ -408,7 +408,8 @@ export async function fetchOracleCandles(
       network: ENV.NETWORK,
     }
   } catch {
-    return emptyResponse("SO4 Oracle Reference")
+    if (signal?.aborted) return emptyResponse("SO4 Oracle Reference")
+    throw new Error(`Chart data unavailable for ${symbol}: all candle sources failed`)
   }
 }
 
@@ -518,7 +519,7 @@ type PythBenchmarksResponse = {
   c: Array<number>
 }
 
-async function fetchPythBenchmarkCandles(
+export async function fetchPythBenchmarkCandles(
   symbol: string,
   period: string,
   limit: number,

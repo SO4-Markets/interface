@@ -147,7 +147,7 @@ export function FilterBar({
                   )
                 }
               >
-                <SelectTrigger className="h-11 w-full">
+                <SelectTrigger className="h-11 w-full" aria-label="Filter by area">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,7 +244,7 @@ export function FilterBar({
             handleAreaFilter(v === "all" ? undefined : (v as ChangelogArea))
           }
         >
-          <SelectTrigger className="h-9 w-48">
+          <SelectTrigger className="h-9 w-48" aria-label="Filter by area">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

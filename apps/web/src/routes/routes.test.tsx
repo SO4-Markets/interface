@@ -39,6 +39,7 @@ vi.mock("@tanstack/react-router", () => {
   return {
     createFileRoute,
     createRootRoute,
+    notFound: () => new Error("Not Found"),
     Link: ({ children, to, ...props }: Record<string, unknown>) => (
       <a href={to as string} {...props}>
         {children as React.ReactNode}
@@ -270,6 +271,62 @@ describe("route smoke tests", () => {
       const RouteComponent = Route.options.component!
       render(<RouteComponent />, { wrapper: createWrapper() })
       await screen.findByRole("heading", { name: /referrals/i })
+    })
+  })
+
+  describe("/gallery", () => {
+    it("throws notFound in production", async () => {
+      const origDev = import.meta.env.DEV
+      try {
+        // @ts-expect-error mutating import.meta.env for test
+        import.meta.env.DEV = false
+        const { Route } = await import("./gallery")
+        expect(() => Route.options.beforeLoad?.()).toThrow()
+      } finally {
+        // @ts-expect-error restoring import.meta.env
+        import.meta.env.DEV = origDev
+      }
+    })
+
+    it("allows loading in dev mode", async () => {
+      const origDev = import.meta.env.DEV
+      try {
+        // @ts-expect-error mutating import.meta.env for test
+        import.meta.env.DEV = true
+        const { Route } = await import("./gallery")
+        expect(() => Route.options.beforeLoad?.()).not.toThrow()
+      } finally {
+        // @ts-expect-error restoring import.meta.env
+        import.meta.env.DEV = origDev
+      }
+    })
+  })
+
+  describe("/design-system", () => {
+    it("throws notFound in production", async () => {
+      const origDev = import.meta.env.DEV
+      try {
+        // @ts-expect-error mutating import.meta.env for test
+        import.meta.env.DEV = false
+        const { Route } = await import("./design-system")
+        expect(() => Route.options.beforeLoad?.()).toThrow()
+      } finally {
+        // @ts-expect-error restoring import.meta.env
+        import.meta.env.DEV = origDev
+      }
+    })
+
+    it("allows loading in dev mode", async () => {
+      const origDev = import.meta.env.DEV
+      try {
+        // @ts-expect-error mutating import.meta.env for test
+        import.meta.env.DEV = true
+        const { Route } = await import("./design-system")
+        expect(() => Route.options.beforeLoad?.()).not.toThrow()
+      } finally {
+        // @ts-expect-error restoring import.meta.env
+        import.meta.env.DEV = origDev
+      }
     })
   })
 
