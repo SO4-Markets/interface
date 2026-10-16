@@ -168,7 +168,7 @@ export function TradePanel({ trade }: TradePanelProps) {
 
         {/* ── Order mode: Market / Limit / Trigger ─────────────────── */}
         <Tabs value={tradeMode} onValueChange={(v) => setTradeMode(v as TradeMode)}>
-          <TabsList variant="line" className="w-full transition-all duration-base">
+          <TabsList variant="line" className="w-full transition-colors duration-base">
             {availableTradeModes.map((mode) => (
               <TabsTrigger key={mode} value={mode} className="flex-1 transition-colors duration-fast">
                 {mode}

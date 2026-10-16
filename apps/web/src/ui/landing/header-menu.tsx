@@ -113,7 +113,7 @@ export function HeaderMenu() {
             <li key={label}>
               <Link
                 to={to}
-                className="text-14 font-medium tracking-[-0.448px] text-white/80 transition-colors duration-180 hover:text-white [&.active]:text-white/60"
+                className="text-14 font-medium tracking-[-0.448px] text-white/80 transition-colors duration-base hover:text-white [&.active]:text-white/60"
               >
                 {label}
               </Link>
@@ -122,7 +122,7 @@ export function HeaderMenu() {
           <li>
             <a
               href="#"
-              className="text-14 font-medium tracking-[-0.448px] text-white/80 transition-colors duration-180 hover:text-white"
+              className="text-14 font-medium tracking-[-0.448px] text-white/80 transition-colors duration-base hover:text-white"
             >
               Docs
             </a>

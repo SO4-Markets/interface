@@ -39,7 +39,7 @@ export function HeroSection() {
 
       <div className="relative mx-auto flex min-h-160 w-full max-w-300 flex-col justify-end px-4 pt-20 pb-15 sm:min-h-215 sm:px-10 sm:pt-24 sm:pb-20">
         <h1
-          className={`text-heading-1 text-white transition-opacity duration-300 ${
+          className={`text-heading-1 text-white transition-opacity duration-slow ${
             sequence.showTitle ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -52,7 +52,7 @@ export function HeroSection() {
             being squeezed into a third column (which wrapped every stat
             label onto three lines at 768). */}
         <div
-          className={`mt-7 flex flex-col gap-6 border-b border-hairline border-gmx-slate-600 pb-7 lg:flex-row lg:items-end lg:justify-between lg:pb-9 transition-opacity duration-300 ${
+          className={`mt-7 flex flex-col gap-6 border-b border-hairline border-gmx-slate-600 pb-7 lg:flex-row lg:items-end lg:justify-between lg:pb-9 transition-opacity duration-slow ${
             sequence.showCta ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -82,7 +82,7 @@ export function HeroSection() {
       </div>
 
       <div
-        className={`relative mx-auto w-full max-w-300 px-4 sm:px-10 transition-opacity duration-300 ${
+        className={`relative mx-auto w-full max-w-300 px-4 sm:px-10 transition-opacity duration-slow ${
           sequence.showGrid ? "opacity-100" : "opacity-0"
         }`}
       >

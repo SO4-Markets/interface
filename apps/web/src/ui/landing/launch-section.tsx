@@ -44,7 +44,7 @@ export function LaunchSection() {
             href="https://stellar.org"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between rounded-8 border border-hairline border-gmx-slate-600/20 bg-white px-4 py-3.5 text-gmx-slate-900 shadow-sm transition-colors duration-180 hover:bg-gmx-light-150"
+            className="flex items-center justify-between rounded-8 border border-hairline border-gmx-slate-600/20 bg-white px-4 py-3.5 text-gmx-slate-900 shadow-sm transition-colors duration-base hover:bg-gmx-light-150"
           >
             <span className="flex items-center gap-3">
               <span className="flex size-8 items-center justify-center rounded-full bg-gmx-light-150">

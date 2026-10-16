@@ -33,7 +33,7 @@ const viewportVariants = cva("min-h-0 min-w-0 flex-1 scroll-area-scrollbars", {
  * as a grey smear.
  */
 const edgeVariants = cva(
-  "pointer-events-none absolute z-10 opacity-0 transition-opacity duration-150 motion-reduce:transition-none",
+  "pointer-events-none absolute z-10 opacity-0 transition-opacity duration-base motion-reduce:transition-none",
   {
     variants: {
       tone: {

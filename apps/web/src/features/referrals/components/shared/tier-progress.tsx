@@ -77,7 +77,7 @@ export function TierProgress({ tier, volumeUsd }: Props) {
         className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
       >
         <div
-          className="h-full rounded-full bg-primary transition-all"
+          className="h-full rounded-full bg-primary transition-[width] duration-base ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>

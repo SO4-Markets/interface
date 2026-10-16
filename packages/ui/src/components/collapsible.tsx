@@ -133,7 +133,7 @@ function CollapsibleTrigger({
         icon={ChevronDownIcon}
         strokeWidth={2.5}
         className={cn(
-          "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180 motion-reduce:transition-none",
+          "size-3.5 shrink-0 text-muted-foreground transition-transform duration-moderate group-aria-expanded:rotate-180 motion-reduce:transition-none",
           open ? "rotate-180" : "rotate-0"
         )}
       />
@@ -160,7 +160,7 @@ function CollapsibleContent({
       data-slot="collapsible-content"
       data-state={open ? "open" : "closed"}
       className={cn(
-        "grid overflow-hidden text-sm leading-relaxed text-muted-foreground transition-[grid-template-rows,padding-bottom] duration-200 motion-reduce:transition-none",
+        "grid overflow-hidden text-sm leading-relaxed text-muted-foreground transition-[grid-template-rows,padding-bottom] duration-moderate motion-reduce:transition-none",
         open ? "grid-rows-[1fr] pb-3" : "grid-rows-[0fr] pb-0",
         className
       )}

@@ -31,7 +31,7 @@ export function InterruptiblePresence({ present, children, duration = 160, class
       data-state={visible ? "open" : "closed"}
       aria-hidden={!visible || undefined}
       inert={!visible ? true : undefined}
-      className={cn("transition-[opacity,transform] duration-150 motion-reduce:transition-none", visible ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 -translate-y-1", className)}
+      className={cn("transition-[opacity,transform] duration-base motion-reduce:transition-none", visible ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 -translate-y-1", className)}
       style={{ ...style, transitionDuration: `${duration}ms` }}
     >
       {children}

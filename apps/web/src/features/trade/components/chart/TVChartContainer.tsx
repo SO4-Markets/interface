@@ -452,7 +452,7 @@ export function TVChartContainer({ symbol, period }: Props) {
         {/* Lightweight Charts canvas — hidden from AT; the VisuallyHidden summary replaces it */}
         <div
           ref={containerRef}
-          className={cn("h-full w-full transition-opacity duration-150", isStale && "opacity-60")}
+          className={cn("h-full w-full transition-opacity duration-base", isStale && "opacity-60")}
           style={{ touchAction: "none" }}
           role="img"
           aria-label={`Price chart for ${symbol}`}

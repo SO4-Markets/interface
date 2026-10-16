@@ -197,7 +197,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
         {/* Chart canvas */}
         <div
           ref={containerRef}
-          className={cn("h-full w-full transition-opacity duration-150", isLoading && "opacity-60")}
+          className={cn("h-full w-full transition-opacity duration-base", isLoading && "opacity-60")}
           role="img"
           aria-label={`Cumulative depth chart for ${symbol}`}
           aria-describedby="depth-chart-desc"

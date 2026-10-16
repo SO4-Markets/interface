@@ -144,7 +144,7 @@ export function OrderbookPreview() {
               {levels.map((level, index) => (
                 <li
                   key={`${level.price}-${index}`}
-                  className="motion-safe:transition-transform motion-safe:duration-300"
+                  className="motion-safe:transition-transform motion-safe:duration-slow"
                 >
                   <div className="flex items-center justify-between text-12">
                     <span className="text-gmx-slate-300">{level.price}</span>

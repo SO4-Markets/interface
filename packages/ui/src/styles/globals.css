@@ -219,6 +219,31 @@
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --ease-in: cubic-bezier(0.4, 0, 1, 1);
     --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /*
+     * Spring presets via CSS linear() easing curves (OB-011 motion design system).
+     *
+     * - spring-snappy: high-frequency UI interactions, micro-feedback, toggles, tab switches,
+     *   and button presses where quick physical response is needed without distracting oscillation.
+     * - spring-smooth: modals, dialogs, dropdowns, drawer sheets, and navigation reveals that
+     *   require natural, fluid deceleration with gentle settling.
+     * - spring-bouncy: attention-drawing micro-interactions, badge updates, toasts, celebratory
+     *   feedback, and drag-to-dismiss gestures with a slight playful overshoot.
+     */
+    --ease-spring-snappy: linear(
+        0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%,
+        0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 60.7%,
+        1.001 76.9%, 1
+    );
+    --ease-spring-smooth: linear(
+        0, 0.005, 0.021 2.2%, 0.082 5.1%, 0.294 12.3%, 0.548 19.9%, 0.738 27.6%,
+        0.869 35.5%, 0.948 43.7%, 0.985 52.2%, 1.001 61.2%, 1.006 71.1%, 1
+    );
+    --ease-spring-bouncy: linear(
+        0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%,
+        0.995 41.2%, 1.05 46.7%, 1.071 51.5%, 1.074 56.6%, 1.057 62.4%, 1.016 71.1%,
+        0.993 79.7%, 0.996 88.5%, 1
+    );
 }
 
 /*
@@ -247,7 +272,7 @@
     --color-gmx-slate-800: oklch(0.2157 0.0294 280.68);  /* #171827 — cards */
     --color-gmx-slate-700: oklch(0.2510 0.0360 278.84);  /* #1E2033 */
     --color-gmx-slate-650: oklch(0.2817 0.0443 277.70);  /* #24273F */
-    --color-gmx-slate-600: oklch(0.3862 0.0663 278.34);  /* #3C4067 — borders */
+    --color-gmx-slate-600: oklch(0.68 0.052 278.34);  /* WCAG AA compliant text & borders (contrast >= 4.5:1) */
     --color-gmx-slate-500: oklch(0.7242 0.0478 281.04);  /* #A0A3C4 — muted text */
     --color-gmx-slate-400: oklch(0.8145 0.0364 282.07);  /* #BEC0DA — secondary text */
     --color-gmx-light-150: oklch(0.9705 0.0054 274.97);  /* #F4F5F9 — light band */
@@ -401,6 +426,50 @@
     transition-property: color, background-color, border-color, opacity;
     transition-duration: var(--duration-base);
     transition-timing-function: var(--ease-in-out);
+}
+@utility ease-spring-snappy {
+    transition-timing-function: var(--ease-spring-snappy);
+}
+@utility ease-spring-smooth {
+    transition-timing-function: var(--ease-spring-smooth);
+}
+@utility ease-spring-bouncy {
+    transition-timing-function: var(--ease-spring-bouncy);
+}
+
+/*
+ * Route transitions via View Transitions API (OB-011 motion design system).
+ *
+ * Smooth crossfade between routes with prefers-reduced-motion fallback.
+ */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root) {
+    animation: var(--duration-base) var(--ease-out) both fade-out;
+}
+
+::view-transition-new(root) {
+    animation: var(--duration-base) var(--ease-out) both fade-in;
+}
+
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
 }
 :root {
     --background: oklch(1 0 0);

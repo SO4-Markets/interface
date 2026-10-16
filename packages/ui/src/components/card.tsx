@@ -4,7 +4,7 @@ import { cva } from "class-variance-authority"
 import { cn } from "@workspace/ui/lib/utils"
 import type { VariantProps } from "class-variance-authority"
 
-const cardVariants = cva("rounded-xl border transition-all outline-none", {
+const cardVariants = cva("rounded-xl border transition-colors outline-none", {
   variants: {
     variant: {
       /** Default raised surface — cards, panels, sidebars. */

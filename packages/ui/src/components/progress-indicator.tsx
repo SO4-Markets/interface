@@ -26,7 +26,7 @@ const progressIndicatorVariants = cva(
   }
 )
 
-const progressBarVariants = cva("h-full transition-all ease-out", {
+const progressBarVariants = cva("h-full transition-[width] duration-base ease-out", {
   variants: {
     tone: {
       neutral: "bg-text-secondary",

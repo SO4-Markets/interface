@@ -233,7 +233,7 @@ function AccordionTrigger({
             strokeWidth={2.5}
             size="sm"
             tone="muted"
-            className="shrink-0 transition-transform duration-200 group-aria-expanded:rotate-180 motion-reduce:transition-none"
+            className="shrink-0 transition-transform duration-moderate group-aria-expanded:rotate-180 motion-reduce:transition-none"
           />
         )}
       </button>
@@ -263,14 +263,14 @@ function AccordionContent({
       data-slot="accordion-content"
       data-state={open ? "open" : "closed"}
       className={cn(
-        "grid overflow-hidden text-11 leading-relaxed text-muted-foreground transition-[grid-template-rows] duration-200 motion-reduce:transition-none",
+        "grid overflow-hidden text-11 leading-relaxed text-muted-foreground transition-[grid-template-rows] duration-moderate motion-reduce:transition-none",
         open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         className
       )}
       {...props}
     >
       <div className="min-h-0 overflow-hidden">
-        <div className="pb-3 opacity-0 transition-opacity duration-200 group-data-[state=open]:opacity-100 motion-reduce:transition-none">
+        <div className="pb-3 opacity-0 transition-opacity duration-moderate group-data-[state=open]:opacity-100 motion-reduce:transition-none">
           {children}
         </div>
       </div>

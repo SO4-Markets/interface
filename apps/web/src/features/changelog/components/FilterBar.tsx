@@ -103,7 +103,7 @@ export function FilterBar({
                 <Badge
                   variant={allTypesActive ? "default" : "outline"}
                   size="sm"
-                  className="cursor-pointer transition-all h-9 px-3 py-1 focus-visible:ring-2"
+                  className="cursor-pointer transition-all-subtle h-9 px-3 py-1 focus-visible:ring-2"
                   onClick={() => handleTypeFilter(undefined)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -120,7 +120,7 @@ export function FilterBar({
                     key={type}
                     variant={search.type === type ? "default" : "outline"}
                     size="sm"
-                    className="h-9 cursor-pointer px-3 py-1 transition-all focus-visible:ring-2"
+                    className="h-9 cursor-pointer px-3 py-1 transition-all-subtle focus-visible:ring-2"
                     onClick={() => handleTypeFilter(type)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
@@ -147,7 +147,7 @@ export function FilterBar({
                   )
                 }
               >
-                <SelectTrigger className="h-11 w-full">
+                <SelectTrigger className="h-11 w-full" aria-label="Filter by area">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,7 +205,7 @@ export function FilterBar({
           <Badge
             variant={allTypesActive ? "default" : "outline"}
             size="sm"
-            className="cursor-pointer transition-all h-9 px-3 py-1 focus-visible:ring-2"
+            className="cursor-pointer transition-all-subtle h-9 px-3 py-1 focus-visible:ring-2"
             onClick={() => handleTypeFilter(undefined)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -222,7 +222,7 @@ export function FilterBar({
               key={type}
               variant={search.type === type ? "default" : "outline"}
               size="sm"
-              className="h-9 cursor-pointer px-3 py-1 transition-all focus-visible:ring-2"
+              className="h-9 cursor-pointer px-3 py-1 transition-all-subtle focus-visible:ring-2"
               onClick={() => handleTypeFilter(type)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -244,7 +244,7 @@ export function FilterBar({
             handleAreaFilter(v === "all" ? undefined : (v as ChangelogArea))
           }
         >
-          <SelectTrigger className="h-9 w-48">
+          <SelectTrigger className="h-9 w-48" aria-label="Filter by area">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -42,7 +42,7 @@ function DepthRow({ level, side, compact, onHover }: RowProps) {
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-y-0 transition-[width] duration-100",
+          "pointer-events-none absolute inset-y-0 transition-[width] duration-fast",
           isBid
             ? "right-0 bg-green-500/10"
             : "left-0 bg-red-500/10",
