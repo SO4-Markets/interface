@@ -1,9 +1,9 @@
-import { cn } from "@workspace/ui/lib/utils"
-import {  useOrderBook } from "../../hooks/useOrderBook"
-import type {OrderBookLevel} from "../../hooks/useOrderBook";
-import { formatUsd } from "@/shared/lib/format"
-import { useRecentTrades } from "../../hooks/useRecentTrades"
 import { useState } from "react"
+import { cn } from "@workspace/ui/lib/utils"
+import { useOrderBook } from "../../hooks/useOrderBook"
+import { useRecentTrades } from "../../hooks/useRecentTrades"
+import type { OrderBookLevel } from "../../hooks/useOrderBook"
+import { formatUsd } from "@/shared/lib/format"
 
 type Props = {
   symbol: string | undefined
@@ -162,13 +162,11 @@ function ColumnHeaders({ compact }: { compact: boolean }) {
 function SpreadRow({
   spread,
   spreadPct,
-  midPrice,
   referencePrice,
   referencePriceLabel,
 }: {
   spread: number | null
   spreadPct: number | null
-  midPrice: number | null
   referencePrice: number | null
   referencePriceLabel: string
 }) {
@@ -217,7 +215,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
   const { trades } = useRecentTrades(symbol)
 
   // OB-054: Determine reference price — prefer last trade, fall back to mid price
-  const lastTradePrice = trades[0]?.price ?? null
+  const lastTradePrice = trades.at(0)?.price ?? null
   const referencePrice = lastTradePrice ?? midPrice
   const referencePriceLabel = lastTradePrice !== null ? "Last" : midPrice !== null ? "Mid" : "Mark"
 
@@ -322,7 +320,6 @@ export function DepthLadder({ symbol, compact = false }: Props) {
           <SpreadRow 
             spread={spread} 
             spreadPct={spreadPct} 
-            midPrice={midPrice}
             referencePrice={referencePrice}
             referencePriceLabel={referencePriceLabel}
           />

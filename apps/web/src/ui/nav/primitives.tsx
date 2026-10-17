@@ -53,14 +53,7 @@ export function SiteLogo({ variant = "app" }: SiteLogoProps) {
         </svg>
       </span>
       <span className="font-mono-num text-17 font-medium tracking-[0.02em] text-foreground">
- ob-031-034-035-032-trading-workspace
-        levee<span className="text-muted-foreground max-[380px]:hidden">.market</span>
-
-        so4
-        <span className="text-muted-foreground max-[380px]:hidden">
-          .market
-        </span>
- main
+        so4<span className="text-muted-foreground max-[380px]:hidden">.market</span>
       </span>
     </>
   )

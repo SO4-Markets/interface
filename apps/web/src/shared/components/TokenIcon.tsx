@@ -7,7 +7,7 @@ type Props = {
   className?: string
 }
 
-const CDN_BASE = "https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color"
+const CDN_BASE = "https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@3.1.0/svg/color"
 
 const SYMBOL_TO_CDN: Record<string, string> = {
   BTC: `${CDN_BASE}/btc.svg`,

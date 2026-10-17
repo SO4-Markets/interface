@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useLocation } from "@tanstack/react-router"
 import { useNetwork } from "../hooks/useNetwork"
 import { useWalletStore } from "../store/wallet-store"
@@ -10,9 +10,15 @@ export function NetworkMismatchBanner() {
   const { pathname } = useLocation()
   const { mismatch, displayLabel } = useNetwork()
   const { status } = useWalletStore()
-  const [dismissed, setDismissed] = useState(
-    () => sessionStorage.getItem(SESSION_KEY) === "1"
-  )
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    try {
+      setDismissed(sessionStorage.getItem(SESSION_KEY) === "1")
+    } catch {
+      // Safari private mode can throw when accessing sessionStorage
+    }
+  }, [])
 
   // Never show on landing page
   if (pathname === "/") return null

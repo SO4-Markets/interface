@@ -8,6 +8,10 @@ on:
         required: false
         type: string
 
+# Read-only by default; the regen job opts in to the write scopes it needs.
+permissions:
+  contents: read
+
 jobs:
   regen:
     name: Regenerate and PR
@@ -17,12 +21,19 @@ jobs:
       contents: write
       pull-requests: write
 
+    env:
+      # workflow_dispatch inputs are user-controlled — never interpolate them
+      # directly into a `run:` script. Expose the value as an environment
+      # variable instead; shell variable expansion never re-parses the value
+      # for metacharacters, so `x; curl …` reaches the command as plain text.
+      BINDINGS: ${{ github.event.inputs.bindings }}
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
@@ -30,19 +41,29 @@ jobs:
         run: bun install
 
       # The official Stellar CLI ships as a native binary, not an npm package.
-      # This action derives the version to download from its own ref, so it has
-      # to be pinned to a release tag — a branch ref like @main resolves to a
-      # nonexistent "vmain" download.
+      # This action derives the version to download from its own ref by
+      # default, so when it is pinned to an immutable commit SHA the release
+      # version has to be passed explicitly (a branch ref like @main would
+      # otherwise resolve to a nonexistent "vmain" download).
       - name: Install Stellar CLI
-        uses: stellar/stellar-cli@v27.1.0
+        uses: stellar/stellar-cli@8e402ea28202950b272fbabc34caad4d2f64fe87 # v27.1.0
+        with:
+          version: v27.1.0
+
+      - name: Validate bindings input
+        run: |
+          if [[ ! "$BINDINGS" =~ ^[a-z0-9 -]*$ ]]; then
+            echo "::error::Invalid 'bindings' input: only lowercase letters, digits, spaces and hyphens are allowed."
+            exit 1
+          fi
 
       # Contract IDs live in packages/contracts/contracts.json, so no secrets
       # or environment wiring are needed here.
       - name: Generate Bindings
-        run: bun run contracts:gen:all ${{ github.event.inputs.bindings }}
+        run: bun run contracts:gen:all $BINDINGS
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: regenerate contract bindings"
@@ -52,7 +73,7 @@ jobs:
             Regenerated contract bindings from the IDs committed in
             `packages/contracts/contracts.json`.
 
-            Requested bindings: `${{ github.event.inputs.bindings || 'all' }}`
+            Requested bindings: `${{ env.BINDINGS || 'all' }}`
 
             > [!WARNING]
             > The committed bindings carry hand-written adaptations (camelCase

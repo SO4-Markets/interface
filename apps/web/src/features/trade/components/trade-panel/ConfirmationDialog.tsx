@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import { validateExecutionRequest } from "../../lib/execution-support"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { applyReferralCode } from "@/features/referrals/lib/referrals"
+import { ENV } from "@/app/config/env"
 import {
   buildBatchOrderTransaction,
   buildCreateOrderTransaction,
@@ -132,8 +133,8 @@ export function ConfirmationDialog({
       sizeUsd,
       entryPrice,
       leverage,
-      triggerPrice: triggerPrice ?? "",
-      collateralAmount: fromAmount ?? "",
+      triggerPrice,
+      collateralAmount: fromAmount,
     }
 
     if (!inputSnapshotRef.current) {

@@ -10,6 +10,7 @@ import { DensityProvider } from "@workspace/ui/components/density-provider"
 import appCss from "@workspace/ui/globals.css?url"
 import { AppProviders } from "../app/providers"
 import { RouteAnnouncer } from "../shared/components/RouteAnnouncer"
+import { useCspNonce } from "../shared/lib/csp-nonce"
 
 // Update this to your production domain before going live.
 const SITE_URL = "https://levee.market"
@@ -134,22 +135,6 @@ export const Route = createRootRoute({
       { rel: "dns-prefetch", href: "//indexer.example.com" },
       { rel: "dns-prefetch", href: "//rpc.example.com" },
 
-      // ── Preload Critical Assets ─────────────────────────────────
-      {
-        rel: "preload",
-        as: "font",
-        href: "/fonts/inter-400.woff2",
-        type: "font/woff2",
-        crossOrigin: "anonymous",
-      },
-      {
-        rel: "preload",
-        as: "font",
-        href: "/fonts/inter-600.woff2",
-        type: "font/woff2",
-        crossOrigin: "anonymous",
-      },
-
       // ── App CSS ─────────────────────────────────────────────────
       { rel: "stylesheet", href: appCss },
     ],
@@ -189,6 +174,11 @@ const THEME_SCRIPT =
   `(function(){try{var t=localStorage.getItem('so4-theme');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.add(d?'dark':'light')}catch(e){}})()` as const
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // Nonce for the document's inline scripts under the strict CSP. React and
+  // the router already thread it through their own script tags; these two are
+  // hand-rendered (theme flash guard, JSON-LD), so they need it explicitly.
+  const nonce = useCspNonce()
+
   return (
     // suppressHydrationWarning: the blocking script adds a class before React
     // hydrates, so the server-rendered HTML and client DOM will differ on the
@@ -196,11 +186,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Must be first — runs before any CSS is applied */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <HeadContent />
         {/* JSON-LD structured data */}
         <script
           type="application/ld+json"
+          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
         />
       </head>

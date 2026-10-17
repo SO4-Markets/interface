@@ -1,0 +1,17 @@
+# Dependabot keeps the GitHub Actions in .github/workflows up to date.
+#
+# Every action there is pinned to a full commit SHA (with a `# vX.Y.Z`
+# comment) so a moved tag or a compromised publisher cannot silently swap the
+# code that runs with our GITHUB_TOKEN. Dependabot understands that pin
+# format and opens PRs that bump both the SHA and the version comment.
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "chore(ci)"

@@ -5,6 +5,15 @@ import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
 
+function resolveNetwork(baseEnv: Record<string, string>): string {
+  const network = baseEnv.VITE_NETWORK || "testnet"
+  const validNetworks = ["testnet", "mainnet"]
+  if (!validNetworks.includes(network)) {
+    throw new Error(`Invalid VITE_NETWORK: "${network}". Must be one of: ${validNetworks.join(", ")}`)
+  }
+  return network
+}
+
 function bundleSizeGuard(limitKb: number) {
   return {
     name: "bundle-size-guard",
@@ -24,9 +33,9 @@ function bundleSizeGuard(limitKb: number) {
 
 export default defineConfig(({ mode }) => {
   // Determine the target network (e.g. "testnet", "mainnet") from VITE_NETWORK
-  // or fall back to the Vite mode string.
+  // or default to "testnet". Invalid values are rejected.
   const baseEnv = loadEnv(mode, process.cwd(), "VITE_")
-  const network = baseEnv.VITE_NETWORK
+  const network = resolveNetwork(baseEnv)
 
   // Load network-specific env overrides from .env.{network}
   const networkEnv = loadEnv(network, process.cwd(), "VITE_")

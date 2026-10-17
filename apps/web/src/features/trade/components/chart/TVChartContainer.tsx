@@ -17,7 +17,6 @@ import { useOracleCandles } from "../../hooks/useOracleCandles"
 import { useLiveBar } from "../../hooks/useLiveBar"
 import { usePositions } from "../../hooks/usePositions"
 import { useOrders } from "../../hooks/useOrders"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import {
   buildCandleOptions,
   buildChartOptions,
@@ -26,6 +25,7 @@ import {
 } from "../../lib/chart-theme"
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OhlcBar } from "../../lib/oracle"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { formatUsd } from "@/shared/lib/format"
 import { ENV } from "@/app/config/env"
 

@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"
 
+# Read-only by default; the release job opts in to the write scope it needs.
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Verify & Publish Release
@@ -14,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history: the docs content check compares each page's
           # `updated:` frontmatter against the last commit that touched it,
@@ -22,12 +26,12 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
       - name: Cache Bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
@@ -65,15 +69,20 @@ jobs:
       - name: Build
         run: bun run build
 
-      # Release verification assertions & note extraction
+      # Release verification assertions & note extraction.
+      # The tag name is interpolated through an env var so it can never be
+      # parsed as shell syntax.
       - name: Verify release tag and changelog
-        run: bun run scripts/changelog/verify-tag.ts --tag "${{ github.ref_name }}" --output-notes /tmp/release-notes.md
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bun run scripts/changelog/verify-tag.ts --tag "$RELEASE_TAG" --output-notes /tmp/release-notes.md
 
       # Publish GitHub Release (never pushes a commit back)
       - name: Publish GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
+          gh release create "$RELEASE_TAG" \
+            --title "$RELEASE_TAG" \
             --notes-file /tmp/release-notes.md

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { cn } from "@workspace/ui/lib/utils"
+import { renderExcerpt } from "../lib/excerpt-renderer"
 
 export interface SearchResult {
   url: string
@@ -117,10 +118,9 @@ export function SearchDialog({ isOpen, onClose, onSearch, initialQuery = "", cla
             >
               <div className="text-sm font-semibold text-text-accent">{result.title}</div>
               {result.excerpt && (
-                <div
-                  className="text-xs text-text-secondary mt-1 line-clamp-2"
-                  dangerouslySetInnerHTML={{ __html: result.excerpt }}
-                />
+                <div className="text-xs text-text-secondary mt-1 line-clamp-2">
+                  {renderExcerpt(result.excerpt)}
+                </div>
               )}
             </a>
           ))}
