@@ -6,6 +6,7 @@ import {
   createRootRoute,
 } from "@tanstack/react-router"
 import { ToastProvider } from "@workspace/ui/components/toast"
+import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { DensityProvider } from "@workspace/ui/components/density-provider"
 import appCss from "@workspace/ui/globals.css?url"
 import { AppProviders } from "../app/providers"
@@ -191,9 +192,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <DensityProvider>
           <AppProviders>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <TooltipProvider delay={500} timeout={400} closeDelay={0}>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </TooltipProvider>
           </AppProviders>
         </DensityProvider>
         <Scripts />

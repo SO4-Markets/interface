@@ -109,6 +109,7 @@ export function TradeHistoryList() {
       <DataTable
         columns={columns}
         data={rows}
+        animateRows
         isLoading={history.isLoading}
         emptyMessage={history.error ? "Trade history unavailable" : `No executed fills in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
         keyExtractor={(row) => row.id}

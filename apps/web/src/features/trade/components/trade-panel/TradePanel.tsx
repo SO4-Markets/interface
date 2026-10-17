@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { explorerTxUrl } from "@/app/config/network"
 import {
   Tabs,
   TabsContent,
@@ -45,6 +46,7 @@ type TradePanelProps = {
 export function TradePanel({ trade }: TradePanelProps) {
   const { getMidPrice, isStale } = useTokenPrices()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmedHash, setConfirmedHash] = useState<string | null>(null)
   const [priceValidationError, setPriceValidationError] = useState<string | null>(null)
   const [previousMode, setPreviousMode] = useState<TradeMode>(trade.tradeMode)
   const account = useWalletStore((state) => state.address)
@@ -330,10 +332,27 @@ export function TradePanel({ trade }: TradePanelProps) {
         {tradeType} {!tradeFlags.isSwap && toTokenLabel}
       </Button>
 
+      {confirmedHash && (
+        <div role="status" aria-live="polite" className="so4-confirm-moment flex items-center gap-2 rounded-md border border-success/30 bg-success/10 p-3 text-xs text-foreground">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="so4-confirm-check size-5 shrink-0 text-success">
+            <circle cx="12" cy="12" r="10" />
+            <path d="m7 12 3 3 7-7" />
+          </svg>
+          <span className="flex-1">
+            <strong className="block font-semibold">Order confirmed on ledger</strong>
+            Your orders and positions update as indexing completes.
+          </span>
+          <a className="shrink-0 text-primary underline-offset-2 hover:underline focus-visible:underline" href={explorerTxUrl(confirmedHash)} target="_blank" rel="noopener noreferrer">
+            View tx
+          </a>
+        </div>
+      )}
+
       {/* ── Confirmation modal ───────────────────────────────────── */}
       <ConfirmationDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
+        onConfirmed={setConfirmedHash}
         tradeState={trade}
         sizeUsd={sizeUsd}
         entryPrice={entryPrice}

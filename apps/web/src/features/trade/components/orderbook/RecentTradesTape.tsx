@@ -1,4 +1,5 @@
 import { useRef } from "react"
+import { useAnimatedRows } from "@workspace/ui/hooks/use-animated-rows"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import {
   Table,
@@ -19,6 +20,7 @@ type Props = {
 export function RecentTradesTape({ symbol }: Props) {
   const { trades, status, isLoading } = useRecentTrades(symbol)
   const containerRef = useRef<HTMLDivElement>(null)
+  const attachTradeRow = useAnimatedRows(trades, (trade) => trade.id, true, isLoading)
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden text-xs">
@@ -77,7 +79,7 @@ export function RecentTradesTape({ symbol }: Props) {
             </TableHeader>
             <TableBody>
               {trades.map((trade) => (
-                <TableRow key={trade.id} interactive={false} className="font-mono text-[11px]">{/* ds-allow: dense trade row font size */}
+                <TableRow key={trade.id} ref={(node) => attachTradeRow(trade.id, node)} interactive={false} className="font-mono text-[11px]">{/* ds-allow: dense trade row font size */}
                   <TableCell className="font-medium text-foreground">
                     {formatUsd(trade.price, { decimals: 4 })}
                   </TableCell>

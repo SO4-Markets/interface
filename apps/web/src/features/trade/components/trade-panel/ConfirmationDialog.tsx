@@ -40,6 +40,7 @@ import { formatAddress } from "@/shared/lib/format"
 type Props = {
   open: boolean
   onClose: () => void
+  onConfirmed?: (hash: string) => void
   tradeState: ReturnType<typeof useTradeState>
   sizeUsd: number
   entryPrice: number
@@ -50,6 +51,7 @@ type Props = {
 export function ConfirmationDialog({
   open,
   onClose,
+  onConfirmed,
   tradeState,
   sizeUsd,
   entryPrice,
@@ -304,10 +306,12 @@ export function ConfirmationDialog({
           leverage: effectiveLeverage,
         }
 
-        await sendBatchOrderTxn(account, {
+        const confirmedHash = await sendBatchOrderTxn(account, {
           createOrders: [parentOrder, ...sidecarCreateOrders],
         })
 
+        // sendBatchOrderTxn waits for ledger confirmation before resolving.
+        onConfirmed?.(confirmedHash)
         clearSidecarOrders()
       }
       onClose()

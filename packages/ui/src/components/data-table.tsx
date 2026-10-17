@@ -3,6 +3,7 @@ import * as React from 'react'
 import { cn } from '@workspace/ui/lib/utils'
 import { Skeleton } from '@workspace/ui/components/skeleton'
 import { EmptyState } from '@workspace/ui/components/empty-state'
+import { useAnimatedRows } from '@workspace/ui/hooks/use-animated-rows'
 import {
   Table,
   TableBody,
@@ -31,6 +32,8 @@ interface DataTableProps<T> {
   keyExtractor: (row: T) => string
   onRowClick?: (row: T) => void
   selectedRowKey?: string
+  /** FLIP insertion/removal/reorder animations for live trading data. */
+  animateRows?: boolean
   className?: string
 }
 
@@ -43,8 +46,11 @@ function DataTable<T>({
   keyExtractor,
   onRowClick,
   selectedRowKey,
+  animateRows = false,
   className,
 }: DataTableProps<T>) {
+  const attachAnimatedRow = useAnimatedRows(data, keyExtractor, animateRows, isLoading)
+
   if (isLoading) {
     return (
       <Table containerClassName={className}>
@@ -98,6 +104,7 @@ function DataTable<T>({
           return (
             <TableRow
               key={key}
+              ref={animateRows ? (node) => attachAnimatedRow(key, node) : undefined}
               interactive={!!onRowClick}
               aria-current={isSelected ? 'true' : undefined}
               tabIndex={onRowClick ? 0 : undefined}

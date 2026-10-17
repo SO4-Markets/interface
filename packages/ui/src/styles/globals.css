@@ -956,3 +956,39 @@
     background-color: CanvasText !important;
   }
 }
+
+
+/* Motion review #880–883: shared timing tokens, compositor-friendly surfaces. */
+@keyframes so4-confirm-check {
+    from { opacity: 0; transform: scale(0.65); }
+    to { opacity: 1; transform: scale(1); }
+}
+.so4-confirm-check {
+    animation: so4-confirm-check var(--duration-moderate) var(--ease-out) both;
+}
+.so4-confirm-moment {
+    animation: so4-confirm-check var(--duration-slow) var(--ease-out) both;
+}
+[data-slot="tooltip-content"] {
+    transition: opacity var(--duration-base) var(--ease-out),
+                transform var(--duration-base) var(--ease-out);
+}
+[data-slot="tooltip-content"][data-starting-style],
+[data-slot="tooltip-content"][data-ending-style] {
+    opacity: 0;
+    transform: translateY(3px);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+@media (prefers-reduced-motion: reduce) {
+    .so4-confirm-check, .so4-confirm-moment { animation: none; }
+    [data-slot="tooltip-content"] { transition: none; }
+}
+:root[data-reduced-motion="true"] .so4-confirm-check,
+:root[data-reduced-motion="true"] .so4-confirm-moment { animation: none; }
+:root[data-reduced-motion="true"] [data-slot="tooltip-content"] { transition: none; }

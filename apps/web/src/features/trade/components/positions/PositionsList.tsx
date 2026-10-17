@@ -276,6 +276,7 @@ export function PositionsList({ onSelectPosition }: Props) {
       <DataTable
         columns={columns}
         data={positions}
+        animateRows
         isLoading={isLoading}
         emptyMessage="No open positions"
         emptyAction={
