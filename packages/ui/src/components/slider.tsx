@@ -2,14 +2,19 @@ import { Slider as SliderPrimitive } from "@base-ui/react/slider"
 
 import { cn } from "@workspace/ui/lib/utils"
 
+interface SliderProps extends SliderPrimitive.Root.Props {
+  indicatorClassName?: string
+}
+
 function Slider({
   className,
+  indicatorClassName,
   defaultValue,
   value,
   min = 0,
   max = 100,
   ...props
-}: SliderPrimitive.Root.Props) {
+}: SliderProps) {
   const _values = Array.isArray(value)
     ? value
     : Array.isArray(defaultValue)
@@ -34,14 +39,17 @@ function Slider({
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
-            className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
+            className={cn(
+              "bg-primary select-none data-horizontal:h-full data-vertical:w-full transition-[background-color] duration-base ease-in-out",
+              indicatorClassName
+            )}
           />
         </SliderPrimitive.Track>
         {Array.from({ length: _values.length }, (_, index) => (
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
-            className="relative block size-3 shrink-0 rounded-md border border-ring bg-white ring-ring/30 transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-2 focus-visible:ring-2 focus-visible:outline-hidden active:ring-2 disabled:pointer-events-none disabled:opacity-50"
+            className="relative block size-3 shrink-0 rounded-md border border-ring bg-white ring-ring/30 transition-[color,box-shadow,transform] duration-fast ease-spring-snappy select-none after:absolute after:-inset-2 hover:ring-2 focus-visible:ring-2 focus-visible:outline-hidden active:ring-2 active:scale-110 motion-reduce:transition-none motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50"
           />
         ))}
       </SliderPrimitive.Control>
@@ -50,3 +58,4 @@ function Slider({
 }
 
 export { Slider }
+export type { SliderProps }
