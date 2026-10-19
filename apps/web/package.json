@@ -48,7 +48,7 @@
     "@vitest/expect": "^4.1.12",
     "@vitest/ui": "^4.1.12",
     "axe-core": "^4.12.1",
-    "eslint": "^9.39.2",
+    "eslint": "^10.13.0",
     "happy-dom": "^20.10.6",
     "msw": "^2.14.6",
     "qrcode.react": "^4.2.0",
