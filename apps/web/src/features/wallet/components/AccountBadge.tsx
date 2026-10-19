@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
-import { toast } from "@workspace/ui/components/toast"
+import { CopyButton } from "@workspace/ui/components/copy-button"
 
 import { cn } from "@workspace/ui/lib/utils"
 import { useBalance } from "../hooks/useBalance"
@@ -48,16 +48,6 @@ export function AccountBadge({ address, className, ...props }: AccountBadgeProps
     }
   }, [open])
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(address)
-      toast.success("Address copied")
-      setOpen(false)
-    } catch {
-      toast.error("Failed to copy address")
-    }
-  }
-
   const handleDisconnect = () => {
     disconnect()
     setOpen(false)
@@ -88,15 +78,14 @@ export function AccountBadge({ address, className, ...props }: AccountBadgeProps
                 </p>
                 <p className="mt-2 wrap-break-word font-mono text-sm">{address}</p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="whitespace-nowrap"
-                onClick={handleCopy}
+              <CopyButton
+                value={address}
+                label="Copy address"
+                tone="outline"
+                onCopied={() => setOpen(false)}
               >
                 Copy
-              </Button>
+              </CopyButton>
             </div>
           </div>
 

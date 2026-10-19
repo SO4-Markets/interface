@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { QRCodeSVG } from "qrcode.react"
 
 import { Button } from "@workspace/ui/components/button"
+import { CopyButton } from "@workspace/ui/components/copy-button"
 import {
   Dialog,
   DialogContent,
@@ -220,16 +221,16 @@ function AccountBadge({
           </div>
 
           <div className="mt-2 space-y-0.5">
-            <button
+            <CopyButton
               type="button"
-              className="w-full rounded px-2 py-1.5 text-start text-sm transition-colors hover:bg-accent"
-              onClick={() => {
-                navigator.clipboard.writeText(address)
-                setOpen(false)
-              }}
+              role="menuitem"
+              className="w-full justify-start rounded px-2 py-1.5 text-start text-sm transition-colors hover:bg-accent"
+              value={address}
+              label="Copy address"
+              onCopied={() => setOpen(false)}
             >
               Copy Address
-            </button>
+            </CopyButton>
 
             {isTestnet && (
               <a

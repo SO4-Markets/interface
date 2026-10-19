@@ -479,6 +479,15 @@
         animation: none !important;
     }
 }
+
+@media (forced-colors: active) {
+  .so4-copy-feedback {
+    background: Canvas;
+    border-color: CanvasText;
+    box-shadow: none;
+    color: CanvasText;
+  }
+}
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);

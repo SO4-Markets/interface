@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
+import { CopyButton } from "@workspace/ui/components/copy-button"
 import {
   Dialog,
   DialogContent,
@@ -154,20 +155,19 @@ export function ConnectButton({
                   {address}
                 </p>
               </div>
-              <button
+              <CopyButton
                 ref={(node) => {
                   menuItemRefs.current[0] = node
                 }}
                 type="button"
                 role="menuitem"
-                onClick={() => {
-                  void navigator.clipboard.writeText(address)
-                  setOpen(false)
-                }}
+                value={address}
+                label="Copy address"
+                onCopied={() => setOpen(false)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-start text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 Copy address
-              </button>
+              </CopyButton>
               <button
                 ref={(node) => {
                   menuItemRefs.current[1] = node

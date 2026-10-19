@@ -15,6 +15,7 @@ export function useClipboard({
 }: UseClipboardOptions = {}) {
   const [status, setStatus] = useState<ClipboardStatus>("idle")
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const operationRef = useRef(0)
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -26,9 +27,12 @@ export function useClipboard({
   const copy = useCallback(
     async (text: string) => {
       clearTimer()
+      const operation = operationRef.current + 1
+      operationRef.current = operation
 
       try {
         await navigator.clipboard.writeText(text)
+        if (operation !== operationRef.current) return false
         setStatus("copied")
         timerRef.current = setTimeout(() => {
           setStatus("idle")
@@ -36,6 +40,7 @@ export function useClipboard({
         }, resetAfter)
         return true
       } catch {
+        if (operation !== operationRef.current) return false
         setStatus("failed")
         timerRef.current = setTimeout(() => {
           setStatus("idle")
@@ -44,7 +49,7 @@ export function useClipboard({
         return false
       }
     },
-    [clearTimer, resetAfter],
+    [clearTimer, resetAfter]
   )
 
   useEffect(() => clearTimer, [clearTimer])

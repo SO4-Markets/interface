@@ -19,8 +19,10 @@ type CopyButtonTone = Exclude<
   "link"
 >
 
-interface CopyButtonProps
-  extends Omit<React.ComponentProps<typeof Button>, "onClick" | "children"> {
+interface CopyButtonProps extends Omit<
+  React.ComponentProps<typeof Button>,
+  "onClick" | "children"
+> {
   /** The value written to the clipboard on click. */
   value: string
   /** Accessible label (required for icon-only mode). */
@@ -34,6 +36,8 @@ interface CopyButtonProps
   tone?: CopyButtonTone
   /** Milliseconds before the status resets. @default 2000 */
   resetAfter?: number
+  /** Called after the clipboard write succeeds. */
+  onCopied?: () => void
 }
 
 const STATUS_ICON: Record<ClipboardStatus, React.ReactNode> = {
@@ -95,12 +99,14 @@ function CopyButton({
   children,
   tone = "ghost",
   resetAfter = 2000,
+  onCopied,
   className,
   disabled,
   ...props
 }: CopyButtonProps) {
   const { status, copy } = useClipboard({ resetAfter })
   const isIconOnly = !children
+  const feedbackId = React.useId()
 
   const tooltipContent =
     status !== "idle" ? STATUS_TOOLTIP[status] : isIconOnly ? label : undefined
@@ -114,22 +120,55 @@ function CopyButton({
       data-slot="copy-button"
       disabled={disabled}
       className={cn(isIconOnly && "touch-target", className)}
-      onClick={() => void copy(value)}
+      aria-describedby={status !== "idle" ? feedbackId : undefined}
+      onClick={() => {
+        void copy(value).then((didCopy) => {
+          if (didCopy) onCopied?.()
+        })
+      }}
       {...props}
     >
-      {STATUS_ICON[status]}
+      <span
+        aria-hidden="true"
+        className="so4-copy-icon relative inline-flex size-3.5"
+        data-copy-status={status}
+      >
+        {(Object.keys(STATUS_ICON) as Array<ClipboardStatus>).map(
+          (iconStatus) => (
+            <span
+              key={iconStatus}
+              data-copy-icon={iconStatus}
+              className={cn(
+                "duration-fast absolute inset-0 inline-flex transition-[opacity,transform] ease-out motion-reduce:transition-none",
+                iconStatus === status
+                  ? "scale-100 opacity-100"
+                  : "scale-75 opacity-0"
+              )}
+            >
+              {STATUS_ICON[iconStatus]}
+            </span>
+          )
+        )}
+      </span>
       {children}
     </Button>
   )
 
   if (status !== "idle") {
     return (
-      <>
+      <span className="relative inline-flex">
         {button}
+        <span
+          id={feedbackId}
+          className="so4-copy-feedback absolute start-1/2 bottom-full mb-1 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1 text-xs whitespace-nowrap text-popover-foreground shadow-md"
+          role="tooltip"
+        >
+          {STATUS_TOOLTIP[status]}
+        </span>
         <span className="sr-only" role="status" aria-live="polite">
           {STATUS_TOOLTIP[status]}
         </span>
-      </>
+      </span>
     )
   }
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { act, cleanup, render, screen } from "@testing-library/react"
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe } from "vitest-axe"
 import { CopyButton } from "./copy-button"
@@ -78,6 +78,20 @@ describe("CopyButton", () => {
     expect(status).toHaveTextContent("Copied!")
   })
 
+  it("shows the copied feedback as a visible tooltip", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(<CopyButton value="test" label="Copy" />)
+
+    await user.click(screen.getByRole("button", { name: "Copy" }))
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Copied!")
+    expect(
+      screen
+        .getByRole("button", { name: "Copy" })
+        .querySelector('[data-copy-status="copied"]')
+    ).toBeInTheDocument()
+  })
+
   it("shows failure state when clipboard rejects", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(
@@ -89,6 +103,54 @@ describe("CopyButton", () => {
 
     const status = screen.getByRole("status")
     expect(status).toHaveTextContent("Failed to copy")
+    expect(screen.queryByText("Copied!")).not.toBeInTheDocument()
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Failed to copy")
+  })
+
+  it("supports keyboard activation and associates the feedback tooltip", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const clipboardWrite = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    render(<CopyButton value="test" label="Copy" />)
+
+    const button = screen.getByRole("button", { name: "Copy" })
+    button.focus()
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => expect(clipboardWrite).toHaveBeenCalledWith("test"))
+    const activeButton = screen.getByRole("button", { name: "Copy" })
+    const tooltip = screen.getByRole("tooltip")
+    expect(activeButton).toHaveAttribute("aria-describedby", tooltip.id)
+  })
+
+  it("restarts feedback for an interrupted repeated copy", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const clipboardWrite = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    render(<CopyButton value="test" label="Copy" resetAfter={500} />)
+    let button = screen.getByRole("button", { name: "Copy" })
+
+    await user.click(button)
+    button = screen.getByRole("button", { name: "Copy" })
+    await waitFor(() =>
+      expect(
+        button.querySelector('[data-copy-status="copied"]')
+      ).toBeInTheDocument()
+    )
+
+    await user.click(button)
+    button = screen.getByRole("button", { name: "Copy" })
+    await waitFor(() =>
+      expect(
+        button.querySelector('[data-copy-status="copied"]')
+      ).toBeInTheDocument()
+    )
+    expect(clipboardWrite).toHaveBeenCalledTimes(2)
+
+    act(() => vi.advanceTimersByTime(500))
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
   })
 
   it("resets state after timeout", async () => {
