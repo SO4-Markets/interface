@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -34,7 +34,7 @@ jobs:
       # to be pinned to a release tag — a branch ref like @main resolves to a
       # nonexistent "vmain" download.
       - name: Install Stellar CLI
-        uses: stellar/stellar-cli@v27.1.0
+        uses: stellar/stellar-cli@v28.1.0
 
       # Contract IDs live in packages/contracts/contracts.json, so no secrets
       # or environment wiring are needed here.
@@ -42,7 +42,7 @@ jobs:
         run: bun run contracts:gen:all ${{ github.event.inputs.bindings }}
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: regenerate contract bindings"
