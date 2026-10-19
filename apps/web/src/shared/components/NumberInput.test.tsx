@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { useState } from "react"
@@ -63,5 +63,17 @@ describe("NumberInput", () => {
   it("exposes an invalid state via aria-invalid", () => {
     render(<NumberInput value="" onValueChange={vi.fn()} aria-invalid="true" />)
     expect(screen.getByRole("textbox")).toHaveAttribute("aria-invalid", "true")
+  })
+
+  it("does not change on wheel input or scientific-notation keys", () => {
+    const onValueChange = vi.fn()
+    render(<NumberInput value="1.2" onValueChange={onValueChange} />)
+    const input = screen.getByRole("textbox")
+
+    fireEvent.wheel(input)
+    fireEvent.keyDown(input, { key: "e" })
+    fireEvent.keyDown(input, { key: "+" })
+    expect(input).toHaveValue("1.2")
+    expect(onValueChange).not.toHaveBeenCalled()
   })
 })

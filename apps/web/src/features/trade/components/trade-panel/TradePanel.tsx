@@ -5,6 +5,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@workspace/ui/components/tabs"
+import { cn } from "@workspace/ui/lib/utils"
 import { Input } from "@workspace/ui/components/input"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
@@ -48,6 +49,7 @@ export function TradePanel({ trade }: TradePanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmedHash, setConfirmedHash] = useState<string | null>(null)
   const [priceValidationError, setPriceValidationError] = useState<string | null>(null)
+  const [amountValidationError, setAmountValidationError] = useState<string | null>(null)
   const [previousMode, setPreviousMode] = useState<TradeMode>(trade.tradeMode)
   const account = useWalletStore((state) => state.address)
 
@@ -115,7 +117,7 @@ export function TradePanel({ trade }: TradePanelProps) {
   const priceStale = isStale(toTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
   const activePrice = getPrice(toTokenAddress)
-  const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale &&
+  const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale && !amountValidationError &&
     (tradeFlags.isSwap || marketRisk.state === "available")
 
   // Detect mode changes and notify user about discarded fields
@@ -190,13 +192,13 @@ export function TradePanel({ trade }: TradePanelProps) {
         </Tabs>
 
         <TabsContent value="Long" className="mt-0">
-          <TradeInputs trade={trade} />
+          <TradeInputs trade={trade} onValidationChange={setAmountValidationError} />
         </TabsContent>
         <TabsContent value="Short" className="mt-0">
-          <TradeInputs trade={trade} />
+          <TradeInputs trade={trade} onValidationChange={setAmountValidationError} />
         </TabsContent>
         <TabsContent value="Swap" className="mt-0">
-          <TradeInputs trade={trade} />
+          <TradeInputs trade={trade} onValidationChange={setAmountValidationError} />
         </TabsContent>
       </Tabs>
 
@@ -289,17 +291,9 @@ export function TradePanel({ trade }: TradePanelProps) {
         {advanced.advancedDisplay && (
           <div className="mt-3 space-y-3">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Slippage tolerance</label>
+                  <label htmlFor="trade-slippage" className="text-xs text-muted-foreground">Slippage tolerance</label>
               <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.1}
-                  value={advanced.slippagePct}
-                  onChange={(e) => trade.setSlippagePct(Number(e.target.value))}
-                  className="pe-10 font-mono text-sm"
-                />
+                <SlippageInput trade={trade} />
                 <span className="text-xs text-muted-foreground">%</span>
               </div>
             </div>
@@ -376,9 +370,49 @@ export function TradePanel({ trade }: TradePanelProps) {
   )
 }
 
+function SlippageInput({ trade }: { trade: TradeController }) {
+  const [draft, setDraft] = useState(String(trade.advanced.slippagePct))
+
+  useEffect(() => {
+    setDraft(String(trade.advanced.slippagePct))
+  }, [trade.advanced.slippagePct])
+
+  const commit = (value: string) => {
+    const parsed = Number(value)
+    if (!value || value === "." || !Number.isFinite(parsed)) return
+    trade.setSlippagePct(Math.min(10, Math.max(0, parsed)))
+  }
+
+  return (
+    <NumberInput
+      id="trade-slippage"
+      value={draft}
+      onValueChange={(value) => {
+        setDraft(value)
+        commit(value)
+      }}
+      onBlur={() => {
+        const parsed = Number(draft)
+        const normalized = Number.isFinite(parsed) ? Math.min(10, Math.max(0, parsed)) : trade.advanced.slippagePct
+        setDraft(String(normalized))
+        trade.setSlippagePct(normalized)
+      }}
+      inputMode="decimal"
+      aria-label="Slippage tolerance percentage"
+      className="pe-10 font-mono text-sm"
+    />
+  )
+}
+
 // ── Pay / Receive inputs ─────────────────────────────────────────────────────
 
-function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useTradeState>; validationError?: string }) {
+function TradeInputs({
+  trade,
+  onValidationChange,
+}: {
+  trade: ReturnType<typeof useTradeState>
+  onValidationChange: (error: string | null) => void
+}) {
   const { fromAmount, fromTokenAddress, toTokenAddress, collateralAddress, tradeFlags, setFromAmount, switchTokens } = trade
   const { getMidPrice } = useTokenPrices()
   const { data: balances } = useTokenBalances()
@@ -396,12 +430,15 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
     if (value) {
       const validation = validateAmount(value, { maxAmount: walletBalance })
       setAmountValidationError(validation.error)
+      onValidationChange(validation.error)
       if (!validation.error && walletBalance !== undefined) {
         const balance = validateBalance(parseFloat(value), walletBalance)
         setAmountValidationError(balance.error)
+        onValidationChange(balance.error)
       }
     } else {
       setAmountValidationError(null)
+      onValidationChange(null)
     }
   }
 
@@ -434,8 +471,8 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
           } : undefined}
           usdValue={fromUsd > 0 ? fromUsd : undefined}
         />
-        {(validationError || amountValidationError) && (
-          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{validationError || amountValidationError}</p>
+        {amountValidationError && (
+          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{amountValidationError}</p>
         )}
       </div>
 
