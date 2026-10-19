@@ -261,10 +261,14 @@ function Toast({
   item,
   revision,
   onDismiss,
+  indexInStack = 0,
+  isStacked = false,
 }: {
   item: ToastItem
   revision: number
   onDismiss: (id: string) => void
+  indexInStack?: number
+  isStacked?: boolean
 }) {
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const exitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -272,6 +276,9 @@ function Toast({
   // Entrance runs once on mount; content updates reuse the same node (OB-092).
   const [, setEntered] = React.useState(true)
   const [closing, setClosing] = React.useState(false)
+  const [swipeX, setSwipeX] = React.useState(0)
+  const [isSwiping, setIsSwiping] = React.useState(false)
+  const pointerStartRef = React.useRef<{ x: number; y: number; time: number } | null>(null)
   const reducedMotion = usePrefersReducedMotion()
 
   React.useEffect(() => {
@@ -324,7 +331,7 @@ function Toast({
 
   React.useEffect(() => {
     const shouldAutoDismiss = item.isTerminal || (!item.persistent && item.duration > 0)
-    if (!shouldAutoDismiss || isHovered) {
+    if (!shouldAutoDismiss || isHovered || isSwiping) {
       if (timerRef.current) clearTimeout(timerRef.current)
       return
     }
@@ -332,7 +339,63 @@ function Toast({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [item.id, item.duration, item.persistent, item.isTerminal, isHovered, onDismiss, revision, requestDismiss])
+  }, [item.id, item.duration, item.persistent, item.isTerminal, isHovered, isSwiping, onDismiss, revision, requestDismiss])
+
+  const handlePointerDown = React.useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return
+    pointerStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() }
+    setIsSwiping(true)
+  }, [])
+
+  const handlePointerMove = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSwiping || !pointerStartRef.current) return
+      const deltaX = e.clientX - pointerStartRef.current.x
+      const deltaY = e.clientY - pointerStartRef.current.y
+      if (Math.abs(deltaX) > Math.abs(deltaY) || Math.abs(deltaX) > 10) {
+        setSwipeX(deltaX)
+      }
+    },
+    [isSwiping]
+  )
+
+  const handlePointerUp = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSwiping || !pointerStartRef.current) return
+      const duration = Math.max(1, Date.now() - pointerStartRef.current.time)
+      const deltaX = e.clientX - pointerStartRef.current.x
+      const velocityX = Math.abs(deltaX) / duration
+
+      setIsSwiping(false)
+      pointerStartRef.current = null
+
+      if (Math.abs(deltaX) > 80 || velocityX > 0.5) {
+        requestDismiss()
+      } else {
+        setSwipeX(0)
+      }
+    },
+    [isSwiping, requestDismiss]
+  )
+
+  const handlePointerCancel = React.useCallback(() => {
+    setIsSwiping(false)
+    pointerStartRef.current = null
+    setSwipeX(0)
+  }, [])
+
+  const stackTranslateY = isStacked ? -indexInStack * 10 : 0
+  const stackScale = isStacked ? Math.max(0.85, 1 - indexInStack * 0.05) : 1
+  const swipeOpacity = Math.abs(swipeX) > 0 ? Math.max(0.2, 1 - Math.abs(swipeX) / 250) : 1
+
+  const transformStyle = reducedMotion
+    ? undefined
+    : {
+        transform: `translate3d(${swipeX}px, ${stackTranslateY}px, 0) scale(${stackScale})`,
+        transition: isSwiping ? "none" : undefined,
+        opacity: closing ? 0 : swipeOpacity,
+        zIndex: 50 - indexInStack,
+      }
 
   return (
     <div
@@ -348,10 +411,15 @@ function Toast({
       onMouseLeave={() => setIsHovered(false)}
       onFocus={() => setIsHovered(true)}
       onBlur={() => setIsHovered(false)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      style={transformStyle}
       className={cn(
-        "pointer-events-auto flex w-80 flex-col gap-2 rounded-lg border p-4 text-sm shadow-lg",
-        "transition-[opacity,transform] duration-[var(--duration-base)] motion-reduce:transition-none",
-        !closing ? "translate-y-0 opacity-100 ease-[var(--ease-out)]" : "-translate-y-2 opacity-0 ease-[var(--ease-in)]",
+        "pointer-events-auto flex w-80 flex-col gap-2 rounded-lg border p-4 text-sm shadow-lg touch-none select-none",
+        "transition-[opacity,transform] duration-base ease-spring-snappy motion-reduce:transition-none",
+        !closing ? "translate-y-0 opacity-100 ease-spring-snappy" : "-translate-y-2 opacity-0 ease-in",
         closing && "pointer-events-none",
         VARIANT_CLASSES[item.variant],
       )}
@@ -395,12 +463,14 @@ function Toast({
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const { toasts: activeToasts, tracked: trackedToasts, inFlight, dismiss } = useToast()
   const [expanded, setExpanded] = React.useState(false)
+  const [containerHovered, setContainerHovered] = React.useState(false)
 
   const visible = expanded ? activeToasts : activeToasts.slice(-MAX_VISIBLE_TOASTS)
   const hidden = activeToasts.length - visible.length + trackedToasts.length
   const visibleIds = new Set(visible.map(t => t.id))
   const hiddenInFlight = inFlight.filter(t => !visibleIds.has(t.id)).length
   const canCollapse = expanded && activeToasts.length > MAX_VISIBLE_TOASTS
+  const isStacked = !expanded && !containerHovered && visible.length > 1
 
   React.useEffect(() => {
     if (expanded && activeToasts.length <= MAX_VISIBLE_TOASTS) setExpanded(false)
@@ -420,6 +490,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="false"
+        onMouseEnter={() => setContainerHovered(true)}
+        onMouseLeave={() => setContainerHovered(false)}
         className="fixed bottom-4 right-4 z-50 flex max-h-screen flex-col gap-2 overflow-y-auto pointer-events-none"
       >
         {overflowLabel && (
@@ -440,8 +512,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             {overflowLabel}
           </button>
         )}
-        {visible.map((t) => (
-          <Toast key={t.id} item={t} revision={revisions.get(t.id) ?? 0} onDismiss={dismiss} />
+        {visible.map((t, idx) => (
+          <Toast
+            key={t.id}
+            item={t}
+            revision={revisions.get(t.id) ?? 0}
+            onDismiss={dismiss}
+            indexInStack={visible.length - 1 - idx}
+            isStacked={isStacked}
+          />
         ))}
       </div>
     </>
