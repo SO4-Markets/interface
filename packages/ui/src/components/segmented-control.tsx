@@ -91,7 +91,7 @@ export function SegmentedControl<T extends string = string>({
           }}
           className={cn(
             "absolute top-[3px] bottom-[3px] rounded-md transition-[transform,width,background-color] duration-base ease-spring-smooth motion-reduce:transition-none shadow-xs pointer-events-none",
-            activeOption?.activeColor || "bg-background dark:bg-input/40 dark:border dark:border-input",
+            activeOption.activeColor || "bg-background dark:bg-input/40 dark:border dark:border-input",
             thumbClassName
           )}
         />

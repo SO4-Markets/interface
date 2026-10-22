@@ -9,31 +9,31 @@ type LogLevel = "log" | "debug" | "info" | "warn" | "error"
 class DebugLogger {
   private isProduction = import.meta.env.PROD
 
-  private log(level: LogLevel, ...args: unknown[]) {
+  private write(level: LogLevel, ...args: Array<unknown>) {
     if (this.isProduction) {
       return
     }
     console[level]("[DEBUG]", ...args)
   }
 
-  log(...args: unknown[]) {
-    this.log("log", ...args)
+  log(...args: Array<unknown>) {
+    this.write("log", ...args)
   }
 
-  debug(...args: unknown[]) {
-    this.log("debug", ...args)
+  debug(...args: Array<unknown>) {
+    this.write("debug", ...args)
   }
 
-  info(...args: unknown[]) {
-    this.log("info", ...args)
+  info(...args: Array<unknown>) {
+    this.write("info", ...args)
   }
 
-  warn(...args: unknown[]) {
-    this.log("warn", ...args)
+  warn(...args: Array<unknown>) {
+    this.write("warn", ...args)
   }
 
-  error(...args: unknown[]) {
-    this.log("error", ...args)
+  error(...args: Array<unknown>) {
+    this.write("error", ...args)
   }
 }
 

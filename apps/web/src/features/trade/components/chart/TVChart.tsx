@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { useChartPreferencesStore } from "../../store/chart-preferences-store"
 import { useMarkets } from "../../hooks/useMarkets"
