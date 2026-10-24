@@ -64,11 +64,13 @@ function Row({
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-y-0",
+          "pointer-events-none absolute inset-y-0 border-y border-dashed",
           side === "bid" ? "right-0 bg-long-subtle" : "left-0 bg-short-subtle",
+          side === "bid" ? "border-long" : "border-short",
         )}
         style={{ width: fill }}
       />
+      <span className="sr-only">{side === "bid" ? "Bid" : "Ask"} depth level</span>
       <span role="cell" className={cn("relative z-10 w-2/5 shrink-0 px-2 tabular-nums", side === "bid" ? "text-long" : "text-short")}>
         {onSelect ? (
           <button type="button"

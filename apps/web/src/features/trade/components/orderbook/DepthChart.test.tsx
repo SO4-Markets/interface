@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { axe } from "vitest-axe"
 import { DepthChart } from "./DepthChart"
 import type { OrderBookLevel } from "../../hooks/useOrderBook"
 
@@ -19,20 +21,28 @@ const mockSeriesMethods = {
 
 vi.mock("lightweight-charts", () => ({
   AreaSeries: Symbol("AreaSeries"),
+  ColorType: { Solid: "solid", VerticalGradient: "gradient" },
+  LineStyle: { Solid: 0, Dashed: 1, Dotted: 2, LargeDashed: 3, SparseDotted: 4 },
+  CrosshairMode: { Normal: 0, Magnet: 1, Hidden: 2, SemiMagnet: 3 },
   createChart: vi.fn(() => {
     mockChartMethods.addSeries.mockReturnValue(mockSeriesMethods)
     return mockChartMethods
   }),
 }))
 
-// JSDOM lacks ResizeObserver / MutationObserver
+// JSDOM lacks ResizeObserver / MutationObserver. Keep the methods on the
+// prototype so lifecycle assertions exercise the same observer surface as the
+// browser APIs, while retaining spies for calls made by the component.
 class ObserverStub {
-  observe = vi.fn()
-  unobserve = vi.fn()
-  disconnect = vi.fn()
+  constructor(_callback: ResizeObserverCallback | MutationCallback) {}
+
+  observe(_target: Element | Node, _options?: ResizeObserverOptions | MutationObserverInit) {}
+  unobserve(_target: Element) {}
+  takeRecords(): Array<MutationRecord> { return [] }
+  disconnect() {}
 }
 globalThis.ResizeObserver = ObserverStub
-globalThis.MutationObserver = ObserverStub as unknown as typeof MutationObserver
+globalThis.MutationObserver = ObserverStub
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -67,7 +77,7 @@ describe("DepthChart", () => {
   it("renders with accessible title and status", () => {
     render(<DepthChart {...defaultProps} />)
 
-    expect(screen.getByText(/BTC Cumulative Depth/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /BTC Cumulative Depth/i })).toBeInTheDocument()
     expect(screen.getByText(/Live/i)).toBeInTheDocument()
   })
 
@@ -92,6 +102,12 @@ describe("DepthChart", () => {
     expect(summary).toBeInTheDocument()
     expect(summary).toHaveTextContent(/2 bid levels/)
     expect(summary).toHaveTextContent(/2 ask levels/)
+  })
+
+  it("has no automated accessibility violations", async () => {
+    const { container } = render(<DepthChart {...defaultProps} />)
+
+    expect(await axe(container)).toHaveNoViolations()
   })
 
   it("shows loading state", () => {
@@ -130,11 +146,28 @@ describe("DepthChart", () => {
     const toggle = screen.getByRole("button", { name: /BTC Cumulative Depth/i })
     expect(toggle).toHaveAttribute("aria-expanded", "false")
 
-    toggle.click()
+    fireEvent.click(toggle)
 
     expect(toggle).toHaveAttribute("aria-expanded", "true")
-    expect(screen.getByText("Bid")).toBeInTheDocument()
-    expect(screen.getByText("Ask")).toBeInTheDocument()
+    expect(screen.getAllByText("Bid")).toHaveLength(SAMPLE_BIDS.length)
+    expect(screen.getAllByText("Ask")).toHaveLength(SAMPLE_ASKS.length)
+  })
+
+  it("supports keyboard access to the data fallback", async () => {
+    const user = userEvent.setup({ delay: null })
+    render(<DepthChart {...defaultProps} />)
+    const toggle = screen.getByRole("button", { name: /BTC Cumulative Depth/i })
+
+    toggle.focus()
+    expect(toggle).toHaveFocus()
+    await user.keyboard("{Enter}")
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("keeps the data fallback in the DOM while the canvas is present", () => {
+    const { container } = render(<DepthChart {...defaultProps} />)
+    expect(container.querySelector(".so4-depth-chart-canvas")).toBeInTheDocument()
+    expect(container.querySelector("[data-forced-colors-fallback]")).toBeInTheDocument()
   })
 
   it("shows price, size, and cumulative total in table", () => {
@@ -230,7 +263,7 @@ describe("DepthChart", () => {
       />,
     )
 
-    expect(screen.getByText(/1 bid levels/i)).toBeInTheDocument()
+    expect(screen.getByText(/2 bid levels/i)).toBeInTheDocument()
   })
 
   it("handles one-sided depth (asks only)", () => {
@@ -242,7 +275,7 @@ describe("DepthChart", () => {
       />,
     )
 
-    expect(screen.getByText(/1 ask levels/i)).toBeInTheDocument()
+    expect(screen.getByText(/2 ask levels/i)).toBeInTheDocument()
   })
 
   it("recovers and displays data after reconnect", () => {
@@ -260,7 +293,7 @@ describe("DepthChart", () => {
       />,
     )
 
-    expect(screen.getByText(/no depth data/i)).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent(/no depth data/i)
 
     // Reconnect: data returns
     mockSeriesMethods.setData.mockClear()
@@ -280,7 +313,7 @@ describe("DepthChart", () => {
   it("does not retain stale depth data between views", () => {
     const { rerender } = render(<DepthChart {...defaultProps} />)
 
-    screen.getByRole("button", { name: /BTC Cumulative Depth/i }).click()
+    fireEvent.click(screen.getByRole("button", { name: /BTC Cumulative Depth/i }))
     expect(screen.getByText(/100/i)).toBeInTheDocument() // bid price
 
     // Switch to new data set
@@ -296,12 +329,11 @@ describe("DepthChart", () => {
 
     // Old data should not be in table
     expect(screen.queryByText("100")).not.toBeInTheDocument()
-    expect(screen.getByText("200")).toBeInTheDocument()
+    expect(screen.getByText("$200.0000")).toBeInTheDocument()
   })
 
   it("cleans up observers on unmount", () => {
-    const observerStub = (ObserverStub as any).prototype
-    const disconnectSpy = vi.spyOn(observerStub, "disconnect")
+    const disconnectSpy = vi.spyOn(ObserverStub.prototype, "disconnect")
 
     const { unmount } = render(<DepthChart {...defaultProps} />)
 

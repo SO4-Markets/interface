@@ -1027,6 +1027,21 @@
   [data-slot="scroll-area-viewport"]::-webkit-scrollbar-thumb {
     background-color: CanvasText !important;
   }
+
+  /* Canvas charts cannot inherit system colors. Keep the semantic table
+   * fallback available and expose depth bars with a visible border plus the
+   * textual side label supplied by the component. */
+  .so4-depth-chart-canvas {
+    display: none !important;
+  }
+
+  .so4-depth-data-table {
+    display: block !important;
+  }
+
+  [data-forced-colors-fallback] {
+    border-top: 1px solid CanvasText !important;
+  }
 }
 
 

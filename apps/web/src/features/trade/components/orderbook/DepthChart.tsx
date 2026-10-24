@@ -197,7 +197,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
         {/* Chart canvas */}
         <div
           ref={containerRef}
-          className={cn("h-full w-full transition-opacity duration-base", isLoading && "opacity-60")}
+          className={cn("so4-depth-chart-canvas h-full w-full transition-opacity duration-base", isLoading && "opacity-60")}
           role="img"
           aria-label={`Cumulative depth chart for ${symbol}`}
           aria-describedby="depth-chart-desc"
@@ -219,8 +219,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
             <span aria-hidden="true">{showTable ? "▲ Hide" : "▼ Show"}</span>
           </button>
 
-          {showTable && (
-            <div className="overflow-x-auto px-3 pb-2" id="depth-data-table">
+          <div className={cn("so4-depth-data-table overflow-x-auto px-3 pb-2", !showTable && "hidden")} id="depth-data-table" data-forced-colors-fallback>
               <Table>
                 <TableHeader>
                   <TableHeadRow>
@@ -251,8 +250,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
