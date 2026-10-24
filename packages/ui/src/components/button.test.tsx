@@ -76,6 +76,7 @@ describe("Button variants and sizes", () => {
     // disabled + focus-visible states live in the shared base classes.
     expect(buttonVariants({})).toMatch(/disabled:/)
     expect(buttonVariants({})).toMatch(/focus-visible:/)
+    expect(buttonVariants({})).toMatch(/focus-visible:outline-2/)
   })
 
   it("keeps the icon-only button's accessible name from aria-label, not the icon", () => {
@@ -85,6 +86,61 @@ describe("Button variants and sizes", () => {
       </Button>
     )
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument()
+  })
+})
+
+describe("Button focus behavior", () => {
+  it("keeps keyboard focus visible and removes it on blur", () => {
+    const onBlur = vi.fn()
+    render(
+      <>
+        <Button onBlur={onBlur}>First</Button>
+        <Button>Second</Button>
+      </>
+    )
+    const first = screen.getByRole("button", { name: "First" })
+    const second = screen.getByRole("button", { name: "Second" })
+
+    first.focus()
+    expect(first).toHaveFocus()
+    expect(first.matches(":focus-visible")).toBe(true)
+
+    second.focus()
+    expect(onBlur).toHaveBeenCalledTimes(1)
+    expect(first).not.toHaveFocus()
+  })
+
+  it("moves focus between buttons without changing their accessible semantics", () => {
+    render(
+      <>
+        <Button>First</Button>
+        <Button>Second</Button>
+      </>
+    )
+    const first = screen.getByRole("button", { name: "First" })
+    const second = screen.getByRole("button", { name: "Second" })
+
+    first.focus()
+    second.focus()
+
+    expect(first).not.toHaveFocus()
+    expect(second).toHaveFocus()
+    expect(second).toHaveAttribute("type", "button")
+  })
+
+  it("never makes disabled controls keyboard focus targets", () => {
+    render(
+      <>
+        <Button disabled>Disabled</Button>
+        <Button pending>Pending</Button>
+      </>
+    )
+    const disabled = screen.getByRole("button", { name: "Disabled" })
+    const pending = screen.getByRole("button", { name: "Pending" })
+
+    expect(pending).toBeDisabled()
+    expect(disabled).toHaveAttribute("disabled")
+    expect(disabled).toHaveClass("disabled:pointer-events-none")
   })
 })
 
@@ -114,9 +170,7 @@ describe("Button pending state", () => {
 
   it("prevents duplicate submissions while pending", () => {
     const handleClick = vi.fn()
-    const { rerender } = render(
-      <Button onClick={handleClick}>Submit</Button>
-    )
+    const { rerender } = render(<Button onClick={handleClick}>Submit</Button>)
     const button = screen.getByRole("button")
     button.click()
     expect(handleClick).toHaveBeenCalledTimes(1)

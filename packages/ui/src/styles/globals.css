@@ -244,6 +244,43 @@
     );
 }
 
+/* Shared keyboard focus treatment (OB-021). Keep the outline present for
+ * keyboard users and animate only the paint-layer affordance so focus never
+ * changes layout or moves the active control. */
+:where(button, a, [role="button"]) {
+  position: relative;
+}
+
+:where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+  outline: 0.125rem solid var(--ring);
+  outline-offset: 0.125rem;
+}
+
+:where(button, a, [role="button"]):after {
+  position: absolute;
+  inset: -0.25rem;
+  border: 0.125rem solid color-mix(in oklch, var(--ring) 50%, transparent);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  content: "";
+  transform: scale(0.96);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+:where(button, a, [role="button"]):focus-visible:after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, a, [role="button"]):after {
+    transition: none;
+  }
+}
+
 /*
  * GMX reference palette and landing theme (GF3).
  *
@@ -979,6 +1016,13 @@
     forced-color-adjust: none;
     outline: 2px solid Highlight !important;
     outline-offset: 2px;
+  }
+
+  :where(button, a, [role="button"]):focus-visible:after {
+    border-color: Highlight;
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 
   /* Icons and SVGs */
