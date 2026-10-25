@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import { Popover, PopoverContent, PopoverTrigger, PopoverTitle, PopoverDescription } from "@workspace/ui/components/popover"
 import { Button } from "@workspace/ui/components/button"
-import { Input } from "@workspace/ui/components/input"
+import { NumberInput } from "@/shared/components/NumberInput"
 import { Kbd } from "@workspace/ui/components/kbd"
 
 const PRESETS: ReadonlyArray<number> = [0.1, 0.5, 1]
@@ -24,8 +24,23 @@ export function SlippageTolerancePopover({ slippagePct, onSlippageChange }: Slip
     setOpen(false)
   }
 
-  function handleCustomChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setCustomValue(e.target.value)
+  function handleCustomChange(value: string) {
+    setCustomValue(value)
+  }
+
+  function handleCustomBlur() {
+    if (!customValue || customValue === ".") {
+      setCustomValue(String(slippagePct))
+      return
+    }
+    const parsed = Number(customValue)
+    if (!Number.isFinite(parsed)) {
+      setCustomValue(String(slippagePct))
+      return
+    }
+    const clamped = Math.min(10, Math.max(0, parsed))
+    setCustomValue(String(clamped))
+    onSlippageChange(clamped)
   }
 
   function handleCustomSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -73,12 +88,13 @@ export function SlippageTolerancePopover({ slippagePct, onSlippageChange }: Slip
             ))}
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground block">Custom</label>
-            <Input
-              type="text"
-              inputMode="decimal"
+            <label htmlFor="trade-slippage" className="text-xs text-muted-foreground block">Custom</label>
+            <NumberInput
+              id="trade-slippage"
+              aria-label="Slippage tolerance percentage"
               value={customValue}
-              onChange={handleCustomChange}
+              onValueChange={handleCustomChange}
+              onBlur={handleCustomBlur}
               placeholder="0.3"
               className="text-xs font-mono"
             />

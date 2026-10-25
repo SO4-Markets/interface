@@ -23,6 +23,8 @@ export function NumberInput({
   placeholder,
   className,
   disabled,
+  onKeyDown,
+  onWheel,
   ...props
 }: NumberInputProps) {
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -41,6 +43,14 @@ export function NumberInput({
           placeholder={placeholder}
           value={value}
           onChange={handleChange}
+          onKeyDown={(event) => {
+            if (["e", "E", "+", "-"].includes(event.key)) event.preventDefault()
+            onKeyDown?.(event)
+          }}
+          onWheel={(event) => {
+            event.preventDefault()
+            onWheel?.(event)
+          }}
           className={cn(onMax && "pe-14", className)}
           disabled={disabled}
           {...props}

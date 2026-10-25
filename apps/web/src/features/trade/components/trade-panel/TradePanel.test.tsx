@@ -11,8 +11,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 // ── Data sources behind the real useTradeState ───────────────────────────────
 vi.mock("../../hooks/useMarkets", () => ({
@@ -37,6 +38,7 @@ vi.mock("../../hooks/useTokenPrices", () => ({
     prices: {},
     isLoading: false,
     error: null,
+    isStale: () => false,
     getPrice: () => undefined,
     getMidPrice: () => 1,
   }),
@@ -58,12 +60,26 @@ vi.mock("../../hooks/useMarketRiskParams", () => ({
     isError: false,
   }),
 }))
+vi.mock("../../hooks/usePositions", () => ({
+  usePositions: () => ({ data: [] }),
+}))
+
+vi.mock("@/lib/contracts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/contracts")>()
+  return {
+    ...actual,
+    getTraderReferralCode: async () => null,
+    readStoredReferralCode: () => null,
+  }
+})
 
 // ── Wallet balances: USDC balance of 500 (the default collateral token) ──────
 // Hoisted because the `vi.mock` factory below closes over it.
 const { WALLET_BALANCE } = vi.hoisted(() => ({ WALLET_BALANCE: 500 }))
 vi.mock("../../../wallet/hooks/useTokenBalances", () => ({
-  useTokenBalances: () => ({ data: { USDC: WALLET_BALANCE } }),
+  useTokenBalances: () => ({
+    data: new Proxy<Record<string, number>>({}, { get: () => WALLET_BALANCE }),
+  }),
 }))
 
 // ── Heavy children — irrelevant to input validation, and the dialog must never
@@ -71,25 +87,74 @@ vi.mock("../../../wallet/hooks/useTokenBalances", () => ({
 vi.mock("./TradeInfoRows", () => ({ TradeInfoRows: () => null }))
 vi.mock("./ConfirmationDialog", () => ({ ConfirmationDialog: () => null }))
 
-// ── Base UI wrappers — stubbed with pass-throughs (fast, and Base UI's Tabs /
-//    Slider are prohibitively slow under happy-dom). ──────────────────────────
-vi.mock("@workspace/ui/components/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsList: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  TabsContent: ({
+// ── Base UI wrappers — lightweight semantic doubles. They preserve the
+//    production tab contract (controlled values, button triggers, and active
+//    content) without loading Base UI's full happy-dom interaction machinery.
+vi.mock("@workspace/ui/components/tabs", async () => {
+  const { createContext, useContext } = await import("react")
+  const TabsContext = createContext<{
+    value?: string
+    onValueChange?: (value: string) => void
+  }>({})
+
+  function Tabs({
+    value,
+    onValueChange,
+    children,
+  }: {
+    value?: string
+    onValueChange?: (value: string) => void
+    children: React.ReactNode
+  }) {
+    return (
+      <TabsContext.Provider value={{ value, onValueChange }}>
+        <div>{children}</div>
+      </TabsContext.Provider>
+    )
+  }
+
+  function TabsTrigger({
     value,
     children,
   }: {
     value: string
     children: React.ReactNode
-  }) =>
-    // Render only the default (Long) tab's content so a single input exists.
-    value === "Long" ? <div>{children}</div> : null,
+  }) {
+    const tabs = useContext(TabsContext)
+    return (
+      <button type="button" aria-selected={tabs.value === value} onClick={() => tabs.onValueChange?.(value)}>
+        {children}
+      </button>
+    )
+  }
+
+  function TabsContent({
+    value,
+    children,
+  }: {
+    value: string
+    children: React.ReactNode
+  }) {
+    const tabs = useContext(TabsContext)
+    return tabs.value === value ? <div>{children}</div> : null
+  }
+
+  return {
+    Tabs,
+  TabsList: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+    TabsTrigger,
+    TabsContent,
+  }
+})
+// Keep the real slippage-popover logic under test with a lightweight portal shell.
+vi.mock("@workspace/ui/components/popover", () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PopoverTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PopoverTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  PopoverDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }))
 vi.mock("@workspace/ui/components/slider", () => ({
   Slider: () => null,
@@ -105,6 +170,13 @@ vi.mock("@workspace/ui/components/badge", () => ({
 
 const { TradePanel } = await import("./TradePanel")
 const { useTradeState } = await import("../../hooks/useTradeState")
+const { useWalletStore } = await import("../../../wallet/store/wallet-store")
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+  },
+})
 
 /**
  * TradePanel takes the trade controller as a prop. These tests target the real
@@ -113,17 +185,21 @@ const { useTradeState } = await import("../../hooks/useTradeState")
  */
 function TradePanelHarness() {
   const trade = useTradeState()
-  return <TradePanel trade={trade} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TradePanel trade={trade} />
+    </QueryClientProvider>
+  )
 }
 
 /** The pay/collateral amount input. */
 function amountInput() {
-  return screen.getByPlaceholderText("0.00")
+  return screen.getAllByPlaceholderText("0.00")[0]
 }
 
-/** The submit button (named e.g. "Long BTC", distinct from the "Long" tab). */
+/** The submit button (named e.g. "Long TWBTC", distinct from the "Long" tab). */
 function submitButton() {
-  return screen.getByRole("button", { name: /Long\s+BTC/i })
+  return screen.getByRole("button", { name: /Long\s+TWBTC/i })
 }
 
 /** Whether the submit button is currently disabled. */
@@ -133,9 +209,14 @@ function submitDisabled(): boolean {
 
 beforeEach(() => {
   localStorage.clear() // ensure the default trade state (Long, empty amount)
+  useWalletStore.getState().setConnected("GTESTACCOUNT", "test-wallet")
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  queryClient.clear()
+  useWalletStore.getState().setDisconnected()
+})
 
 describe("TradePanel input validation (#226)", () => {
   it("disables submit while no amount is entered", () => {
@@ -143,13 +224,12 @@ describe("TradePanel input validation (#226)", () => {
     expect(submitDisabled()).toBe(true)
   })
 
-  it("rejects an invalid (negative) amount", async () => {
-    const user = userEvent.setup()
+  it("does not accept a negative amount", () => {
     render(<TradePanelHarness />)
 
-    await user.type(amountInput(), "-5")
+    fireEvent.change(amountInput(), { target: { value: "-5" } })
 
-    expect(screen.getByRole("alert").textContent).toBe("Enter a valid amount")
+    expect(amountInput()).toHaveValue("")
     expect(submitDisabled()).toBe(true)
   })
 
@@ -159,7 +239,7 @@ describe("TradePanel input validation (#226)", () => {
 
     await user.type(amountInput(), "0")
 
-    expect(screen.getByRole("alert").textContent).toBe("Enter a valid amount")
+    expect(screen.getByText("Amount must be greater than zero")).toBeInTheDocument()
     expect(submitDisabled()).toBe(true)
   })
 
@@ -169,7 +249,7 @@ describe("TradePanel input validation (#226)", () => {
 
     await user.type(amountInput(), String(WALLET_BALANCE + 1000))
 
-    expect(screen.getByRole("alert").textContent).toBe("Insufficient balance")
+    expect(screen.getByText("Amount exceeds maximum")).toBeInTheDocument()
     expect(submitDisabled()).toBe(true)
   })
 
@@ -179,7 +259,7 @@ describe("TradePanel input validation (#226)", () => {
 
     await user.type(amountInput(), "100")
 
-    expect(screen.queryByRole("alert")).toBeNull()
+    expect(screen.queryByText(/Amount must be greater than zero|Amount exceeds maximum|Insufficient balance/)).toBeNull()
     expect(submitDisabled()).toBe(false)
   })
 })
@@ -189,9 +269,9 @@ describe("TradePanel mode transitions (OB-071)", () => {
     render(<TradePanelHarness />)
 
     // Long trade should have all three modes available
-    expect(screen.getByText("Market")).toBeInTheDocument()
-    expect(screen.getByText("Limit")).toBeInTheDocument()
-    expect(screen.getByText("Trigger")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Market" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Limit" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Trigger" })).toBeInTheDocument()
   })
 
   it("hides trigger price when switching to Swap (which doesn't support Trigger)", async () => {
@@ -306,5 +386,49 @@ describe("TradePanel mode transitions (OB-071)", () => {
 
     // Panel should maintain flex layout and spacing regardless of mode
     expect(panel).toHaveClass("flex", "flex-col", "gap-3", "p-4")
+  })
+})
+
+describe("TradePanel slippage input", () => {
+  async function openAdvancedOptions() {
+    const user = userEvent.setup()
+    render(<TradePanelHarness />)
+    await user.click(screen.getByRole("button", { name: "Show" }))
+    return screen.getByRole("textbox", { name: "Slippage tolerance percentage" })
+  }
+
+  it("accepts valid slippage values from 0% through 10%", async () => {
+    const input = await openAdvancedOptions()
+
+    fireEvent.change(input, { target: { value: "0" } })
+    expect(input).toHaveValue("0")
+
+    fireEvent.change(input, { target: { value: "10" } })
+    expect(input).toHaveValue("10")
+  })
+
+  it("clamps values above 10% and restores an invalid draft on blur", async () => {
+    const input = await openAdvancedOptions()
+
+    fireEvent.change(input, { target: { value: "11" } })
+    fireEvent.blur(input)
+    expect(input).toHaveValue("10")
+
+    fireEvent.change(input, { target: { value: "." } })
+    expect(input).toHaveValue(".")
+    fireEvent.blur(input)
+    expect(input).toHaveValue("10")
+  })
+
+  it("rejects scientific-notation keys and wheel changes while retaining keyboard focus", async () => {
+    const input = await openAdvancedOptions()
+    input.focus()
+
+    fireEvent.keyDown(input, { key: "e" })
+    fireEvent.keyDown(input, { key: "+" })
+    fireEvent.wheel(input)
+
+    expect(input).toHaveValue("0.3")
+    expect(document.activeElement).toBe(input)
   })
 })

@@ -1,3 +1,4 @@
+import { cn } from "@workspace/ui/lib/utils"
 import { useEffect, useMemo, useState } from "react"
 import {
   Tabs,
@@ -49,6 +50,7 @@ export function TradePanel({ trade }: TradePanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmedHash, setConfirmedHash] = useState<string | null>(null)
   const [priceValidationError, setPriceValidationError] = useState<string | null>(null)
+  const [amountValidationError, setAmountValidationError] = useState<string | null>(null)
   const [previousMode, setPreviousMode] = useState<TradeMode>(trade.tradeMode)
   const account = useWalletStore((state) => state.address)
 
@@ -116,7 +118,7 @@ export function TradePanel({ trade }: TradePanelProps) {
   const priceStale = isStale(toTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
   const activePrice = getPrice(toTokenAddress)
-  const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale &&
+  const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale && !amountValidationError &&
     (tradeFlags.isSwap || marketRisk.state === "available")
 
   // Detect mode changes and notify user about discarded fields
@@ -191,13 +193,13 @@ export function TradePanel({ trade }: TradePanelProps) {
         </Tabs>
 
         <TabsContent value="Long" className="mt-0">
-          <TradeInputs trade={trade} />
+          <TradeInputs trade={trade} onValidationChange={setAmountValidationError} />
         </TabsContent>
         <TabsContent value="Short" className="mt-0">
-          <TradeInputs trade={trade} />
+          <TradeInputs trade={trade} onValidationChange={setAmountValidationError} />
         </TabsContent>
         <TabsContent value="Swap" className="mt-0">
-          <TradeInputs trade={trade} />
+          <TradeInputs trade={trade} onValidationChange={setAmountValidationError} />
         </TabsContent>
       </Tabs>
 
@@ -371,7 +373,13 @@ export function TradePanel({ trade }: TradePanelProps) {
 
 // ── Pay / Receive inputs ─────────────────────────────────────────────────────
 
-function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useTradeState>; validationError?: string }) {
+function TradeInputs({
+  trade,
+  onValidationChange,
+}: {
+  trade: TradeController
+  onValidationChange: (error: string | null) => void
+}) {
   const { fromAmount, fromTokenAddress, toTokenAddress, collateralAddress, tradeFlags, setFromAmount, switchTokens } = trade
   const { getMidPrice } = useTokenPrices()
   const { data: balances } = useTokenBalances()
@@ -386,16 +394,15 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
 
   const handleAmountChange = (value: string) => {
     setFromAmount(value)
+    let error: string | null = null
     if (value) {
-      const validation = validateAmount(value, { maxAmount: walletBalance })
-      setAmountValidationError(validation.error)
-      if (!validation.error && walletBalance !== undefined) {
-        const balance = validateBalance(parseFloat(value), walletBalance)
-        setAmountValidationError(balance.error)
+      error = validateAmount(value, { maxAmount: walletBalance }).error
+      if (!error && walletBalance !== undefined) {
+        error = validateBalance(parseFloat(value), walletBalance).error
       }
-    } else {
-      setAmountValidationError(null)
     }
+    setAmountValidationError(error)
+    onValidationChange(error)
   }
 
   function handleFill(pct: number) {
@@ -436,8 +443,8 @@ function TradeInputs({ trade, validationError }: { trade: ReturnType<typeof useT
           } : undefined}
           usdValue={fromUsd > 0 ? fromUsd : undefined}
         />
-        {(validationError || amountValidationError) && (
-          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{validationError || amountValidationError}</p>
+        {amountValidationError && (
+          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{amountValidationError}</p>
         )}
       </div>
 
