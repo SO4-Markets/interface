@@ -351,7 +351,7 @@ export async function fetchOracleCandles(
     const res = await fetch(`${GMX_BASE}/prices/candles?${params}`, { signal })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = (await res.json()) as { candles: Array<Array<number>> }
-    if (signal?.aborted) return emptyResponse("SO4 Oracle Reference")
+    if (signal?.aborted) return emptyResponse("GMX Oracle Reference")
 
     const rawBars: Array<OhlcBar> = json.candles
       .map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
@@ -360,13 +360,13 @@ export async function fetchOracleCandles(
     return {
       candles: validateAndSortCandles(rawBars),
       sourceType: "oracle_reference",
-      venueName: "SO4 Oracle Reference",
+      venueName: "GMX Oracle Reference",
       symbol: base,
       period,
       network: ENV.NETWORK,
     }
   } catch {
-    if (signal?.aborted) return emptyResponse("SO4 Oracle Reference")
+    if (signal?.aborted) return emptyResponse("GMX Oracle Reference")
     throw new Error(`Chart data unavailable for ${symbol}: all candle sources failed`)
   }
 }
