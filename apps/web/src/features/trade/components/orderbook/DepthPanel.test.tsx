@@ -281,6 +281,20 @@ describe("stability while the feed is live (OB-053)", () => {
       expect(el.className.toString()).not.toMatch(/transition|animate|duration/)
     }
   })
+
+  it("labels both sides textually and gives depth fills visible borders", () => {
+    const { container } = render(<DepthPanel metadata={BTC} bids={BIDS} asks={ASKS} rows={8} />)
+
+    expect(screen.getAllByText("Bid depth level")).toHaveLength(BIDS.length)
+    expect(screen.getAllByText("Ask depth level")).toHaveLength(ASKS.length)
+
+    const fills = Array.from(container.querySelectorAll(".border-y.border-dashed"))
+    expect(fills).toHaveLength(BIDS.length + ASKS.length)
+    for (const fill of fills) {
+      expect(fill.className).toContain("border-y")
+      expect(fill.className).toContain("border-dashed")
+    }
+  })
 })
 
 describe("unusable market metadata", () => {
