@@ -32,14 +32,14 @@ describe("useClipboard", () => {
 
   it("starts in idle status", () => {
     const { result } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
     expect(result.current.status).toBe("idle")
   })
 
   it("sets status to copied on success", async () => {
     const { result } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
 
     let ok = false
@@ -54,7 +54,7 @@ describe("useClipboard", () => {
 
   it("resets to idle after the timeout", async () => {
     const { result } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
 
     await act(async () => {
@@ -71,7 +71,7 @@ describe("useClipboard", () => {
   it("sets status to failed when clipboard rejects", async () => {
     writeText.mockRejectedValue(new Error("denied"))
     const { result } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
 
     let ok = true
@@ -86,7 +86,7 @@ describe("useClipboard", () => {
   it("resets failed status after the timeout", async () => {
     writeText.mockRejectedValue(new Error("denied"))
     const { result } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
 
     await act(async () => {
@@ -102,7 +102,7 @@ describe("useClipboard", () => {
 
   it("clears previous timer on repeated clicks", async () => {
     const { result } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
 
     await act(async () => {
@@ -130,9 +130,35 @@ describe("useClipboard", () => {
     expect(result.current.status).toBe("idle")
   })
 
+  it("ignores a stale clipboard result when a newer copy starts", async () => {
+    let resolveFirst: (() => void) | undefined
+    const firstWrite = new Promise<void>((resolve) => {
+      resolveFirst = resolve
+    })
+    writeText
+      .mockImplementationOnce(() => firstWrite)
+      .mockResolvedValueOnce(undefined)
+
+    const { result } = renderHook(() =>
+      useClipboard({ resetAfter: RESET_AFTER })
+    )
+    let firstCopy: Promise<boolean> | undefined
+    await act(async () => {
+      firstCopy = result.current.copy("first")
+      await result.current.copy("second")
+    })
+
+    expect(result.current.status).toBe("copied")
+    resolveFirst?.()
+    await act(async () => {
+      await firstCopy
+    })
+    expect(result.current.status).toBe("copied")
+  })
+
   it("cleans up timer on unmount", async () => {
     const { result, unmount } = renderHook(() =>
-      useClipboard({ resetAfter: RESET_AFTER }),
+      useClipboard({ resetAfter: RESET_AFTER })
     )
 
     await act(async () => {

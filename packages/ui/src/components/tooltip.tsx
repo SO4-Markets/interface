@@ -67,6 +67,7 @@ function TooltipContent({
             "z-50 max-w-xs origin-(--transform-origin) rounded-md bg-popover px-3 py-1.5 text-xs text-popover-foreground ring-1 ring-foreground/10 shadow-md has-data-[slot=tooltip-description]:flex-col has-data-[slot=tooltip-description]:items-start has-data-[slot=tooltip-description]:gap-0 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-inline-start-2 data-[side=inline-start]:slide-in-from-inline-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:ms-auto **:data-[slot=kbd]:rounded-sm **:data-[slot=kbd]:border **:data-[slot=kbd]:border-border **:data-[slot=kbd]:bg-muted **:data-[slot=kbd]:px-1 **:data-[slot=kbd]:py-0.5 **:data-[slot=kbd]:text-10 **:data-[slot=kbd]:font-mono **:data-[slot=kbd]:leading-none ",
             className
           )}
+          role="tooltip"
           {...props}
         >
           {children}
