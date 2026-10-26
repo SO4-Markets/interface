@@ -10,7 +10,7 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test && bun test scripts/changelog",
     "test:coverage": "turbo test:coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "bash ./scripts/test-e2e.sh",
     "contracts:gen:all": "bun run scripts/generate-bindings.ts",
     "indexer:codegen": "bun run --cwd apps/s03-indexer codegen",
     "indexer:build": "bun run --cwd apps/s03-indexer build",
