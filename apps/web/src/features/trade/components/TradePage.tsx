@@ -19,6 +19,7 @@ import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
 import { OrderBookPanel } from "./orderbook/OrderBookPanel"
 import type {MobileTradeView} from "./MobileTradeNav"
 import { saveReferralCode } from "@/lib/contracts"
+import { validateReferralCode } from "@/features/referrals/lib/referrals"
 import { useAppFocusRecovery } from "@/shared/hooks/useAppFocusRecovery"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useTheme } from "@/ui/theme-provider"
@@ -57,7 +58,9 @@ export function TradePage() {
   useEffect(() => {
     if (!search.ref) return
     const normalized = search.ref.toUpperCase().trim()
-    if (!normalized) return
+    // Untrusted URL input: store only well-formed codes. The code is never
+    // applied automatically; ApplyReferralCodePrompt asks the trader first.
+    if (validateReferralCode(normalized) !== null) return
     saveReferralCode(normalized)
   }, [search.ref])
 

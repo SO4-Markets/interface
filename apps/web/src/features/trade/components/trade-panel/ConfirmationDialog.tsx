@@ -26,13 +26,10 @@ import { validateExecutionRequest } from "../../lib/execution-support"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { ENV } from "@/app/config/env"
-import { applyReferralCode } from "@/features/referrals/lib/referrals"
 import {
   buildBatchOrderTransaction,
   buildCreateOrderTransaction,
-  getTraderReferralCode,
   parseSorobanError,
-  readStoredReferralCode,
 } from "@/lib/contracts"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { estimateFee } from "@/lib/soroban/simulate"
@@ -280,17 +277,10 @@ export function ConfirmationDialog({
           throw new Error("Market risk parameters are unavailable or stale.")
         }
 
-        const storedReferralCode = readStoredReferralCode()
-        if (storedReferralCode) {
-          const existingCode = await getTraderReferralCode(account)
-          if (!existingCode) {
-            try {
-              await applyReferralCode(account, storedReferralCode)
-            } catch (error) {
-              console.warn("Referral code could not be auto-applied:", error)
-            }
-          }
-        }
+        // Referral codes are applied only through ApplyReferralCodePrompt, where
+        // the trader sees and confirms the code. Never bind a code captured from
+        // a ?ref= link inside the order flow: a link would otherwise silently
+        // attach the trader to whoever crafted it.
 
         const parentOrder: IncreaseOrderParams = {
           account,

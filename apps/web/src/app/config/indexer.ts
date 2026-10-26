@@ -11,6 +11,7 @@
  *   }
  */
 
+import { debugLog } from "../../shared/lib/debug-log"
 import { ENV } from "./env"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,6 +99,6 @@ export function validateIndexerConfig(): void {
   }
 
   if (report) {
-    console.log(`Indexer enabled: ${INDEXER_CONFIG.graphqlUrl} (${INDEXER_CONFIG.network})`)
+    debugLog(`Indexer enabled: ${INDEXER_CONFIG.graphqlUrl} (${INDEXER_CONFIG.network})`)
   }
 }

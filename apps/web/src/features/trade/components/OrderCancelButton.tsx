@@ -1,4 +1,13 @@
 import React from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
+import { Button } from "@workspace/ui/components/button"
 import { useCancelOrder } from "../hooks/useCancelOrder"
 import type { Order } from "../hooks/useOrders"
 
@@ -23,11 +32,10 @@ export function OrderCancelButton({
 }: OrderCancelButtonProps) {
   const { cancelOrder, isPending } = useCancelOrder()
 
-  const handleCancel = React.useCallback(async () => {
-    if (!window.confirm(`Cancel ${order.orderType} on ${order.marketName}?`)) {
-      return
-    }
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
 
+  const handleConfirm = React.useCallback(() => {
+    setConfirmOpen(false)
     cancelOrder({
       account,
       order,
@@ -42,8 +50,9 @@ export function OrderCancelButton({
   }
 
   return (
+    <>
     <button
-      onClick={handleCancel}
+      onClick={() => setConfirmOpen(true)}
       disabled={isPending || order.status !== "active"}
       className={`
         px-3 py-1.5 rounded-md text-sm font-medium transition-colors
@@ -56,5 +65,24 @@ export function OrderCancelButton({
     >
       {isPending ? "Cancelling..." : "Cancel Order"}
     </button>
+    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Cancel order?</DialogTitle>
+          <DialogDescription>
+            Cancel {order.orderType} on {order.marketName}? This sends a cancellation transaction for this order only.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+            Keep order
+          </Button>
+          <Button variant="destructive" onClick={handleConfirm}>
+            Cancel order
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

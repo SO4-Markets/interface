@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { indexerQueryKeys } from "./query-keys"
 import { INDEXER_CONFIG } from "@/app/config/indexer"
+import { debugLog } from "@/shared/lib/debug-log"
 
 /**
  * Invalidate all indexer queries when network or account changes.
@@ -28,7 +29,7 @@ export function useIndexerInvalidation(account: string | null) {
 
     // Network changed - invalidate ALL indexer queries
     if (currentNetwork !== prevNetwork) {
-      console.log(`[Indexer] Network changed: ${prevNetwork} → ${currentNetwork}`)
+      debugLog(`[Indexer] Network changed: ${prevNetwork} → ${currentNetwork}`)
       queryClient.invalidateQueries({
         queryKey: indexerQueryKeys.all(),
       })
@@ -37,7 +38,7 @@ export function useIndexerInvalidation(account: string | null) {
 
     // Account changed - invalidate account-specific queries
     if (account !== prevAccount) {
-      console.log(`[Indexer] Account changed: ${prevAccount} → ${account}`)
+      debugLog("[Indexer] Account changed; invalidating account queries")
       
       if (prevAccount) {
         // Invalidate queries for the old account
