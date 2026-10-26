@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChangelogRouteImport } from './routes/changelog'
-import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as EarnRouteImport } from './routes/earn'
 import { Route as FaucetRouteImport } from './routes/faucet'
 import { Route as GalleryRouteImport } from './routes/gallery'
@@ -27,11 +26,6 @@ const IndexRoute = IndexRouteImport.update({
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignSystemRoute = DesignSystemRouteImport.update({
-  id: '/design-system',
-  path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EarnRoute = EarnRouteImport.update({
@@ -68,7 +62,6 @@ const TradeRoute = TradeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/changelog': typeof ChangelogRoute
-  '/design-system': typeof DesignSystemRoute
   '/earn': typeof EarnRoute
   '/faucet': typeof FaucetRoute
   '/gallery': typeof GalleryRoute
@@ -79,7 +72,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/changelog': typeof ChangelogRoute
-  '/design-system': typeof DesignSystemRoute
   '/earn': typeof EarnRoute
   '/faucet': typeof FaucetRoute
   '/gallery': typeof GalleryRoute
@@ -91,7 +83,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/changelog': typeof ChangelogRoute
-  '/design-system': typeof DesignSystemRoute
   '/earn': typeof EarnRoute
   '/faucet': typeof FaucetRoute
   '/gallery': typeof GalleryRoute
@@ -104,7 +95,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/changelog'
-    | '/design-system'
     | '/earn'
     | '/faucet'
     | '/gallery'
@@ -115,7 +105,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/changelog'
-    | '/design-system'
     | '/earn'
     | '/faucet'
     | '/gallery'
@@ -126,7 +115,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/changelog'
-    | '/design-system'
     | '/earn'
     | '/faucet'
     | '/gallery'
@@ -138,7 +126,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChangelogRoute: typeof ChangelogRoute
-  DesignSystemRoute: typeof DesignSystemRoute
   EarnRoute: typeof EarnRoute
   FaucetRoute: typeof FaucetRoute
   GalleryRoute: typeof GalleryRoute
@@ -161,13 +148,6 @@ declare module '@tanstack/react-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design-system': {
-      id: '/design-system'
-      path: '/design-system'
-      fullPath: '/design-system'
-      preLoaderRoute: typeof DesignSystemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/earn': {
@@ -218,7 +198,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChangelogRoute: ChangelogRoute,
-  DesignSystemRoute: DesignSystemRoute,
   EarnRoute: EarnRoute,
   FaucetRoute: FaucetRoute,
   GalleryRoute: GalleryRoute,
