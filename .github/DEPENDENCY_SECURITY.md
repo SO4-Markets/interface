@@ -69,3 +69,16 @@ exploitable. Before an exception, assess whether untrusted brace patterns
 or untrusted ZIP files can reach the cited tools in production or CI.
 The next quarterly checkpoint is **January 18, 2027**, or sooner when
 patches become available.
+
+## Approved exceptions
+
+| GHSA | Package (installed) | Reachable in | Why not fixable now | Compensating controls | Approved | Review by |
+| --- | --- | --- | --- | --- | --- | --- |
+| GHSA-jmr9-qjv8-65gv | extract-zip 2.0.1 | CI only (`docs` → `@lhci/cli` → puppeteer) | No patched release; parent pins it | Only extracts Chromium from Google's CDN in CI; not in any shipped bundle | @IbrahimIjai, 2026-10-26 | 2027-01-18 |
+| GHSA-7pqw-9j4j-h8q3 | extract-zip 2.0.1 | same as above | same as above | same as above | @IbrahimIjai, 2026-10-26 | 2027-01-18 |
+| GHSA-mrhx-c7xc-m3w5 | zod 3.22.4 / 3.23.8 / 3.25.76 | web runtime (`@pythnetwork/hermes-client`, `@reown/appkit-wallet`), build tooling | Latest releases of both parents still require zod 3 | Inputs are trusted API responses; Hermes is reached via `/api/pyth`, which only forwards the app's fixed feed IDs; any DoS is confined to the user's own tab | @IbrahimIjai, 2026-10-26 | 2027-01-18 |
+
+Tracking issue: [#1035](https://github.com/SO4-Markets/interface/issues/1035). Remove each
+`--ignore` from `.github/workflows/ci.yml` as soon as its exit criterion is met.
+The braces advisory (GHSA-vfj7-8cjw-p6xm) from the October 18 baseline no longer
+appears in the lockfile.

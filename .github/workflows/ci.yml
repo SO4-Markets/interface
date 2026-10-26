@@ -29,8 +29,19 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
+      # Maintainer-approved temporary exceptions (2026-10-26, @IbrahimIjai),
+      # tracked in #1035, review by 2027-01-18. Each lists the exact GHSA;
+      # see .github/DEPENDENCY_SECURITY.md for reachability and exit criteria.
+      #   GHSA-jmr9-qjv8-65gv, GHSA-7pqw-9j4j-h8q3: extract-zip 2.0.1 via
+      #     @lhci/cli (CI-only Chromium download; no untrusted ZIPs).
+      #   GHSA-mrhx-c7xc-m3w5: zod 3.x pinned by @pythnetwork/hermes-client and
+      #     @reown/appkit-wallet (validates trusted API responses only).
       - name: Audit locked dependencies
-        run: bun audit --audit-level=high
+        run: >-
+          bun audit --audit-level=high
+          --ignore GHSA-jmr9-qjv8-65gv
+          --ignore GHSA-7pqw-9j4j-h8q3
+          --ignore GHSA-mrhx-c7xc-m3w5
 
   ci:
     name: Lint · Typecheck · Build
