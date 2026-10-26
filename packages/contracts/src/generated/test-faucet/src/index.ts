@@ -3,17 +3,17 @@ import {
   AssembledTransaction,
   Client as ContractClient,
   Spec as ContractSpec,
-} from "@stellar/stellar-sdk/contract"
+} from "@stellar/stellar-sdk/minimal/contract"
 import type {
   ClientOptions as ContractClientOptions,
   MethodOptions,
   u32,
   i128,
-} from "@stellar/stellar-sdk/contract"
+} from "@stellar/stellar-sdk/minimal/contract"
 
-export * from "@stellar/stellar-sdk"
-export * as contract from "@stellar/stellar-sdk/contract"
-export * as rpc from "@stellar/stellar-sdk/rpc"
+export * from "@stellar/stellar-sdk/minimal"
+export * as contract from "@stellar/stellar-sdk/minimal/contract"
+export * as rpc from "@stellar/stellar-sdk/minimal/rpc"
 
 if (typeof window !== "undefined") {
   // @ts-ignore Buffer exists

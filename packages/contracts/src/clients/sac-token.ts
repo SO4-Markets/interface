@@ -1,5 +1,5 @@
-import { Address, Contract, TransactionBuilder, rpc, scValToNative, xdr } from "@stellar/stellar-sdk"
-import type { Transaction } from "@stellar/stellar-sdk"
+import { Address, Contract, TransactionBuilder, rpc, scValToNative, xdr } from "@stellar/stellar-sdk/minimal"
+import type { Transaction } from "@stellar/stellar-sdk/minimal"
 import type { NetworkConfig } from "../types"
 import { i128ToScVal } from "../scval"
 

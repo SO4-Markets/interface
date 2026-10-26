@@ -15,7 +15,7 @@
  */
 
 import { sorobanRpc } from "./client"
-import type { rpc as StellarRpc, xdr } from "@stellar/stellar-sdk"
+import type { rpc as StellarRpc, xdr } from "@stellar/stellar-sdk/minimal"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

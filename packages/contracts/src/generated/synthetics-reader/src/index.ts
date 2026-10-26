@@ -1,4 +1,4 @@
-import { Account, Address, Contract, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk"
+import { Account, Address, Contract, rpc, TransactionBuilder, xdr } from "@stellar/stellar-sdk/minimal"
 
 // ── Return types ─────────────────────────────────────────────────────────────
 // These mirror the Rust #[contracttype] structs returned by the Reader contract.

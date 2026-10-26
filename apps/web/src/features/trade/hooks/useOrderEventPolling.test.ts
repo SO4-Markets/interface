@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { xdr } from "@stellar/stellar-sdk"
+import { xdr } from "@stellar/stellar-sdk/minimal"
 import {
   applyOrderEventRefreshMatrix,
   decodeOrderEvent,

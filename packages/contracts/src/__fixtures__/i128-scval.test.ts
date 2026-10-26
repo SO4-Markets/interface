@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { xdr } from "@stellar/stellar-sdk"
+import { xdr } from "@stellar/stellar-sdk/minimal"
 import { i128ToScVal } from "../scval"
 import fixture from "./i128-scval.json"
 

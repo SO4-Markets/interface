@@ -72,6 +72,17 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         external: ["@twind/core"],
+        output: {
+          // The Stellar XDR/crypto core is large and changes far less often
+          // than app code; give it its own long-lived, parallel-loaded chunk
+          // instead of folding it into the contract-client chunk.
+          manualChunks(id: string) {
+            if (id.includes("@stellar/stellar-base") || id.includes("@stellar/js-xdr")) {
+              return "stellar-base"
+            }
+            return undefined
+          },
+        },
       },
     },
     ssr: {

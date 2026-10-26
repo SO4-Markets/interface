@@ -1,4 +1,4 @@
-import { xdr } from "@stellar/stellar-sdk"
+import { xdr } from "@stellar/stellar-sdk/minimal"
 import { i128ToScVal } from "../scval"
 
 export type OrderVaultBinding = {

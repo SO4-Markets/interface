@@ -1,4 +1,4 @@
-import { rpc } from "@stellar/stellar-sdk"
+import { rpc } from "@stellar/stellar-sdk/minimal"
 
 const RPC_URL = import.meta.env.VITE_RPC_URL
 

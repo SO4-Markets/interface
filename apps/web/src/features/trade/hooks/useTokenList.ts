@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Account, Contract, TransactionBuilder, rpc, scValToNative } from "@stellar/stellar-sdk"
+import { Account, Contract, TransactionBuilder, rpc, scValToNative } from "@stellar/stellar-sdk/minimal"
 import { TOKENS } from "../data/tokens"
 import { sorobanRpc } from "../../../lib/soroban/client"
 import { NETWORK } from "../../../app/config/network"

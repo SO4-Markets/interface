@@ -29,7 +29,7 @@ import {
   Transaction,
   TransactionBuilder,
   xdr,
-} from "@stellar/stellar-sdk"
+} from "@stellar/stellar-sdk/minimal"
 import { assembleAndBuild, assembleTx } from "./assemble"
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -15,9 +15,9 @@
  *   TxTimeoutError  — transaction still NOT_FOUND after timeoutMs.
  */
 
-import { TransactionBuilder, rpc } from "@stellar/stellar-sdk"
+import { TransactionBuilder, rpc } from "@stellar/stellar-sdk/minimal"
 import { NETWORK } from "../app/config/network"
-import type { xdr } from "@stellar/stellar-sdk";
+import type { xdr } from "@stellar/stellar-sdk/minimal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Error types

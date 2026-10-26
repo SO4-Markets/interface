@@ -1,4 +1,4 @@
-import { scValToNative } from "@stellar/stellar-sdk"
+import { scValToNative } from "@stellar/stellar-sdk/minimal"
 import { queryKeys } from "./query-keys"
 import type { QueryClient } from "@tanstack/react-query"
 import type { ContractEvent } from "@/lib/soroban/events"

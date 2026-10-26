@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 
-import { Popover, PopoverContent, PopoverTrigger, PopoverTitle, PopoverDescription } from "@workspace/ui/components/popover"
+import { Popover, PopoverContent, PopoverDescription, PopoverTitle, PopoverTrigger } from "@workspace/ui/components/popover"
 import { Button } from "@workspace/ui/components/button"
-import { NumberInput } from "@/shared/components/NumberInput"
 import { Kbd } from "@workspace/ui/components/kbd"
+import { NumberInput } from "@/shared/components/NumberInput"
 
 const PRESETS: ReadonlyArray<number> = [0.1, 0.5, 1]
 

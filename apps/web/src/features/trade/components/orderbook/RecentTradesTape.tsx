@@ -12,9 +12,8 @@ import {
   TableRow,
 } from "@workspace/ui/components/table"
 import { useRecentTrades } from "../../hooks/useRecentTrades"
-import { formatUsd } from "@/shared/lib/format"
+import { formatToken, formatUsd  } from "@/shared/lib/format"
 import { RelativeTime } from "@/shared/components/RelativeTime"
-import { formatToken } from "@/shared/lib/format"
 
 type Props = {
   symbol: string | undefined

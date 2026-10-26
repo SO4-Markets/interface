@@ -134,7 +134,7 @@ export function ClosePositionDialog({ position, open, onClose, onConfirm }: Prop
                   <button
                     key={percent}
                     type="button"
-                    className="flex-1 rounded border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex-1 rounded-sm border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => setPreset(percent)}
                     aria-label={`Close ${percent}% of position`}
                   >
@@ -142,7 +142,7 @@ export function ClosePositionDialog({ position, open, onClose, onConfirm }: Prop
                   </button>
                 ))}
               </div>
-              <div className="rounded border border-border/60 bg-muted/20 p-2 text-xs" aria-live="polite">
+              <div className="rounded-sm border border-border/60 bg-muted/20 p-2 text-xs" aria-live="polite">
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground">Position after close</span>
                   <span className="font-mono font-medium">{formatUsd(Math.max(0, position.sizeUsd - partialAmount))}</span>

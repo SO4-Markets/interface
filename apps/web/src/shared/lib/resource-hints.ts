@@ -35,9 +35,9 @@ export function originOf(url: string): string | undefined {
   }
 }
 
-export function buildResourceHints(sources: ResourceHintSources): ResourceHintLink[] {
+export function buildResourceHints(sources: ResourceHintSources): Array<ResourceHintLink> {
   const seen = new Set<string>()
-  const links: ResourceHintLink[] = []
+  const links: Array<ResourceHintLink> = []
 
   const add = (rel: ResourceHintLink["rel"], origin: string | undefined) => {
     if (!origin || seen.has(origin)) return

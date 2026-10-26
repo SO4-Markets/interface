@@ -1,5 +1,5 @@
-import { Address, Contract, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk"
-import type { Transaction } from "@stellar/stellar-sdk"
+import { Address, Contract, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk/minimal"
+import type { Transaction } from "@stellar/stellar-sdk/minimal"
 import {
   createOrderArgs,
   createOrderParamsVal,

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@workspac
 import { Button } from "@workspace/ui/components/button"
 import { Kbd, KbdGroup } from "@workspace/ui/components/kbd"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
-import { registerShortcut, useKeyboardShortcut, getRegisteredShortcuts } from "@/lib/use-keyboard-shortcut"
+import { getRegisteredShortcuts, registerShortcut, useKeyboardShortcut } from "@/lib/use-keyboard-shortcut"
 
 function formatShortcut(combo: string): string {
   const parts = combo.split("+")

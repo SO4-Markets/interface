@@ -26,7 +26,7 @@ export function installWebVitalsReporting(): () => void {
   watch("event", (entry) => {
     const interaction = entry as PerformanceEntry & { interactionId?: number; duration?: number }
     if (interaction.interactionId) {
-      const duration = interaction.duration ?? 0
+      const duration = interaction.duration
       telemetry.recordWebVital("INP", duration, duration <= 200 ? "good" : duration <= 500 ? "needs-improvement" : "poor")
     }
   })

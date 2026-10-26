@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 
-import { CommandMenu, type CommandMenuGroup } from "@workspace/ui/components/command-menu"
+import { CommandMenu  } from "@workspace/ui/components/command-menu"
 import { Icon } from "@workspace/ui/components/icon"
-import { registerShortcut, useKeyboardShortcut } from "@/lib/use-keyboard-shortcut"
 import { Home01Icon, Search01Icon, Settings01Icon } from "@hugeicons/core-free-icons"
+import type {CommandMenuGroup} from "@workspace/ui/components/command-menu";
+import { registerShortcut, useKeyboardShortcut } from "@/lib/use-keyboard-shortcut"
 
 type CommandPaletteProps = {
   onFocusMarketSearch: () => void

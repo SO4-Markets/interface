@@ -1,4 +1,4 @@
-import { xdr } from "@stellar/stellar-sdk"
+import { xdr } from "@stellar/stellar-sdk/minimal"
 
 export function i128ToScVal(value: bigint): xdr.ScVal {
   return xdr.ScVal.scvI128(

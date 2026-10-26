@@ -286,7 +286,9 @@ export function DepthLadder({ symbol, compact = false }: Props) {
   const [visible, setVisible] = useState(true)
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry?.isIntersecting ?? true))
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) setVisible(entry.isIntersecting)
+    })
     if (rootRef.current) observer.observe(rootRef.current)
     return () => observer.disconnect()
   }, [])

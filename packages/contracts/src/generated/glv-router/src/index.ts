@@ -1,4 +1,4 @@
-import { Account, Address, Contract, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk"
+import { Account, Address, Contract, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk/minimal"
 
 const DUMMY_ACCOUNT = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"
 

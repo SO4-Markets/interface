@@ -6,8 +6,8 @@ import {
   rpc,
   scValToNative,
   xdr,
-} from "@stellar/stellar-sdk"
-import type { Transaction } from "@stellar/stellar-sdk"
+} from "@stellar/stellar-sdk/minimal"
+import type { Transaction } from "@stellar/stellar-sdk/minimal"
 import type { NetworkConfig } from "../types"
 import { referralCodeToScVal, scValToReferralCode } from "../soroban/referral-code"
 

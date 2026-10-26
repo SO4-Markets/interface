@@ -53,7 +53,7 @@ function MarketRow({
       role="option"
       aria-selected={isActive}
       tabIndex={-1}
-      className={`flex w-full cursor-pointer items-center justify-between gap-4 rounded px-3 py-2 text-start text-sm transition-colors ${
+      className={`flex w-full cursor-pointer items-center justify-between gap-4 rounded-sm px-3 py-2 text-start text-sm transition-colors ${
         isActive ? "bg-accent/60" : "hover:bg-accent"
       }`}
       onClick={onSelect}
@@ -207,7 +207,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
       <PopoverTrigger
         aria-haspopup="listbox"
         aria-controls={open ? listboxId : undefined}
-        className="flex items-center gap-1.5 rounded border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
+        className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
       >
         <span
           data-slot="market-name"
@@ -262,7 +262,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleInputKeyDown}
               placeholder="Search markets..."
-              className="w-full rounded bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
+              className="w-full rounded-sm bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
             />
           </div>
           <ul
@@ -295,7 +295,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
           type="button"
           onClick={handleClear}
           aria-label="Clear selected market"
-          className="rounded border border-border bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"
+          className="rounded-sm border border-border bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"
         >
           ×
         </button>

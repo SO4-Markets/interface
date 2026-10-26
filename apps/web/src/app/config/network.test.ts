@@ -11,7 +11,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import { Networks } from "@stellar/stellar-sdk"
+import { Networks } from "@stellar/stellar-sdk/minimal"
 
 import { VALID_ENV, loadNetwork } from "../../../test/config-harness"
 

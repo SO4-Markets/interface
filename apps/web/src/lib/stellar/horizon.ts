@@ -1,4 +1,4 @@
-import { Horizon } from "@stellar/stellar-sdk"
+import { Horizon } from "@stellar/stellar-sdk/minimal"
 
 const HORIZON_URL = import.meta.env.VITE_HORIZON_URL
 

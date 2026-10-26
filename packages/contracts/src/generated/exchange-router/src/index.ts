@@ -1,4 +1,4 @@
-import { Address, xdr } from "@stellar/stellar-sdk"
+import { Address, xdr } from "@stellar/stellar-sdk/minimal"
 import { Buffer } from "buffer"
 
 // ── Types ────────────────────────────────────────────────────────────────────

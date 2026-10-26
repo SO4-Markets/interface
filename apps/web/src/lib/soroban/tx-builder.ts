@@ -1,5 +1,5 @@
 import { sorobanRpc } from "./client"
-import type { Transaction } from "@stellar/stellar-sdk"
+import type { Transaction } from "@stellar/stellar-sdk/minimal"
 
 export interface SigningWallet {
   signTransaction: (xdr: string, options?: { networkPassphrase: string }) => Promise<{

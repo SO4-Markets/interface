@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { estimateFee, estimateFeeFromSimulation, simulateTx } from "./simulate"
-import type { rpc as StellarRpc, Transaction  } from "@stellar/stellar-sdk"
+import type { rpc as StellarRpc, Transaction  } from "@stellar/stellar-sdk/minimal"
 
 const mockSimulateTransaction = vi.fn()
 

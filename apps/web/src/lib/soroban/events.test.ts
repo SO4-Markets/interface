@@ -18,7 +18,7 @@
 
 import { describe, expect, it } from "vitest"
 import { HttpResponse, http } from "msw"
-import { xdr } from "@stellar/stellar-sdk"
+import { xdr } from "@stellar/stellar-sdk/minimal"
 import { server } from "../../../test/msw/server"
 import { queryContractEvents } from "./events"
 

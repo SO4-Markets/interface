@@ -1,6 +1,6 @@
-import { TransactionBuilder } from "@stellar/stellar-sdk"
+import { TransactionBuilder } from "@stellar/stellar-sdk/minimal"
 import { GlvRouterClient, parseSorobanError } from "@workspace/contracts"
-import type { Transaction } from "@stellar/stellar-sdk"
+import type { Transaction } from "@stellar/stellar-sdk/minimal"
 import type {
   GlvCreateDepositParams as GeneratedCreateDepositParams,
   GlvCreateWithdrawalParams as GeneratedCreateWithdrawalParams,

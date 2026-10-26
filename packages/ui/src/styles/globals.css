@@ -1,8 +1,44 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+@import "@fontsource/space-mono/latin-400.css";
+@import "@fontsource/space-mono/latin-700.css";
+
+/*
+ * Self-hosted fonts, subset to Latin (#930).
+ *
+ * The packages' default stylesheets declare every script subset (latin-ext,
+ * cyrillic, vietnamese, ...), and the bundler emits a woff2 for each. The UI
+ * ships English-only, so only the Latin face of each family is declared here,
+ * with the same `unicode-range` fontsource uses, so a glyph outside the range
+ * falls back to the system stack instead of pulling a second file. Space Mono
+ * above is already imported from its Latin-only stylesheets. The Geist face is preloaded
+ * from the root route's <head>.
+ */
+@font-face {
+    font-family: 'Geist Variable';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url(../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2) format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'Geist Mono Variable';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url(../../node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2) format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'Archivo Variable';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url(../../node_modules/@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2) format('woff2-variations');
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
 
 @custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
@@ -96,13 +132,36 @@
      * - xl (0.75rem / 12px):  Large cards, feature panels, section containers
      * - full (9999px):        Pills, avatar badges, status indicators (fully rounded)
      *
-     * Usage: rounded-sm, rounded-md, rounded-lg, rounded-xl, rounded-full
+     * Usage: rounded-sm, rounded-md, rounded-lg, rounded-xl, rounded-full.
+     * Bare `rounded` is not part of the scale (it resolves to the same 4px as
+     * `rounded-sm`); always name the step.
      */
     --radius-sm: 0.25rem;   /* 4px  - buttons, inputs, badges, tabs */
     --radius-md: 0.375rem;  /* 6px  - dropdowns, selects, chips */
     --radius-lg: 0.5rem;    /* 8px  - cards, panels, modals */
     --radius-xl: 0.75rem;   /* 12px - large cards, feature sections */
     --radius-full: 9999px;  /* Fully rounded - pills, avatars, indicators */
+
+    /*
+     * Elevation scale (#921).
+     *
+     * Five named steps, declared explicitly (values match Tailwind's
+     * defaults, so adopting the scale changes no pixels) so elevation is a
+     * documented token rather than an implicit framework default.
+     * Always pair a step with the layer it belongs to:
+     * - xs: resting controls (switch/checkbox/radio track, active tab)
+     * - sm: raised-in-place controls (switch thumb, selected segment)
+     * - md: tooltips, small popovers, dropdown panels
+     * - lg: toasts, sheets, floating panels over content
+     * - xl: modals and full dialogs
+     * Usage: shadow-xs, shadow-sm, shadow-md, shadow-lg, shadow-xl. Bare
+     * `shadow` and arbitrary `shadow-[...]` values are not part of the scale.
+     */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
     
     --font-sans: 'Geist Variable', sans-serif;
     --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
@@ -321,6 +380,8 @@
     --color-gmx-sponsors-border: oklch(0.8933 0.0194 276.32); /* #D8DBE9 — SponsorsSection top border */
     --color-gmx-card-shadow: oklch(0 0 0);                    /* #000 — ProgramCards drop shadow */
 
+    --font-landing-sans: "Archivo Variable", "Geist Variable", sans-serif;
+    --font-landing-code: "Space Mono", "Geist Mono Variable", monospace;
 
     /* GMX line-heights — headings tighter than 1.0 is the signature look */
     --leading-heading-lg: 0.98;
@@ -606,10 +667,10 @@
 
     /* Semantic status roles — shared by badges, alerts, numeric text and the
        trading chart so a "long" candle is the same green as a positive PnL. */
-    --success: oklch(0.596 0.145 163.225);
+    --success: oklch(0.52 0.13 163.225);
     --success-foreground: oklch(0.985 0 0);
-    --warning: oklch(0.681 0.162 75.834);
-    --warning-foreground: oklch(0.21 0 0);
+    --warning: oklch(0.55 0.14 70);
+    --warning-foreground: oklch(0.985 0 0);
     --info: oklch(0.546 0.245 262.881);
     --info-foreground: oklch(0.985 0 0);
     --neutral: oklch(0.556 0 0);
@@ -618,32 +679,47 @@
     --short: var(--destructive);
 
     --long-foreground: var(--success-foreground);
-    --long-subtle: oklch(0.18 0.05 163.225);
-    --long-border: oklch(0.35 0.10 163.225);
+    --long-subtle: oklch(0.96 0.03 163.225);
+    --long-border: oklch(0.85 0.08 163.225);
     --short-foreground: var(--destructive-foreground);
-    --short-subtle: oklch(0.18 0.05 27.325);
-    --short-border: oklch(0.35 0.10 27.325);
-    --liquidation: oklch(0.82 0.16 65);
-    --liquidation-foreground: oklch(0.21 0 0);
-    --liquidation-subtle: oklch(0.18 0.05 75.834);
-    --liquidation-border: oklch(0.35 0.10 75.834);
-    --success-subtle: oklch(0.18 0.05 163.225);
-    --success-border: oklch(0.35 0.10 163.225);
-    --warning-subtle: oklch(0.18 0.05 75.834);
-    --warning-border: oklch(0.35 0.10 75.834);
-    --info-subtle: oklch(0.18 0.05 262.881);
-    --info-border: oklch(0.35 0.10 262.881);
-    --danger-subtle: oklch(0.18 0.05 27.325);
-    --danger-border: oklch(0.35 0.10 27.325);
-    --neutral-subtle: oklch(0.20 0 0);
-    --neutral-border: oklch(0.32 0 0);
+    --short-subtle: oklch(0.96 0.03 27.325);
+    --short-border: oklch(0.86 0.08 27.325);
+    --liquidation: oklch(0.55 0.15 55);
+    --liquidation-foreground: oklch(0.985 0 0);
+    --liquidation-subtle: oklch(0.96 0.04 75.834);
+    --liquidation-border: oklch(0.86 0.09 75.834);
+    --success-subtle: oklch(0.96 0.03 163.225);
+    --success-border: oklch(0.85 0.08 163.225);
+    --warning-subtle: oklch(0.96 0.04 75.834);
+    --warning-border: oklch(0.86 0.09 75.834);
+    --info-subtle: oklch(0.96 0.03 262.881);
+    --info-border: oklch(0.86 0.07 262.881);
+    --danger-subtle: oklch(0.96 0.03 27.325);
+    --danger-border: oklch(0.86 0.08 27.325);
+    --neutral-subtle: oklch(0.97 0 0);
+    --neutral-border: oklch(0.87 0 0);
 
-    --chart-surface: oklch(0.145 0 0);
+    /* Surface and text roles. Light values mirror the .dark set below so
+       `bg-surface-*` / `text-text-*` utilities resolve in both themes. */
+    --surface-canvas: var(--background);
+    --surface-sunken: oklch(0.97 0 0);
+    --surface-raised: oklch(1 0 0);
+    --surface-overlay: oklch(1 0 0);
+    --surface-interactive: oklch(0.955 0 0);
+
+    --text-primary: var(--foreground);
+    --text-secondary: oklch(0.45 0 0);
+    --text-tertiary: oklch(0.556 0 0);
+    --text-disabled: oklch(0.708 0 0);
+    --text-inverse: oklch(1 0 0);
+    --text-link: oklch(0.5 0.2 262);
+
+    --chart-surface: var(--background);
     --chart-text: var(--muted-foreground);
-    --chart-grid: oklch(0.269 0 0);
-    --chart-crosshair: oklch(0.44 0 0);
-    --chart-crosshair-label: oklch(0.269 0 0);
-    --chart-border: oklch(0.269 0 0);
+    --chart-grid: oklch(0.922 0 0);
+    --chart-crosshair: oklch(0.708 0 0);
+    --chart-crosshair-label: oklch(0.97 0 0);
+    --chart-border: oklch(0.922 0 0);
     --chart-up: var(--long);
     --chart-down: var(--short);
     --chart-liquidation: var(--warning);
@@ -664,12 +740,12 @@
  * Re-introduces `.dark` (previously absent, so dark mode fell back to the
  * light values above). Surfaces, text roles, border, primary/ring, and accent
  * are sourced straight from the GMX reference palette per the mapping table
- * in docs/gf_3/001_theme_update.md §8.2 — trading-state foreground colors
+ * in docs/gf_3/001_theme_update.md §8.2 — trading-state colors
  * (long/short/liquidation/success/warning/danger/neutral) are intentionally
- * NOT GMX concepts and are left untouched, inherited from :root. Only their
- * `subtle`/`border` fill pairs are re-lightened here so a badge still reads
- * as a distinct tint against the new slate-800/900 surfaces instead of
- * blending into them (the :root pairs were tuned for a white canvas).
+ * NOT GMX concepts. The :root values are darkened for contrast on white, so
+ * the bright success/warning/liquidation values are restored here, and the
+ * `subtle`/`border` fill pairs are re-lightened so a badge still reads as a
+ * distinct tint against the slate-800/900 surfaces.
  */
 .dark {
     --background: var(--color-gmx-slate-900);
@@ -691,6 +767,20 @@
     --input: var(--color-gmx-stroke-primary);
     --ring: oklch(0.72 0.18 190);
 
+    /* The light-theme status colours are darkened to reach 4.5:1 on white.
+       Restore the brighter values on dark surfaces, and re-declare every
+       alias so it resolves against them (var() is resolved where declared). */
+    --success: oklch(0.596 0.145 163.225);
+    --warning: oklch(0.681 0.162 75.834);
+    --warning-foreground: oklch(0.21 0 0);
+    --liquidation: oklch(0.82 0.16 65);
+    --liquidation-foreground: oklch(0.21 0 0);
+    --long: var(--success);
+    --chart-1: var(--long);
+    --chart-3: var(--liquidation);
+    --chart-up: var(--long);
+    --chart-liquidation: var(--warning);
+
     --surface-canvas: var(--color-gmx-slate-900);
     --surface-sunken: var(--color-gmx-slate-950);
     --surface-raised: var(--color-gmx-slate-800);
@@ -700,6 +790,7 @@
     --text-primary: oklch(1 0 0);
     --text-secondary: var(--color-gmx-slate-400);
     --text-tertiary: var(--color-gmx-slate-500);
+    --text-disabled: oklch(0.5 0.03 281);
     --text-inverse: oklch(1 0 0);
     --text-link: oklch(0.78 0.15 190);
 
@@ -1456,3 +1547,10 @@
     animation: none;
     transform: none;
 }
+
+/* Market book density follows the root user preference without requiring
+   consumers or isolated tests to mount a React context provider. */
+.density-compact .so4-density-orderbook [role="row"] { min-height: 18px; }
+.density-comfortable .so4-density-orderbook [role="row"] { min-height: 28px; }
+.density-compact .so4-density-orderbook [role="cell"] { padding-block: 0; }
+.density-comfortable .so4-density-orderbook [role="cell"] { padding-block: 0.25rem; }

@@ -16,11 +16,11 @@
 
 import {
   rpc as StellarRpc
-} from "@stellar/stellar-sdk"
+} from "@stellar/stellar-sdk/minimal"
 import type {
   FeeBumpTransaction,
   Transaction,
-  TransactionBuilder} from "@stellar/stellar-sdk";
+  TransactionBuilder} from "@stellar/stellar-sdk/minimal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

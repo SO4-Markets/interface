@@ -1,6 +1,6 @@
-import { rpc as StellarRpc } from "@stellar/stellar-sdk"
+import { rpc as StellarRpc } from "@stellar/stellar-sdk/minimal"
 import { sorobanRpc } from "./client"
-import type { Transaction } from "@stellar/stellar-sdk"
+import type { Transaction } from "@stellar/stellar-sdk/minimal"
 
 // Stroops to XLM conversion (1 XLM = 10,000,000 stroops)
 const STROOPS_PER_XLM = 10_000_000

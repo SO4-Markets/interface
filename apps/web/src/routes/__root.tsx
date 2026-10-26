@@ -6,7 +6,6 @@ import {
   createRootRoute,
 } from "@tanstack/react-router"
 import { useEffect } from "react"
-import { installWebVitalsReporting } from "@/features/observability/lib/web-vitals"
 import { ToastProvider } from "@workspace/ui/components/toast"
 import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { DensityProvider } from "@workspace/ui/components/density-provider"
@@ -19,6 +18,7 @@ import { SITE_NAME, SITE_URL, SOCIAL_URLS } from "../shared/lib/site-identity"
 import { RouteAnnouncer } from "../shared/components/RouteAnnouncer"
 import { RouteProgressBar } from "../shared/components/RouteProgressBar"
 import { useCspNonce } from "../shared/lib/csp-nonce"
+import { installWebVitalsReporting } from "@/features/observability/lib/web-vitals"
 
 const TITLE = `${SITE_NAME} · On-chain perpetuals`
 const DESCRIPTION =

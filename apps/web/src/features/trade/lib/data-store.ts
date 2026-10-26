@@ -1,4 +1,4 @@
-import { Account, Contract, TransactionBuilder, rpc, scValToNative, xdr } from "@stellar/stellar-sdk"
+import { Account, Contract, TransactionBuilder, rpc, scValToNative, xdr } from "@stellar/stellar-sdk/minimal"
 import { CONTRACTS } from "@/app/config/contracts"
 import { NETWORK } from "@/app/config/network"
 import { sorobanRpc } from "@/lib/soroban/client"
