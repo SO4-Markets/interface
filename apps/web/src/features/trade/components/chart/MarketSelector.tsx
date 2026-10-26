@@ -1,6 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-// Aliased so the DOM globals of the same name stay available for the native
-// `document.addEventListener` handlers below.
+import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { usePriceDelta24h } from "../../hooks/usePriceDelta24h"
 import { useMarkets } from "../../hooks/useMarkets"
@@ -17,7 +16,7 @@ type Props = {
 }
 
 const RECENT_MARKETS_KEY = "so4-recent-markets-v1"
-function readRecentMarkets(): string[] {
+function readRecentMarkets(): Array<string> {
   try {
     const value = JSON.parse(localStorage.getItem(RECENT_MARKETS_KEY) ?? "[]")
     return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []
@@ -91,17 +90,15 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
-  const [recentMarkets, setRecentMarkets] = useState<string[]>(() => readRecentMarkets())
-  const containerRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [recentMarkets, setRecentMarkets] = useState<Array<string>>(() => readRecentMarkets())
   const inputRef = useRef<HTMLInputElement>(null)
   const comboboxId = useId()
   const listboxId = `${comboboxId}-listbox`
 
+  // The popover returns focus to its trigger on close.
   function closeAndRestoreFocus() {
     setOpen(false)
     setSearch("")
-    queueMicrotask(() => triggerRef.current?.focus())
   }
 
   const { markets } = useMarkets()
@@ -129,33 +126,6 @@ export function MarketSelector({ symbol, onSelect }: Props) {
     )
     setActiveIndex(Math.max(0, currentIndex))
   }, [open, orderedMarkets, symbol])
-
-  useEffect(() => {
-    if (!open) return
-
-    function handleClick(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        closeAndRestoreFocus()
-      }
-    }
-
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        closeAndRestoreFocus()
-      }
-    }
-
-    document.addEventListener("mousedown", handleClick)
-    document.addEventListener("keydown", handleKey)
-    return () => {
-      document.removeEventListener("mousedown", handleClick)
-      document.removeEventListener("keydown", handleKey)
-    }
-  }, [open])
 
   const selectMarket = (market: Market) => {
     const nextRecent = [market.indexTokenAddress, ...recentMarkets.filter((id) => id !== market.indexTokenAddress)].slice(0, 5)
@@ -219,14 +189,9 @@ export function MarketSelector({ symbol, onSelect }: Props) {
     }
   }
 
-  const handleToggle = () => {
-    setOpen((value) => {
-      const next = !value
-      if (next) {
-        setTimeout(() => inputRef.current?.focus(), 0)
-      }
-      return next
-    })
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) setSearch("")
   }
 
   const handleClear = (event: ReactMouseEvent<HTMLButtonElement>) => {
@@ -237,14 +202,11 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   }
 
   return (
-    <div ref={containerRef} className="relative inline-flex items-center gap-2">
-      <button
-        ref={triggerRef}
-        type="button"
+    <div className="relative inline-flex items-center gap-2">
+     <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
         aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        onClick={handleToggle}
+        aria-controls={open ? listboxId : undefined}
         className="flex items-center gap-1.5 rounded border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
       >
         <span
@@ -267,21 +229,14 @@ export function MarketSelector({ symbol, onSelect }: Props) {
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
-      </button>
+      </PopoverTrigger>
 
-      {symbol && (
-        <button
-          type="button"
-          onClick={handleClear}
-          aria-label="Clear selected market"
-          className="rounded border border-border bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"
-        >
-          ×
-        </button>
-      )}
-
-      {open && (
-        <div className="start-0 absolute top-full z-50 mt-1 w-64 rounded-md border border-border bg-popover shadow-lg">
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        initialFocus={inputRef}
+        className="w-72 p-0"
+      >
           <div className="p-2">
             <label
               htmlFor={`${comboboxId}-input`}
@@ -303,7 +258,6 @@ export function MarketSelector({ symbol, onSelect }: Props) {
                   : undefined
               }
               aria-autocomplete="list"
-              autoFocus
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleInputKeyDown}
@@ -334,7 +288,17 @@ export function MarketSelector({ symbol, onSelect }: Props) {
               ))
             )}
           </ul>
-        </div>
+      </PopoverContent>
+     </Popover>
+      {symbol && (
+        <button
+          type="button"
+          onClick={handleClear}
+          aria-label="Clear selected market"
+          className="rounded border border-border bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"
+        >
+          ×
+        </button>
       )}
     </div>
   )
