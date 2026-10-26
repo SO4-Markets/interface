@@ -467,6 +467,64 @@
     transition-duration: var(--duration-base);
     transition-timing-function: var(--ease-in-out);
 }
+/*
+ * Motion duration utilities. Tailwind v4 has no theme namespace for
+ * transition durations, so `--duration-*` tokens alone never produced
+ * `duration-base` etc.; components using them got the browser default (0s).
+ */
+@utility duration-fast {
+    transition-duration: var(--duration-fast);
+    --tw-duration: var(--duration-fast);
+}
+@utility duration-base {
+    transition-duration: var(--duration-base);
+    --tw-duration: var(--duration-base);
+}
+@utility duration-moderate {
+    transition-duration: var(--duration-moderate);
+    --tw-duration: var(--duration-moderate);
+}
+@utility duration-slow {
+    transition-duration: var(--duration-slow);
+    --tw-duration: var(--duration-slow);
+}
+@utility duration-slowest {
+    transition-duration: var(--duration-slowest);
+    --tw-duration: var(--duration-slowest);
+}
+/* Tabular monospace figures for prices and brand wordmarks. */
+@utility font-mono-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+/* Minimum 44px hit area on touch devices without changing desktop layout. */
+@utility touch-target {
+    @media (pointer: coarse) {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+/* Single-side hairlines. `border-hairline` sets all four widths, so combining
+   it with border-t/border-b drew a full box instead of a rule. */
+@utility border-t-hairline {
+    border-top-width: 0.5px;
+}
+@utility border-b-hairline {
+    border-bottom-width: 0.5px;
+}
+/* Safe-area padding for full-bleed mobile sheets (notch / home indicator). */
+@utility safe-top {
+    padding-top: max(var(--spacing) * 4, env(safe-area-inset-top));
+}
+@utility safe-bottom {
+    padding-bottom: max(var(--spacing) * 4, env(safe-area-inset-bottom));
+}
+@utility safe-left {
+    padding-left: max(var(--spacing) * 4, env(safe-area-inset-left));
+}
+@utility safe-right {
+    padding-right: max(var(--spacing) * 4, env(safe-area-inset-right));
+}
 @utility ease-spring-snappy {
     transition-timing-function: var(--ease-spring-snappy);
 }

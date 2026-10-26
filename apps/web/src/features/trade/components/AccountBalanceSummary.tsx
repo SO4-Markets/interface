@@ -6,7 +6,7 @@ export function AccountBalanceSummary() {
 
   if (!summary) {
     return (
-      <div className="rounded-lg border border-border bg-surface-secondary p-4">
+      <div className="rounded-lg border border-border bg-surface-raised p-4">
         <div className="text-sm text-muted-foreground">Not connected</div>
       </div>
     )
@@ -31,7 +31,7 @@ export function AccountBalanceSummary() {
   ]
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface-secondary p-4">
+    <div className="space-y-3 rounded-lg border border-border bg-surface-raised p-4">
       {/* Summary rows */}
       <div className="space-y-2">
         {rows.map((row) => (

@@ -69,7 +69,7 @@ export function AccountBadge({ address, className, ...props }: AccountBadgeProps
       </Button>
 
       {open && (
-        <div className="absolute inset-inline-end-0 z-50 mt-2 w-88 min-w-[16rem] rounded-2xl border border-border bg-background p-4 shadow-xl">
+        <div className="absolute end-0 z-50 mt-2 w-88 min-w-[16rem] rounded-2xl border border-border bg-background p-4 shadow-xl">
           <div className="mb-3 rounded-2xl border border-border/70 bg-muted p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

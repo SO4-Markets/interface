@@ -10,9 +10,9 @@ const statusBadgeVariants = cva(
         success:
           "border-success-border bg-success-subtle text-success-foreground",
         warning: "border-warning-border bg-warning text-warning-foreground",
-        danger: "text-danger-foreground border-danger-border bg-danger-subtle",
+        danger: "text-danger border-danger-border bg-danger-subtle",
         "danger-subtle":
-          "text-danger-foreground border-danger-border bg-danger-subtle",
+          "text-danger border-danger-border bg-danger-subtle",
         info: "border-info-border bg-info text-info-foreground",
         "info-subtle": "border-info-border bg-info-subtle text-info-foreground",
         muted: "border-border bg-muted text-foreground",

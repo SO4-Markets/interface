@@ -65,7 +65,7 @@ export function FeatureGrid() {
         <IconBox>
           <GearsIcon />
         </IconBox>
-        <div className="mt-9 border-t border-hairline border-gmx-slate-600 pt-6">
+        <div className="mt-9 border-t-hairline border-gmx-slate-600 pt-6">
           <p className="text-12 uppercase tracking-[0.864px] text-gmx-slate-500">Verified settlement</p>
           <h3 className="mt-2 text-heading-4 text-white">Stellar order book</h3>
           <p className="mt-3 text-description">
@@ -165,7 +165,7 @@ export function FeatureGrid() {
         <IconBox>
           <ShieldIcon />
         </IconBox>
-        <div className="mt-9 border-t border-hairline border-gmx-slate-600 pt-6">
+        <div className="mt-9 border-t-hairline border-gmx-slate-600 pt-6">
           <p className="text-12 uppercase tracking-[0.864px] text-gmx-slate-500">Network efficiency</p>
           <h3 className="mt-2 text-heading-4 text-white">Minimal fees</h3>
           <p className="mt-3 text-description">

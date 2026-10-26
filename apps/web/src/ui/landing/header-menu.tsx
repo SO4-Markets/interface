@@ -139,7 +139,7 @@ export function HeaderMenu() {
             </li>
           </ul>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3 sm:ms-8">
             <OpenAppButton className="hidden sm:inline-flex" />
             <HamburgerButton
               open={open}
@@ -175,7 +175,7 @@ export function HeaderMenu() {
           {NAV_LINKS.map(({ label, to }) => (
             <li
               key={label}
-              className="border-hairline border-t border-gmx-slate-600"
+              className="border-t-hairline border-gmx-slate-600"
             >
               <Link
                 to={to}
@@ -186,7 +186,7 @@ export function HeaderMenu() {
               </Link>
             </li>
           ))}
-          <li className="border-hairline border-t border-gmx-slate-600">
+          <li className="border-t-hairline border-gmx-slate-600">
             <a
               href="#"
               className="block py-4 text-16 font-medium text-white"
@@ -199,7 +199,7 @@ export function HeaderMenu() {
         <div className="px-4 pb-2">
           <OpenAppButton className="w-full justify-center" />
         </div>
-        <div className="border-hairline border-t border-gmx-slate-600 px-4 py-5">
+        <div className="border-t-hairline border-gmx-slate-600 px-4 py-5">
           <p className="text-12 text-gmx-slate-500">Driven by our community</p>
           <div className="mt-3 flex gap-4">
             {SOCIALS.map(({ label, href }) => (

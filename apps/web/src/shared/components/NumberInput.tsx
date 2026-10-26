@@ -60,7 +60,7 @@ export function NumberInput({
             type="button"
             size="sm"
             variant="outline"
-            className="absolute inset-inline-end-2 top-1/2 -translate-y-1/2 px-2 text-11"
+            className="absolute end-2 top-1/2 -translate-y-1/2 px-2 text-11"
             onClick={onMax}
             disabled={disabled}
           >

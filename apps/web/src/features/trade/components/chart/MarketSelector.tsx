@@ -281,7 +281,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
       )}
 
       {open && (
-        <div className="inset-inline-start-0 absolute top-full z-50 mt-1 w-64 rounded-md border border-border bg-popover shadow-lg">
+        <div className="start-0 absolute top-full z-50 mt-1 w-64 rounded-md border border-border bg-popover shadow-lg">
           <div className="p-2">
             <label
               htmlFor={`${comboboxId}-input`}

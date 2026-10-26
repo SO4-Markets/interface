@@ -8,7 +8,7 @@ const SPONSORS = ["Stellar", "Soroban", "Binance", "GMX Oracle"]
 
 export function SponsorsSection() {
   return (
-    <section className="border-t border-hairline border-gmx-sponsors-border bg-gmx-light-150 px-4 py-20 text-gmx-slate-900 sm:px-10 sm:py-15">
+    <section className="border-t-hairline border-gmx-sponsors-border bg-gmx-light-150 px-4 py-20 text-gmx-slate-900 sm:px-10 sm:py-15">
       <div className="mx-auto flex max-w-300 flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-40 font-medium tracking-[-1.28px]">Built on</h2>

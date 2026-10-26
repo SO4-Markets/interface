@@ -27,7 +27,7 @@ const FOOTER_LINKS = [
 
 export function SocialSection() {
   return (
-    <section className="border-t border-hairline border-gmx-slate-600 bg-gmx-slate-900 sm:border-t">
+    <section className="border-t-hairline border-gmx-slate-600 bg-gmx-slate-900 sm:border-t">
       <div className="py-20 sm:py-30">
         <SocialSlider />
       </div>
@@ -39,7 +39,7 @@ export function SocialSection() {
           our community.
         </h2>
 
-        <div className="mt-9 flex flex-col gap-9 border-t border-hairline border-gmx-slate-600 pt-9 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mt-9 flex flex-col gap-9 border-t-hairline border-gmx-slate-600 pt-9 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-wrap gap-9">
             {SOCIAL_STATS.map(({ name, value, href }) => (
               <a key={name} href={href} target="_blank" rel="noreferrer" className="group">
@@ -54,7 +54,7 @@ export function SocialSection() {
           <NewsletterForm />
         </div>
 
-        <div className="flex flex-col items-center gap-3 border-t border-hairline border-gmx-slate-600 py-5 sm:flex-row sm:justify-center sm:gap-3">
+        <div className="flex flex-col items-center gap-3 border-t-hairline border-gmx-slate-600 py-5 sm:flex-row sm:justify-center sm:gap-3">
           {FOOTER_LINKS.map(({ label, href }) => (
             <a
               key={label}

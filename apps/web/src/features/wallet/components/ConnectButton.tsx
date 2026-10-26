@@ -207,7 +207,7 @@ function AccountBadge({
       </Button>
 
       {open && (
-        <div className="absolute inset-inline-end-0 top-full z-50 mt-1 w-72 rounded-md border bg-popover p-3 shadow-md">
+        <div className="absolute end-0 top-full z-50 mt-1 w-72 rounded-md border bg-popover p-3 shadow-md">
           <p className="text-xs text-muted-foreground">Connected</p>
           <p className="mt-1 truncate font-mono text-sm" title={address}>
             {address}

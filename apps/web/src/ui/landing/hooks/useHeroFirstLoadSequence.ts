@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 export interface FirstLoadSequenceConfig {
   /** Delay before starting the title animation (ms) */
@@ -21,11 +21,12 @@ export function useHeroFirstLoadSequence(config?: FirstLoadSequenceConfig) {
   const [showTitle, setShowTitle] = useState(false)
   const [showCta, setShowCta] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
-  const hasRunRef = useRef(false)
 
   useEffect(() => {
-    if (!isFirstLoad || hasRunRef.current) return
-    hasRunRef.current = true
+    // No "has run" ref: under StrictMode the effect mounts, cleans up (clearing
+    // the timers) and mounts again, and a ref guard would skip the second run,
+    // leaving the hero at opacity 0 forever. isFirstLoad already stops re-runs.
+    if (!isFirstLoad) return
 
     const titleTimer = setTimeout(() => setShowTitle(true), resolvedConfig.titleDelay)
     const ctaTimer = setTimeout(() => setShowCta(true), resolvedConfig.ctaDelay)

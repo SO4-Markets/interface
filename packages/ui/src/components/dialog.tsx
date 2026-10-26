@@ -54,7 +54,10 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           // Positioning & sizing
-          "fixed top-1/2 inset-inline-start-1/2 z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 origin-(--transform-origin)",
+          // Centering offset lives in .so4-dialog-content (globals.css) together with
+          // the enter/exit scale; adding Tailwind's translate utilities here too
+          // would apply the -50% shift twice and push the dialog off-screen.
+          "fixed top-1/2 start-1/2 z-50 w-full max-w-[calc(100%-2rem)] origin-(--transform-origin)",
           // Mobile: cap height so content scrolls inside rather than overflowing the viewport
           "max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto",
           // Layout, surface, typography

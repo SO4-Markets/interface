@@ -125,7 +125,7 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
           id={listboxId}
           role="listbox"
           aria-label="Markets"
-          className="absolute inset-inline-start-0 top-full z-50 mt-1 w-56 rounded-md border border-border bg-popover shadow-lg"
+          className="absolute start-0 top-full z-50 mt-1 w-56 rounded-md border border-border bg-popover shadow-lg"
         >
           <div className="p-2">
             <input

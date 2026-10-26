@@ -227,7 +227,7 @@ export function TradePanel({ trade }: TradePanelProps) {
                 }
               }}
             />
-            <span className="absolute top-1/2 inset-inline-end-3 -translate-y-1/2 text-xs text-muted-foreground">
+            <span className="absolute top-1/2 end-3 -translate-y-1/2 text-xs text-muted-foreground">
               USD
             </span>
           </div>

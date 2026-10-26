@@ -25,7 +25,7 @@ export function FaqSection() {
             <AccordionItem
               key={item.id}
               value={item.id}
-              className="border-b border-hairline border-gmx-slate-600 last:border-b-hairline"
+              className="border-b-hairline border-gmx-slate-600 last:border-b-hairline"
             >
               <AccordionTrigger
                 headingLevel={3}

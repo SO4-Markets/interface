@@ -131,7 +131,7 @@ const AvatarGroup = forwardRef<HTMLDivElement, AvatarGroupProps>(
             role="img"
             aria-label={`${hiddenCount} more members`}
           >
-            <span className="text-9 font-semibold">+{hiddenCount}</span>
+            <span className="text-9-5 font-semibold">+{hiddenCount}</span>
           </div>
         )}
       </div>

@@ -131,7 +131,7 @@ export function OrderbookPreview() {
                   className="motion-safe:transition-transform motion-safe:duration-slow"
                 >
                   <div className="flex items-center justify-between text-12">
-                    <span className="text-gmx-slate-300">{level.price}</span>
+                    <span className="text-gmx-slate-400">{level.price}</span>
                     <span className="text-gmx-slate-400">{level.size}</span>
                   </div>
                   <div className="mt-1 h-1 w-full rounded-8 bg-gmx-slate-700">
@@ -152,15 +152,15 @@ export function OrderbookPreview() {
             <dl className="flex flex-col gap-2 text-12">
               <div className="flex items-center justify-between">
                 <dt className="text-gmx-slate-400">Side</dt>
-                <dd className="text-gmx-slate-200">Long</dd>
+                <dd className="text-gmx-slate-400">Long</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-gmx-slate-400">Size</dt>
-                <dd className="text-gmx-slate-200">1.000 BTC</dd>
+                <dd className="text-gmx-slate-400">1.000 BTC</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-gmx-slate-400">Collateral</dt>
-                <dd className="text-gmx-slate-200">USDC from wallet</dd>
+                <dd className="text-gmx-slate-400">USDC from wallet</dd>
               </div>
             </dl>
             <Link

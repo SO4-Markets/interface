@@ -178,7 +178,7 @@ export function AmendOrderDialog({ order, open, onClose, onSubmit, sizeOnly = fa
               ) : null}
 
               {resultError ? (
-                <p role="alert" className="rounded-lg border border-danger-border bg-danger-subtle px-3 py-2 text-xs text-danger-foreground">
+                <p role="alert" className="rounded-lg border border-danger-border bg-danger-subtle px-3 py-2 text-xs text-danger">
                   {resultError}
                 </p>
               ) : null}

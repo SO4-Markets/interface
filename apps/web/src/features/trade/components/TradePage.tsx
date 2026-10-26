@@ -148,7 +148,7 @@ export function TradePage() {
               id="mobile-trade-view-book"
               aria-label="Order book depth"
               className={cn(
-                "min-h-40 w-full flex-col overflow-hidden border-t border-border md:min-h-0 md:w-[var(--book-width)] md:border-t-0 md:border-inline-start lg:min-h-0 lg:w-[var(--book-width)] lg:border-t-0 lg:border-inline-start",
+                "min-h-40 w-full flex-col overflow-hidden border-t border-border md:min-h-0 md:w-[var(--book-width)] md:border-t-0 md:border-s lg:min-h-0 lg:w-[var(--book-width)] lg:border-t-0 lg:border-s",
                 mobileViewClassName("book", mobileView)
               )}
               style={{ ["--book-width" as string]: `${bookWidth}px` }}
@@ -221,7 +221,7 @@ export function TradePage() {
         <div
           id="mobile-trade-view-trade"
           className={cn(
-            "w-full min-h-0 flex-col overflow-x-hidden overflow-y-auto border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-inline-start md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-inline-start lg:shrink-0",
+            "w-full min-h-0 flex-col overflow-x-hidden overflow-y-auto border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
             mobileViewClassName("trade", mobileView)
           )}
           style={{ ["--trade-panel-width" as string]: `${tradePanelWidth}px` }}

@@ -63,7 +63,7 @@ export function HeroSection() {
             being squeezed into a third column (which wrapped every stat
             label onto three lines at 768). */}
         <div
-          className={`mt-7 flex flex-col gap-6 border-b border-hairline border-gmx-slate-600 pb-7 lg:flex-row lg:items-end lg:justify-between lg:pb-9 transition-opacity duration-slow ${
+          className={`mt-7 flex flex-col gap-6 border-b-hairline border-gmx-slate-600 pb-7 lg:flex-row lg:items-end lg:justify-between lg:pb-9 transition-opacity duration-slow ${
             sequence.showCta ? "opacity-100" : "opacity-0"
           }`}
         >
