@@ -9,7 +9,14 @@ import { DepthPanel } from "./DepthPanel"
 import type { BookLevel } from "../../lib/orderbook/book-reducer"
 import type { MarketDisplayMetadata } from "../../lib/orderbook/display-prefs"
 import type { SourceHealth } from "../../hooks/useSourceHealth"
+import type { KeyboardEvent as ReactKeyboardEvent } from "react"
+import type { OrderbookView } from "../../store/chart-preferences-store"
 
+const ORDERBOOK_TABS = [
+  { view: "book", label: "Order Book" },
+  { view: "trades", label: "Trades" },
+  { view: "chart", label: "Depth Chart" },
+] as const satisfies ReadonlyArray<{ view: OrderbookView; label: string }>
 
 export type VerifiedDepth = {
   metadata: MarketDisplayMetadata

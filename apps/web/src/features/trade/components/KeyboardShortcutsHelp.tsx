@@ -8,8 +8,6 @@ import { Kbd, KbdGroup } from "@workspace/ui/components/kbd"
 import { ScrollArea } from "@workspace/ui/components/scroll-area"
 import { registerShortcut, useKeyboardShortcut, getRegisteredShortcuts } from "@/lib/use-keyboard-shortcut"
 
-type ShortcutEntry = ReturnType<typeof getRegisteredShortcuts>[number]
-
 function formatShortcut(combo: string): string {
   const parts = combo.split("+")
   return parts.map((part) => part.trim()).join(" + ")

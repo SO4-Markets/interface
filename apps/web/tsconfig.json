@@ -27,6 +27,7 @@
       "@/*": ["./src/*"],
       "@/test/*": ["./test/*"],
       "@workspace/contracts": ["../../packages/contracts/src/index.ts"],
+      "@workspace/contracts/*": ["../../packages/contracts/src/*"],
       "@workspace/ui/*": ["../../packages/ui/src/*"]
     }
   }

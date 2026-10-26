@@ -10,6 +10,7 @@ import { useBoundedChartHeight } from "../hooks/useBoundedChartHeight"
 import { useLayoutPreferencesStore } from "../store/layout-preferences-store"
 import { seedLimitTicketPrice } from "../lib/orderbook/seed-limit-ticket"
 import { Navbar } from "../../../ui/Navbar"
+import { useWorkspaceShortcuts } from "../hooks/useWorkspaceShortcuts"
 import { TVChart } from "./chart/TVChart"
 import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
@@ -17,15 +18,14 @@ import { CircuitBreakerBanner } from "./CircuitBreakerBanner"
 import { PanelErrorBoundary } from "./PanelErrorBoundary"
 import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
 import { OrderBookPanel } from "./orderbook/OrderBookPanel"
+import { CommandPalette } from "./CommandPalette"
+import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp"
 import type {MobileTradeView} from "./MobileTradeNav"
 import { saveReferralCode } from "@/lib/contracts"
 import { validateReferralCode } from "@/features/referrals/lib/referrals"
 import { useAppFocusRecovery } from "@/shared/hooks/useAppFocusRecovery"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useTheme } from "@/ui/theme-provider"
-import { useWorkspaceShortcuts } from "../hooks/useWorkspaceShortcuts"
-import { CommandPalette } from "./CommandPalette"
-import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp"
 
 const tradeRoute = getRouteApi("/trade")
 
@@ -73,6 +73,10 @@ export function TradePage() {
 
   // ── Desktop workspace resizing (OB-038) ─────────────────────────────────
   const chartRowRef = useRef<HTMLDivElement>(null)
+  // The bound must come from the column that holds the chart row and the
+  // bottom tabs. Measuring the chart row itself feeds its own (already
+  // clamped) height back in, collapsing it to the minimum on every render.
+  const chartColumnRef = useRef<HTMLDivElement>(null)
   const {
     chartRowHeight,
     bookWidth,
@@ -82,7 +86,7 @@ export function TradePage() {
     setTradePanelWidth,
     resetLayout,
   } = useLayoutPreferencesStore()
-  const boundedChartRowHeight = useBoundedChartHeight(chartRowRef, chartRowHeight)
+  const boundedChartRowHeight = useBoundedChartHeight(chartColumnRef, chartRowHeight)
 
   // ── Mobile chart/book/trade navigation (OB-037) ─────────────────────────
   const [mobileView, setMobileView] = useState<MobileTradeView>("chart")
@@ -112,7 +116,7 @@ export function TradePage() {
       {/* Main layout: stacked mobile, stacked-with-tabs tablet, side-by-side desktop */}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row md:px-4 lg:flex-row lg:px-6">
         {/* ── Left: Chart + Book row, Bottom Tabs below ──────────────── */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={chartColumnRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div
             ref={chartRowRef}
             className="flex min-h-0 flex-1 flex-col md:flex-none md:h-[var(--chart-row-height)] md:flex-row lg:flex-none lg:h-[var(--chart-row-height)] lg:flex-row"

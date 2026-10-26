@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 
 import { CommandMenu, type CommandMenuGroup } from "@workspace/ui/components/command-menu"
 import { Icon } from "@workspace/ui/components/icon"
-import { Kbd } from "@workspace/ui/components/kbd"
 import { registerShortcut, useKeyboardShortcut } from "@/lib/use-keyboard-shortcut"
 import { Home01Icon, Search01Icon, Settings01Icon } from "@hugeicons/core-free-icons"
 

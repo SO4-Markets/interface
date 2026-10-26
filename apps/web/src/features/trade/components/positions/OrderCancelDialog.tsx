@@ -8,8 +8,8 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
-import type { Order } from "../../hooks/useOrders"
 import { formatUsd } from "../../lib/trade-math"
+import type { Order } from "../../hooks/useOrders"
 
 type Props = {
   open: boolean

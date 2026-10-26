@@ -45,8 +45,10 @@ export function ClosePositionDialog({ position, open, onClose, onConfirm }: Prop
   const isValid = closeType === "full" || (partialAmount > 0 && !validationError)
   const sizeDeltaUsd = closeType === "full" ? position.sizeUsd : partialAmount
 
+  const positionSizeUsd = position.sizeUsd
+
   function setPreset(percent: number) {
-    setPartialUsd((position.sizeUsd * percent / 100).toFixed(2))
+    setPartialUsd((positionSizeUsd * percent / 100).toFixed(2))
   }
 
   function handleConfirm() {
