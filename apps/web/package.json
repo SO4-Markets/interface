@@ -35,7 +35,7 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^20.11.1",
+    "@happy-dom/global-registrator": "^21.0.4",
     "@repo/vitest-config": "workspace:*",
     "@tanstack/eslint-config": "^0.3.0",
     "@tanstack/react-query-devtools": "^5.100.9",
@@ -50,7 +50,7 @@
     "@vitest/ui": "^4.1.12",
     "axe-core": "^4.12.1",
     "eslint": "^9.39.2",
-    "happy-dom": "^20.10.6",
+    "happy-dom": "^21.0.4",
     "msw": "^2.14.6",
     "qrcode.react": "^4.2.0",
     "rou3": "^1.0.0",
