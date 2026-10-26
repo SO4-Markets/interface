@@ -37,7 +37,9 @@ export function ChangelogEntry({ entry, highlight }: ChangelogEntryProps) {
       </div>
 
       {/* Right side: PR link - touch target 44×44 */}
-      {entry.pr && (
+      {/* Entry text from the changelog pipeline usually already cites the
+          PR inline ("(#512)"); only add the side link when it does not. */}
+      {entry.pr && !entry.text.includes(`#${entry.pr}`) && (
         <div className="mt-2 sm:mt-0 sm:ml-4 shrink-0">
           <a
             href={`${REPO_URL}/pull/${entry.pr}`}

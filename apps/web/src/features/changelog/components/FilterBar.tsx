@@ -100,38 +100,27 @@ export function FilterBar({
             <div>
               <p className="mb-2 text-label">Category</p>
               <div className="flex flex-wrap gap-2">
-                <Badge
-                  variant={allTypesActive ? "default" : "outline"}
-                  size="sm"
-                  className="cursor-pointer transition-all-subtle h-9 px-3 py-1 focus-visible:ring-2"
-                  onClick={() => handleTypeFilter(undefined)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      handleTypeFilter(undefined)
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
+                <Button
+                    type="button"
+                    variant={allTypesActive ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={allTypesActive}
+                    className="h-8 rounded-full px-3"
+                    onClick={() => handleTypeFilter(undefined)}
+                  >
                   All
-                </Badge>
+                </Button>
                 {CHANGELOG_TYPES.map((type) => (
-                  <Badge
-                    key={type}
+                  <Button
+                    key={type} type="button"
                     variant={search.type === type ? "default" : "outline"}
                     size="sm"
-                    className="h-9 cursor-pointer px-3 py-1 transition-all-subtle focus-visible:ring-2"
+                    aria-pressed={search.type === type}
+                    className="h-8 rounded-full px-3"
                     onClick={() => handleTypeFilter(type)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        handleTypeFilter(type)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
                   >
                     {typeLabel(type)}
-                  </Badge>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -148,7 +137,11 @@ export function FilterBar({
                 }
               >
                 <SelectTrigger className="h-11 w-full" aria-label="Filter by area">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string) =>
+                      value === "all" ? "All areas" : areaLabel(value)
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All areas</SelectItem>
@@ -202,38 +195,27 @@ export function FilterBar({
       <div className="mb-8 hidden flex-wrap items-center gap-4 md:flex">
         {/* Category chips */}
         <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={allTypesActive ? "default" : "outline"}
-            size="sm"
-            className="cursor-pointer transition-all-subtle h-9 px-3 py-1 focus-visible:ring-2"
-            onClick={() => handleTypeFilter(undefined)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                handleTypeFilter(undefined)
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
+          <Button
+                    type="button"
+                    variant={allTypesActive ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={allTypesActive}
+                    className="h-8 rounded-full px-3"
+                    onClick={() => handleTypeFilter(undefined)}
+                  >
             All
-          </Badge>
+          </Button>
           {CHANGELOG_TYPES.map((type) => (
-            <Badge
-              key={type}
-              variant={search.type === type ? "default" : "outline"}
-              size="sm"
-              className="h-9 cursor-pointer px-3 py-1 transition-all-subtle focus-visible:ring-2"
-              onClick={() => handleTypeFilter(type)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  handleTypeFilter(type)
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
+            <Button
+                    key={type} type="button"
+                    variant={search.type === type ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={search.type === type}
+                    className="h-8 rounded-full px-3"
+                    onClick={() => handleTypeFilter(type)}
+                  >
               {typeLabel(type)}
-            </Badge>
+            </Button>
           ))}
         </div>
 
@@ -245,7 +227,11 @@ export function FilterBar({
           }
         >
           <SelectTrigger className="h-9 w-48" aria-label="Filter by area">
-            <SelectValue />
+            <SelectValue>
+                    {(value: string) =>
+                      value === "all" ? "All areas" : areaLabel(value)
+                    }
+                  </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All areas</SelectItem>

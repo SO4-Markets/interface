@@ -46,8 +46,11 @@ export function ReleaseSection({
       aria-label={`Version ${release.version}${release.yanked ? " (yanked)" : ""}`}
       className={
         release.yanked
-          ? "mb-8 sm:mb-12 pb-8 sm:pb-12 opacity-60 last:mb-0 last:pb-0"
-          : "mb-8 sm:mb-12 pb-8 sm:pb-12 last:border-b-0 last:mb-0 last:pb-0 border-b border-border"
+          // Spacing and separators live on the parent <li>: as the only child
+          // of its <li>, this section was always `:last-child`, so the old
+          // last:* variants stripped every release's border and spacing.
+          ? "opacity-60"
+          : undefined
       }
     >
       {/* Release header: responsive layout */}

@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react"
-import { useNetwork } from "./useNetwork"
 import { useWalletStore } from "../store/wallet-store"
+import { useNetwork } from "./useNetwork"
 
 export type NetworkHealthStatus = "healthy" | "offline" | "mismatch" | "disconnected"
 
 export function useNetworkHealth() {
   const { mismatch, displayLabel } = useNetwork()
   const walletStatus = useWalletStore((state) => state.status)
-  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine)
+  // Start "online" on both server and first client render so hydration
+  // matches, then read the real value after mount.
+  const [online, setOnline] = useState(true)
 
   useEffect(() => {
+    setOnline(navigator.onLine)
     const handleOnline = () => setOnline(true)
     const handleOffline = () => setOnline(false)
     window.addEventListener("online", handleOnline)

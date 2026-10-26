@@ -239,10 +239,11 @@ export function ChangelogPage() {
   const showLoadOlder = Boolean(data.hasArchive) && archiveStatus !== "loaded"
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Page header with safe area padding */}
-      <div className="px-[var(--gutter-page-sm)] md:px-[var(--gutter-page-md)] lg:px-[var(--gutter-page-lg)] pt-6 md:pt-8 lg:pt-10 pb-4 md:pb-6 border-b border-border">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-8">
+    <div>
+      {/* Page header — shares the AppShell container with the content so the
+          title, filters and releases align on one edge. */}
+      <div className="border-b border-border pb-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-8">
           <div className="flex-1 min-w-0">
             <h1 className="text-display-sm md:text-display font-bold text-foreground mb-2 break-words">
               Changelog
@@ -262,7 +263,7 @@ export function ChangelogPage() {
       </div>
 
       {/* Main content */}
-      <div className="px-[var(--gutter-page-sm)] md:px-[var(--gutter-page-md)] lg:px-[var(--gutter-page-lg)] py-6 md:py-8 max-w-4xl mx-auto">
+      <div className="pt-6 md:pt-8">
         {/* Live region for filter announcements */}
         <LiveRegion message={message} announcementKey={announcementKey} />
 
@@ -283,7 +284,10 @@ export function ChangelogPage() {
           <section aria-label="Release history" className="space-y-0">
             <ul role="list" className="space-y-0">
               {filteredReleases.map((release) => (
-                <li key={release.version}>
+                <li
+                  key={release.version}
+                  className="border-b border-border py-10 first:pt-2 last:border-b-0"
+                >
                   <ReleaseSection
                     release={release}
                     isFiltered={isFiltered}
