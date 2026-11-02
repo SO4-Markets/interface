@@ -55,7 +55,7 @@
     "msw": "^2.14.6",
     "qrcode.react": "^4.2.0",
     "rou3": "^1.0.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vite": "^7.3.2",
     "vitest": "^4.1.12",
     "vitest-axe": "^0.1.0"
