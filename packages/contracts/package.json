@@ -15,7 +15,7 @@
     "./errors": "./src/errors.ts"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^15.1.0",
+    "@stellar/stellar-sdk": "^17.4.0",
     "buffer": "^6.0.3"
   },
   "devDependencies": {
