@@ -40,7 +40,7 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.1.12",
-    "@vitest/expect": "^4.1.12",
+    "@vitest/expect": "^5.0.5",
     "axe-core": "^4.12.1",
     "eslint": "^9.39.2",
     "jsdom": "^30.0.1",
