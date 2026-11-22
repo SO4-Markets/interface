@@ -6,6 +6,8 @@ import {
   createRootRoute,
 } from "@tanstack/react-router"
 import { useEffect } from "react"
+import { Home01Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "@workspace/ui/components/icon"
 import { ToastProvider } from "@workspace/ui/components/toast"
 import { TooltipProvider } from "@workspace/ui/components/tooltip"
 import { DensityProvider } from "@workspace/ui/components/density-provider"
@@ -156,22 +158,85 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
     ],
   }),
-  notFoundComponent: () => (
-    <main className="mx-auto max-w-330 p-4 pt-16">
-      <h1 className="text-2xl font-medium text-foreground">404</h1>
-      <p className="mt-2 text-muted-foreground">
-        The requested page could not be found.
-      </p>
-      <div className="mt-4">
-        <Link to="/" className="text-primary hover:underline">
-          Go back home
-        </Link>
-      </div>
-    </main>
-  ),
+  notFoundComponent: NotFoundPage,
   component: RootComponent,
   shellComponent: RootDocument,
 })
+
+const NOT_FOUND_DESTINATIONS = [
+  { label: "Markets", description: "Find a market to trade", to: "/trade" },
+  { label: "Liquidity pools", description: "Explore pool performance", to: "/pools" },
+  { label: "Earn", description: "Manage staking and rewards", to: "/earn" },
+  { label: "Referrals", description: "View your referral program", to: "/referrals" },
+] as const
+
+function NotFoundPage() {
+  return (
+    <main className="mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-330 items-center px-4 py-10 md:px-8">
+      <div className="grid w-full items-center gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)] lg:gap-16">
+        <section className="max-w-3xl motion-safe:animate-in motion-safe:fade-in motion-safe:duration-moderate">
+          <p className="font-mono text-xs text-text-tertiary">SO4 / ROUTE NOT FOUND</p>
+          <p aria-hidden="true" className="mt-8 font-mono text-8xl leading-none text-text-tertiary/40 md:text-9xl">
+            404
+          </p>
+          <h1 className="mt-6 text-3xl font-semibold text-text-primary sm:text-4xl">
+            Page not found.
+          </h1>
+          <p className="mt-3 max-w-lg text-base text-text-secondary">
+            This route isn’t on the map. It may have moved, or the address may be
+            mistyped.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              to="/"
+              className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 motion-reduce:transition-none"
+            >
+              <Icon icon={Home01Icon} size="sm" aria-hidden="true" />
+              Back to home
+            </Link>
+            <Link
+              to="/trade"
+              className="inline-flex min-h-11 items-center rounded-sm border border-border px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-interactive motion-reduce:transition-none"
+            >
+              Browse markets
+            </Link>
+          </div>
+        </section>
+
+        <nav
+          aria-labelledby="not-found-destinations"
+          className="rounded-lg border border-border bg-surface-raised p-5 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-moderate"
+        >
+          <h2 id="not-found-destinations" className="text-sm font-semibold text-text-primary">
+            Useful destinations
+          </h2>
+          <ul className="mt-3 divide-y divide-border">
+            {NOT_FOUND_DESTINATIONS.map((destination) => (
+              <li key={destination.to}>
+                <Link
+                  to={destination.to}
+                  className="-mx-2 flex min-h-14 items-center justify-between gap-4 rounded-sm px-2 py-2 transition-colors hover:bg-surface-interactive motion-reduce:transition-none"
+                >
+                  <span>
+                    <span className="block text-sm font-medium text-text-primary">
+                      {destination.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-text-tertiary">
+                      {destination.description}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="font-mono text-sm text-text-tertiary">
+                    /{destination.to.slice(1)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </main>
+  )
+}
 
 // Sits above every route so the post-navigation focus/announcement handoff
 // (DS-078) is installed exactly once, inside router context.
