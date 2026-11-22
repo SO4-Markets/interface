@@ -20,6 +20,7 @@ import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
 import { OrderBookPanel } from "./orderbook/OrderBookPanel"
 import { CommandPalette } from "./CommandPalette"
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp"
+import { TradeWorkspaceTour } from "./TradeWorkspaceTour"
 import type {MobileTradeView} from "./MobileTradeNav"
 import { saveReferralCode } from "@/lib/contracts"
 import { validateReferralCode } from "@/features/referrals/lib/referrals"
@@ -90,6 +91,7 @@ export function TradePage() {
 
   // ── Mobile chart/book/trade navigation (OB-037) ─────────────────────────
   const [mobileView, setMobileView] = useState<MobileTradeView>("chart")
+  const [tourReplayKey, setTourReplayKey] = useState(0)
 
   const { setTheme, resolvedTheme } = useTheme()
   const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark")
@@ -184,6 +186,7 @@ export function TradePage() {
           {/* Bottom tabs/panels: Positions / Orders / Trades / Claims */}
           <div
             id="mobile-trade-view-positions"
+            data-tour-target="positions"
             className={cn(
               "min-h-0 flex-1 flex-col overflow-auto border-t border-border md:border-t-0 md:hidden lg:flex lg:border-t-0",
               mobileViewClassName("positions", mobileView)
@@ -251,7 +254,8 @@ export function TradePage() {
         onFocusPositions={() => setMobileView("positions")}
         onToggleTheme={toggleTheme}
       />
-      <KeyboardShortcutsHelp />
+      <KeyboardShortcutsHelp onStartTour={() => setTourReplayKey((key) => key + 1)} />
+      <TradeWorkspaceTour replayKey={tourReplayKey} onViewChange={setMobileView} />
     </AppShell>
   )
 }

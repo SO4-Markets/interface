@@ -148,7 +148,7 @@ export function TradePanel({ trade }: TradePanelProps) {
   }, [tradeMode, previousMode])
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 p-4">
+    <div data-tour-target="order-form" className="flex min-w-0 flex-col gap-3 p-4">
       <p role="status" aria-label="Active price source" className="text-xs text-muted-foreground">
         Price source: {activePrice?.source === "pyth" ? "Pyth Hermes" : activePrice?.source === "binance" ? "Binance reference" : activePrice?.source === "gmx" ? "GMX reference" : activePrice?.source === "fallback" ? "Illustrative fallback (not live)" : "Unavailable"}
       </p>

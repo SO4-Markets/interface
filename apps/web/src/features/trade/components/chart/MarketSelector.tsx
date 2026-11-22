@@ -205,6 +205,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
     <div className="relative inline-flex items-center gap-2">
      <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
+        data-tour-target="market-selector"
         aria-haspopup="listbox"
         aria-controls={open ? listboxId : undefined}
         className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
