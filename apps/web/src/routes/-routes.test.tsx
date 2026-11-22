@@ -34,7 +34,7 @@ vi.mock("@tanstack/react-router", () => {
     return (opts: Record<string, unknown>) => opts as { component: React.ComponentType }
   }
   function createRootRoute(opts?: Record<string, unknown>) {
-    return (opts ?? {})
+    return { options: opts ?? {} }
   }
   return {
     createFileRoute,
@@ -303,8 +303,15 @@ describe("route smoke tests", () => {
       const { Route } = await import("./__root")
       const NotFound = Route.options.notFoundComponent as React.ComponentType
       render(<NotFound />, { wrapper: createWrapper() })
-      await screen.findByRole("heading", { name: /404/i })
-      expect(screen.getByText(/Go back home/i)).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: /Page not found/i })).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: /Back to home/i })).toHaveAttribute("href", "/")
+      expect(screen.getByRole("link", { name: /Browse markets/i })).toHaveAttribute("href", "/trade")
+      expect(screen.getByRole("navigation", { name: /Useful destinations/i })).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: /Liquidity pools/i })).toHaveAttribute("href", "/pools")
+      expect(screen.getByRole("link", { name: /Earn/i })).toHaveAttribute("href", "/earn")
+      expect(screen.getByRole("link", { name: /Referrals/i })).toHaveAttribute("href", "/referrals")
+      expect(screen.getByText("404")).toHaveClass("font-mono")
+      expect(screen.getByRole("main").querySelector("section")).toHaveClass("motion-safe:animate-in")
     })
   })
 })
