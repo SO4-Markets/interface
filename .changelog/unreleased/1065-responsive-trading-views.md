@@ -1,7 +1,7 @@
 ---
 type: fixed
 area: trade
-pr: 1051
+pr: 1065
 breaking: false
 ---
 
