@@ -1363,6 +1363,14 @@
         transition: opacity var(--duration-fast) var(--ease-out);
     }
     .so4-dialog-content, .so4-sheet-content, .so4-popover-content { transform: none; }
+    .so4-dialog-content[data-starting-style],
+    .so4-dialog-content[data-ending-style],
+    .so4-sheet-content[data-starting-style],
+    .so4-sheet-content[data-ending-style],
+    .so4-popover-content[data-starting-style],
+    .so4-popover-content[data-ending-style] { transform: none; }
+    .so4-sheet-content[data-starting-style][data-side],
+    .so4-sheet-content[data-ending-style][data-side] { transform: none; }
 }
 :root[data-reduced-motion="true"] .so4-dialog-overlay,
 :root[data-reduced-motion="true"] .so4-sheet-overlay,
@@ -1370,6 +1378,14 @@
 :root[data-reduced-motion="true"] .so4-sheet-content,
 :root[data-reduced-motion="true"] .so4-popover-content {
     transition: none;
+    transform: none;
+}
+:root[data-reduced-motion="true"] .so4-dialog-content[data-starting-style],
+:root[data-reduced-motion="true"] .so4-dialog-content[data-ending-style],
+:root[data-reduced-motion="true"] .so4-sheet-content[data-starting-style],
+:root[data-reduced-motion="true"] .so4-sheet-content[data-ending-style],
+:root[data-reduced-motion="true"] .so4-popover-content[data-starting-style],
+:root[data-reduced-motion="true"] .so4-popover-content[data-ending-style] {
     transform: none;
 }
 /* The explicit preference is global so independently-authored UI cannot miss it. */
@@ -1380,6 +1396,16 @@
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 1ms;
+        --duration-base: 1ms;
+        --duration-moderate: 1ms;
+        --duration-slow: 1ms;
+        --duration-slowest: 1ms;
+        --duration-pulse: 1ms;
+    }
 }
 @media (prefers-reduced-motion: reduce) {
     [data-slot="skeleton"]::before { animation: none; display: none; }

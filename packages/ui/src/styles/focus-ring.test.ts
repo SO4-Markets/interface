@@ -21,6 +21,15 @@ describe("shared focus-ring motion contract", () => {
     )
   })
 
+  it("applies the app's instant-motion policy to system reduced-motion users", () => {
+    expect(stylesheet).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*:root\s*\{[\s\S]*--duration-fast: 1ms;[\s\S]*--duration-pulse: 1ms;/
+    )
+    expect(stylesheet).toMatch(
+      /\.so4-sheet-content\[data-starting-style\]\[data-side\],[\s\S]*\.so4-sheet-content\[data-ending-style\]\[data-side\] \{ transform: none; \}/
+    )
+  })
+
   it("keeps a system-colored focus indicator in forced-colors mode", () => {
     expect(stylesheet).toMatch(
       /@media \(forced-colors: active\)[\s\S]*\*:\s*focus-visible\s*\{[\s\S]*outline: 2px solid Highlight !important;/

@@ -53,7 +53,7 @@ export function FaucetCooldown({ lastClaimLedger, nextClaimLedger, currentLedger
   }, [currentLedger, nextClaimLedger, cooldownLedgers])
 
   if (isLoading) {
-    return <div className="h-32 animate-pulse rounded-lg bg-muted" />
+    return <div className="h-32 motion-safe:animate-pulse rounded-lg bg-muted" />
   }
 
   const isAvailable = currentLedger >= nextClaimLedger

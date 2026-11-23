@@ -433,7 +433,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-sm bg-background/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur border border-border"
             role="status"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
             <span>Updating {period}…</span>
           </div>
         )}

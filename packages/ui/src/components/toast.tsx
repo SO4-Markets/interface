@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Alert01Icon, Cancel01Icon, InformationCircleIcon, ReloadIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { cn } from "@workspace/ui/lib/utils"
+import { useReducedMotion } from "../hooks/use-reduced-motion"
 import { Icon } from "./icon"
 
 export type ToastVariant = "info" | "success" | "warning" | "error" | "transaction-progress"
@@ -244,19 +245,6 @@ const VARIANT_LABEL: Record<ToastVariant, string> = {
 /** Exit duration matches `--duration-base` (motion spec: toast 150ms ease-out/in). */
 export const TOAST_EXIT_MS = 150
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = React.useState(false)
-  React.useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)")
-    setReduced(query.matches)
-    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches)
-    query.addEventListener("change", onChange)
-    return () => query.removeEventListener("change", onChange)
-  }, [])
-  return reduced
-}
-
 function Toast({
   item,
   revision,
@@ -269,27 +257,8 @@ function Toast({
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const exitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isHovered, setIsHovered] = React.useState(false)
-  // Entrance runs once on mount; content updates reuse the same node (OB-092).
-  const [, setEntered] = React.useState(true)
   const [closing, setClosing] = React.useState(false)
-  const reducedMotion = usePrefersReducedMotion()
-
-  React.useEffect(() => {
-    if (reducedMotion) {
-      setEntered(true)
-      return
-    }
-    const frame = requestAnimationFrame(() => setEntered(true))
-    return () => {
-      try {
-        cancelAnimationFrame(frame)
-      } catch {
-        try {
-          clearTimeout(frame)
-        } catch {}
-      }
-    }
-  }, [reducedMotion])
+  const reducedMotion = useReducedMotion()
 
   // A content update for the same id cancels a pending exit (rapid reversal).
   // Guarded by a content snapshot so starting an exit does not immediately
@@ -321,6 +290,12 @@ function Toast({
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
     }
   }, [])
+
+  React.useEffect(() => {
+    if (!reducedMotion || !closing) return
+    if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    onDismiss(item.id)
+  }, [closing, item.id, onDismiss, reducedMotion])
 
   React.useEffect(() => {
     const shouldAutoDismiss = item.isTerminal || (!item.persistent && item.duration > 0)
