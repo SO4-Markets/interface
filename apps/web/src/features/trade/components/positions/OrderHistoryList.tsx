@@ -99,6 +99,7 @@ export function OrderHistoryList() {
     {
       id: "market",
       header: "Market",
+      sticky: true,
       accessor: (row) => (
         <div className="flex items-center gap-1.5">
           <span className="font-medium">{row.marketName}</span>
@@ -218,6 +219,7 @@ export function OrderHistoryList() {
         <DataTable
           columns={columns}
           data={history.rows}
+          ariaLabel="Order history"
           isLoading={history.isLoading}
           emptyMessage={history.error ? "Order history unavailable" : `No orders in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
           keyExtractor={(row) => row.rowKey}

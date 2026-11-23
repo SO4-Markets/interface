@@ -114,12 +114,15 @@ describe("account workspace responsive (OB-090)", () => {
     mockData = [createMockOrder()]
     render(<OrdersList />, { wrapper: createWrapper() })
 
-    const toggle = screen.getByRole("button", { name: "Details" })
-    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    const toggle = screen.getByRole("button", { name: "Hide details" })
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
 
     // Keyboard reading order: Details toggle first, then Edit/Cancel inside.
     toggle.focus()
     expect(document.activeElement).toBe(toggle)
+    await user.keyboard("{Enter}")
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+
     await user.keyboard("{Enter}")
     expect(toggle).toHaveAttribute("aria-expanded", "true")
 

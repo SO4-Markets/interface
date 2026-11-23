@@ -52,7 +52,7 @@ export function AccountOrderCard({
   actions,
   summarySizeUsd,
 }: Props) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const regionId = `account-row-details-${rowKey}`
   const buttonId = `account-row-toggle-${rowKey}`
 
@@ -61,8 +61,8 @@ export function AccountOrderCard({
       aria-labelledby={buttonId}
       className="rounded-lg border border-border bg-card px-4 py-3"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span className="truncate text-sm font-medium">{marketName}</span>
           <StatusBadge variant={sideBadge.variant}>{sideBadge.label}</StatusBadge>
           {statusBadge ? (
@@ -92,9 +92,9 @@ export function AccountOrderCard({
         <div id={regionId} role="region" aria-labelledby={buttonId} className="mt-3">
           <dl className="space-y-2">
             {fields.map((field) => (
-              <div key={field.label} className="flex items-baseline justify-between gap-3">
-                <dt className="shrink-0 text-xs text-muted-foreground">{field.label}</dt>
-                <dd className="min-w-0 text-right text-xs">{field.value}</dd>
+              <div key={field.label} className="grid grid-cols-[minmax(6rem,0.8fr)_minmax(0,1.2fr)] items-baseline gap-3">
+                <dt className="text-xs text-muted-foreground">{field.label}</dt>
+                <dd className="min-w-0 break-words text-right text-xs tabular-nums">{field.value}</dd>
               </div>
             ))}
           </dl>

@@ -16,12 +16,13 @@ import {
   describePositionRisk,
   riskSeverity,
 } from "../../lib/position-risk"
+import { AccountOrderCard } from "./AccountRowDetails"
 import { CollateralDialog } from "./CollateralDialog"
 import { ClosePositionDialog } from "./ClosePositionDialog"
-import type { Column } from "@workspace/ui/components/data-table"
 import type { Position } from "../../hooks/usePositions"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
+import type { Column } from "@workspace/ui/components/data-table"
 import { TokenIcon } from "@/shared/components/TokenIcon"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 type Props = {
   onSelectPosition?: (position: Position) => void
@@ -97,6 +98,7 @@ export function PositionsList({ onSelectPosition }: Props) {
     {
       id: "market",
       header: "Market",
+      sticky: true,
       accessor: (p) => (
         <div className="flex items-center gap-1.5">
           <TokenIcon symbol={p.indexToken} size={20} />
@@ -273,28 +275,73 @@ export function PositionsList({ onSelectPosition }: Props) {
           ⚠️ Indexer disabled - Historical data unavailable. Showing live contract data only.
         </div>
       )}
-      <DataTable
-        columns={columns}
-        data={positions}
-        animateRows
-        isLoading={isLoading}
-        emptyMessage="No open positions"
-        emptyAction={
-          <div className="flex flex-col items-center gap-2">
-            {isDisabled && (
-              <p className="text-xs text-amber-500">
-                ⚠️ Indexer disabled - showing contract-only data
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">Start trading to open your first position</p>
-            <a href="/trade" className="text-xs text-primary hover:text-primary/80 font-medium">
-              Start trading →
-            </a>
-          </div>
-        }
-        keyExtractor={(p) => p.key}
-        onRowClick={onSelectPosition ? (p) => onSelectPosition(p) : undefined}
-      />
+      <div className="hidden md:block">
+        <DataTable
+          columns={columns}
+          data={positions}
+          ariaLabel="Open positions"
+          animateRows
+          isLoading={isLoading}
+          emptyMessage="No open positions"
+          emptyAction={
+            <div className="flex flex-col items-center gap-2">
+              {isDisabled && (
+                <p className="text-xs text-amber-500">
+                  ⚠️ Indexer disabled - showing contract-only data
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">Start trading to open your first position</p>
+              <a href="/trade" className="text-xs text-primary hover:text-primary/80 font-medium">
+                Start trading →
+              </a>
+            </div>
+          }
+          keyExtractor={(p) => p.key}
+          onRowClick={onSelectPosition ? (p) => onSelectPosition(p) : undefined}
+        />
+      </div>
+      <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Open positions">
+        {isLoading ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Loading positions…</p>
+        ) : positions.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">No open positions</p>
+        ) : positions.map((p) => {
+          const reading = describePositionRisk({
+            sizeUsd: p.sizeUsd,
+            markPriceUsd: p.markPrice,
+            liquidationPriceUsd: p.liquidationPrice,
+            isLong: p.isLong,
+            markPriceStaleness: getStaleness(p.indexToken),
+          })
+          return (
+            <div key={p.key} role="listitem">
+              <AccountOrderCard
+                rowKey={p.key}
+                marketName={p.marketName}
+                sideBadge={{ label: p.isLong ? "Long" : "Short", variant: p.isLong ? "success" : "danger" }}
+                summarySizeUsd={p.sizeUsd}
+                fields={[
+                  { label: "Collateral", value: <Numeric value={p.collateralUsd} format="usd" /> },
+                  { label: "Entry", value: <Numeric value={p.entryPrice} format="usd" /> },
+                  { label: "Mark", value: <Numeric value={p.markPrice} format="usd" /> },
+                  { label: "Liq.", value: <Numeric value={p.liquidationPrice} format="usd" /> },
+                  { label: "Available risk", value: reading.hasData ? <Numeric value={reading.availableRiskUsd} format="usd" role={riskSeverity(reading)} /> : <span>No data</span> },
+                  { label: "PnL", value: <span aria-label={`PnL ${p.pnlAfterFees >= 0 ? "gain" : "loss"}`}><Numeric value={p.pnlAfterFees} format="usd" role={p.pnlAfterFees >= 0 ? "positive" : "negative"} /> <Numeric value={p.pnlPercent} format="pct" role={p.pnlAfterFees >= 0 ? "positive" : "negative"} /></span> },
+                  { label: "Funding fee", value: p.fundingFeeUsd > 0 ? <Numeric value={p.fundingFeeUsd} format="usd" role="positive" /> : <span>&mdash;</span> },
+                  { label: "Next funding", value: <span className="font-mono tabular-nums">{countdown}</span> },
+                ]}
+                actions={[
+                  { label: "Share", onClick: () => handleShare(p) },
+                  { label: "+ Collateral", onClick: () => { setDialogPosition(p); setDialogMode("add") } },
+                  { label: "- Collateral", onClick: () => { setDialogPosition(p); setDialogMode("remove") } },
+                  ...(p.fundingFeeUsd > 0 ? [{ label: "Claim", pending: claiming === p.key, onClick: () => void handleClaim(p) }] : []),
+                  { label: "Close", pending: closing === p.key || isBusy(p.key), onClick: () => setCloseDialogPosition(p) },
+                ]}
+              />
+            </div>
+          )
+        })}
+      </div>
       <CollateralDialog
         position={dialogPosition}
         mode={dialogMode}

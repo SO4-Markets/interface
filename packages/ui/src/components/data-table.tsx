@@ -21,6 +21,7 @@ interface Column<T> {
   accessor: (row: T) => React.ReactNode
   align?: 'left' | 'right'
   className?: string
+  sticky?: boolean
 }
 
 interface DataTableProps<T> {
@@ -30,6 +31,7 @@ interface DataTableProps<T> {
   emptyMessage?: string
   emptyAction?: React.ReactNode
   keyExtractor: (row: T) => string
+  ariaLabel?: string
   onRowClick?: (row: T) => void
   selectedRowKey?: string
   /** FLIP insertion/removal/reorder animations for live trading data. */
@@ -48,6 +50,7 @@ function DataTable<T>({
   selectedRowKey,
   animateRows = false,
   className,
+  ariaLabel,
 }: DataTableProps<T>) {
   const attachAnimatedRow = useAnimatedRows(data, keyExtractor, animateRows, isLoading)
   const [scrollTop, setScrollTop] = React.useState(0)
@@ -56,15 +59,18 @@ function DataTable<T>({
   const maxRows = 50
   const start = virtual ? Math.min(Math.max(0, Math.floor(scrollTop / rowHeight) - 10), data.length - maxRows) : 0
   const end = virtual ? Math.min(data.length, start + maxRows) : data.length
+  const stickyClass = (col: Column<T>) => col.sticky
+    ? "sticky left-0 z-[1] bg-card shadow-[1px_0_0_var(--border)]"
+    : undefined
 
   if (isLoading) {
     return (
-      <Table containerClassName={className}>
+      <Table aria-label={ariaLabel} containerClassName={className}>
         <TableBody>
           {[0, 1, 2].map((i) => (
             <TableRow key={i} interactive={false}>
               {columns.map((col) => (
-                <TableCell key={col.id} align={col.align}>
+                <TableCell key={col.id} align={col.align} className={cn(col.className, stickyClass(col))}>
                   <Skeleton className="h-4 w-full" />
                 </TableCell>
               ))}
@@ -78,7 +84,7 @@ function DataTable<T>({
   if (data.length === 0) {
     const colSpan = columns.length || 1
     return (
-      <Table containerClassName={className}>
+      <Table aria-label={ariaLabel} containerClassName={className}>
         <TableBody>
           <TableEmptyRow colSpan={colSpan}>
             <EmptyState
@@ -92,11 +98,19 @@ function DataTable<T>({
   }
 
   return (
-    <Table containerClassName={cn(className, virtual && "max-h-[32rem] overflow-y-auto")} containerOnScroll={virtual ? (event) => setScrollTop(event.currentTarget.scrollTop) : undefined}>
+    <Table
+      aria-label={ariaLabel}
+      containerClassName={cn(className, virtual && "max-h-[32rem] overflow-y-auto")}
+      containerOnScroll={virtual ? (event) => setScrollTop(event.currentTarget.scrollTop) : undefined}
+    >
       <TableHeader>
         <TableHeadRow>
           {columns.map((col) => (
-            <TableHead key={col.id} align={col.align} className={col.className}>
+            <TableHead
+              key={col.id}
+              align={col.align}
+              className={cn(col.className, col.sticky && "sticky left-0 z-[2] bg-muted/25 shadow-[1px_0_0_var(--border)]")}
+            >
               {col.header}
             </TableHead>
           ))}
@@ -129,7 +143,11 @@ function DataTable<T>({
               className={cn(onRowClick && 'cursor-pointer', isSelected && 'bg-muted/30')}
             >
               {columns.map((col) => (
-                <TableCell key={col.id} align={col.align} className={col.className}>
+                <TableCell
+                  key={col.id}
+                  align={col.align}
+                  className={cn(col.className, stickyClass(col), isSelected && col.sticky && "bg-muted/30")}
+                >
                   {col.accessor(row)}
                 </TableCell>
               ))}
