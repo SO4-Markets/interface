@@ -118,7 +118,10 @@ export function ConnectButton({ className, ...props }: ConnectButtonProps) {
           <span className="so4-wallet-pulse absolute inset-0 rounded-full bg-primary/20" />
           <WalletIcon className="relative size-3.5" />
         </span>
-        <span role="status">Connecting</span>
+        <span role="status">
+          <span className="hidden sm:inline">Connecting</span>
+          <span className="sm:hidden">…</span>
+        </span>
       </Button>
     )
   }
@@ -133,7 +136,8 @@ export function ConnectButton({ className, ...props }: ConnectButtonProps) {
         disabled={props.disabled}
         onClick={() => setIsWalletModalOpen(true)}
       >
-        Connect Wallet
+        <span className="hidden sm:inline">Connect Wallet</span>
+        <span className="sm:hidden">Connect</span>
       </Button>
 
       <WalletModal open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen} />

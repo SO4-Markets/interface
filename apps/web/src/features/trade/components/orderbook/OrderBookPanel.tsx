@@ -71,12 +71,12 @@ export function OrderBookPanel({ symbol, verifiedDepth, activeMarketId, onSeedLi
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
       {/* ── Panel Header Tabs ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border px-3 py-1.5">
         <div
           role="tablist"
           aria-label="Order book view"
           onKeyDown={handleKeyDown}
-          className="flex items-center gap-1"
+          className="flex min-w-0 flex-wrap items-center gap-1"
         >
           {ORDERBOOK_TABS.map(({ view, label }) => {
             const isActive = orderbookView === view
@@ -105,8 +105,8 @@ export function OrderBookPanel({ symbol, verifiedDepth, activeMarketId, onSeedLi
             )
           })}
         </div>
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          Reference Data
+        <span className="flex min-w-0 shrink-0 items-center gap-2 text-xs text-muted-foreground">
+          <span className="sr-only sm:not-sr-only">Reference Data</span>
           {source ? <SourceHealthBadge health={source.health} /> : null}
         </span>
       </div>

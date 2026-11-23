@@ -113,7 +113,7 @@ export function TradePage() {
       variant="full"
       navbar={<Navbar variant="app" />}
       banner={<CircuitBreakerBanner symbol={trade.toTokenAddress} />}
-      className="overflow-hidden"
+      className="h-svh overflow-hidden"
     >
       {/* Main layout: stacked mobile, stacked-with-tabs tablet, side-by-side desktop */}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row md:px-4 lg:flex-row lg:px-6">
@@ -127,7 +127,7 @@ export function TradePage() {
             {/* Chart */}
             <div
               id="mobile-trade-view-chart"
-              className={cn("min-h-0 min-w-0 flex-1 flex-col", mobileViewClassName("chart", mobileView))}
+              className={cn("relative min-h-0 min-w-0 flex-1 flex-col overflow-hidden", mobileViewClassName("chart", mobileView))}
             >
               <PanelErrorBoundary panel="chart">
                 <TVChart symbol={trade.toTokenAddress} onSelectToken={trade.setToTokenAddress} />
@@ -188,7 +188,7 @@ export function TradePage() {
             id="mobile-trade-view-positions"
             data-tour-target="positions"
             className={cn(
-              "min-h-0 flex-1 flex-col overflow-auto border-t border-border md:border-t-0 md:hidden lg:flex lg:border-t-0",
+              "min-h-0 flex-1 flex-col overflow-auto border-t border-border md:border-t-0",
               mobileViewClassName("positions", mobileView)
             )}
           >
@@ -224,7 +224,7 @@ export function TradePage() {
         <div
           id="mobile-trade-view-trade"
           className={cn(
-            "w-full min-h-0 flex-col overflow-x-hidden overflow-y-auto border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
+            "w-full min-h-0 flex-col overflow-x-auto overflow-y-auto border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
             mobileViewClassName("trade", mobileView)
           )}
           style={{ ["--trade-panel-width" as string]: `${tradePanelWidth}px` }}
@@ -241,8 +241,8 @@ export function TradePage() {
         </Button>
       </div>
 
-      {/* Show mobile/tablet nav only on md and below; tablet shows chart+book + trade/positions tabs */}
-      <MobileTradeNav active={mobileView} onChange={setMobileView} className="md:hidden" />
+      {/* Compact navigation covers every width where the full side-by-side layout does not fit. */}
+      <MobileTradeNav active={mobileView} onChange={setMobileView} className="lg:hidden" />
 
       <CommandPalette
         onFocusMarketSearch={() => {

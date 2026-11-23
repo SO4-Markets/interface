@@ -33,11 +33,11 @@ export function RecentTradesTape({ symbol }: Props) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden text-xs">
       {/* ── Sub-header with venue and feed status indicator ───────────────── */}
-      <div className="flex items-center justify-between border-b border-border px-3 py-1.5 bg-muted/20">
-        <span className="font-mono text-11 text-muted-foreground">
+      <div className="flex min-w-0 items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20">
+        <span className="min-w-0 truncate font-mono text-11 text-muted-foreground" title={symbol}>
           {symbol ?? "Market"} Trades
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <LiveIndicator status={status} className="text-10" />
         </div>
       </div>
@@ -54,7 +54,9 @@ export function RecentTradesTape({ symbol }: Props) {
           </div>
         ) : trades.length === 0 ? (
           <div className="flex h-full items-center justify-center p-4 text-center text-xs text-muted-foreground" role="status">
-            No recent trades available for {symbol ?? "selected market"}
+            <span className="max-w-full break-all">
+              No recent trades available for {symbol ?? "selected market"}
+            </span>
           </div>
         ) : (
           <Table>
@@ -69,7 +71,7 @@ export function RecentTradesTape({ symbol }: Props) {
             <TableBody>
               {start > 0 && <TableRow aria-hidden="true"><TableCell colSpan={4} style={{ height: start * rowHeight, padding: 0 }} /></TableRow>}
               {trades.slice(start, end).map((trade) => (
-                <TableRow key={trade.id} ref={(node) => attachTradeRow(trade.id, node)} interactive={false} className="font-mono text-[11px]">{/* ds-allow: dense trade row font size */}
+                <TableRow key={trade.id} ref={(node) => attachTradeRow(trade.id, node)} interactive={false} className="font-mono text-11">
                   <TableCell className="font-medium text-foreground">
                     {formatUsd(trade.price, { decimals: 4 })}
                   </TableCell>

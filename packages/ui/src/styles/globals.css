@@ -305,9 +305,16 @@
 
 /* Shared keyboard focus treatment (OB-021). Keep the outline present for
  * keyboard users and animate only the paint-layer affordance so focus never
- * changes layout or moves the active control. */
-:where(button, a, [role="button"]) {
-  position: relative;
+ * changes layout or moves the active control. This lives in Tailwind's base
+ * layer so explicit `fixed` / `absolute` utilities can override it. */
+@layer base {
+  :where(button, a, [role="button"]) {
+    position: relative;
+  }
+}
+
+.tsqd-open-btn-container {
+  z-index: 20 !important;
 }
 
 :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
