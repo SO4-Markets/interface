@@ -36,6 +36,8 @@ beforeEach(() => {
 afterEach(() => {
   act(() => resetToastStore())
   vi.useRealTimers()
+  vi.unstubAllGlobals()
+  delete document.documentElement.dataset.reducedMotion
 })
 
 describe("toast deduplication", () => {
@@ -250,24 +252,7 @@ describe("dismissed progress", () => {
  * single-provider lifecycle and the presence-aware interruptible transitions.
  */
 
-// jsdom lacks a stable requestAnimationFrame under fake timers; the toast
-// entrance uses rAF, so provide a deterministic shim for these suites.
-function stubRaf() {
-  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
-    return setTimeout(() => cb(performance.now()), 0) as unknown as number
-  })
-  vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id))
-}
-
 describe("sole notification implementation (OB-091)", () => {
-  beforeEach(() => {
-    stubRaf()
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
   it("delivers every supported call to the single mounted provider", () => {
     renderProvider()
     act(() => {
@@ -310,27 +295,12 @@ describe("sole notification implementation (OB-091)", () => {
   })
 })
 
-describe("toast motion — entrance, updates, stacking, exit (OB-092)", () => {
-  beforeEach(() => {
-    stubRaf()
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  function flushEntrance() {
-    act(() => {
-      vi.advanceTimersByTime(0)
-    })
-  }
-
-  it("updates content in place without replaying the entrance", () => {
+describe("toast motion — updates, stacking, exit (OB-092)", () => {
+  it("updates content in place without remounting", () => {
     renderProvider()
     act(() => {
       toast.show({ id: "up-1", message: "Waiting…", variant: "transaction-progress", duration: 0, persistent: true })
     })
-    flushEntrance()
     expect(screen.getByText("Waiting…").closest("[data-slot='toast']")).toHaveAttribute("data-state", "open")
     act(() => {
       toast.show({ id: "up-1", message: "Confirmed", variant: "success" })
@@ -350,7 +320,6 @@ describe("toast motion — entrance, updates, stacking, exit (OB-092)", () => {
     act(() => {
       toast.info("Goodbye", { duration: 0 })
     })
-    flushEntrance()
     expect(screen.getByText("Goodbye").closest("[data-slot='toast']")).toHaveAttribute("data-state", "open")
 
     act(() => {
@@ -372,7 +341,6 @@ describe("toast motion — entrance, updates, stacking, exit (OB-092)", () => {
     act(() => {
       toast.show({ id: "flip-1", message: "Working…", variant: "transaction-progress", duration: 0, persistent: true })
     })
-    flushEntrance()
     act(() => {
       screen.getByRole("button", { name: "Dismiss" }).click()
     })
@@ -380,13 +348,58 @@ describe("toast motion — entrance, updates, stacking, exit (OB-092)", () => {
     act(() => {
       toast.show({ id: "flip-1", message: "Working… done", variant: "transaction-progress", duration: 0, persistent: true })
     })
-    flushEntrance()
     // Exactly one row, open again on the symmetric return path.
     expect(screen.getAllByText("Working… done")).toHaveLength(1)
     expect(screen.getByText("Working… done").closest("[data-slot='toast']")).toHaveAttribute("data-state", "open")
     act(() => {
       toast.dismiss("flip-1")
     })
+  })
+
+  it("skips the exit delay when the in-app reduced-motion setting is enabled", () => {
+    document.documentElement.dataset.reducedMotion = "true"
+    renderProvider()
+    act(() => toast.info("Reduced motion", { duration: 0 }))
+
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).click()
+    })
+
+    expect(screen.queryByText("Reduced motion")).toBeNull()
+  })
+
+  it("finishes an active exit when the in-app setting changes to reduced motion", async () => {
+    renderProvider()
+    act(() => toast.info("Changing preference", { duration: 0 }))
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).click()
+    })
+    expect(screen.getByText("Changing preference").closest("[data-slot='toast']")).toHaveAttribute("data-state", "closed")
+
+    await act(async () => {
+      document.documentElement.dataset.reducedMotion = "true"
+      await Promise.resolve()
+    })
+
+    expect(screen.queryByText("Changing preference")).toBeNull()
+  })
+
+  it("finishes an active exit when the system preference changes to reduced motion", () => {
+    const media = Object.assign(new EventTarget(), { matches: false })
+    vi.stubGlobal("matchMedia", vi.fn(() => media))
+    renderProvider()
+    act(() => toast.info("System preference", { duration: 0 }))
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).click()
+    })
+    expect(screen.getByText("System preference").closest("[data-slot='toast']")).toHaveAttribute("data-state", "closed")
+
+    act(() => {
+      media.matches = true
+      media.dispatchEvent(new Event("change"))
+    })
+
+    expect(screen.queryByText("System preference")).toBeNull()
   })
 
   it("uses semantic token surfaces and interruptible motion classes", () => {

@@ -8,6 +8,7 @@ import type {
   MouseEvent as ReactMouseEvent,
 } from "react"
 import type { Market } from "../../hooks/useMarkets"
+import { useReducedMotion } from "@/lib/use-reduced-motion"
 import { formatUsd } from "@/shared/lib/format"
 
 type Props = {
@@ -94,6 +95,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const comboboxId = useId()
   const listboxId = `${comboboxId}-listbox`
+  const reducedMotion = useReducedMotion()
 
   // The popover returns focus to its trigger on close.
   function closeAndRestoreFocus() {
@@ -131,13 +133,10 @@ export function MarketSelector({ symbol, onSelect }: Props) {
     const nextRecent = [market.indexTokenAddress, ...recentMarkets.filter((id) => id !== market.indexTokenAddress)].slice(0, 5)
     setRecentMarkets(nextRecent)
     try { localStorage.setItem(RECENT_MARKETS_KEY, JSON.stringify(nextRecent)) } catch { /* optional preference */ }
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (
       typeof document !== "undefined" &&
       "startViewTransition" in document &&
-      !prefersReduced
+      !reducedMotion
     ) {
       document.startViewTransition(() => {
         onSelect(market.indexTokenAddress)

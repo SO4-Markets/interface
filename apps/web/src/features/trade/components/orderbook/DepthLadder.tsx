@@ -333,7 +333,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
           {Array.from({ length: 14 }).map((_, i) => (
             <div
               key={i}
-              className="h-[22px] rounded-sm animate-pulse bg-muted/40"
+              className="h-[22px] rounded-sm motion-safe:animate-pulse bg-muted/40"
             />
           ))}
         </div>
