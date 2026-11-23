@@ -519,7 +519,13 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
           </button>
 
           {showTable && (
-            <div className="min-h-0 overflow-auto px-3 pb-2" id="ohlc-data-table">
+            <div
+              className="min-h-0 overflow-auto px-3 pb-2"
+              id="ohlc-data-table"
+              role="region"
+              aria-label={`${label} OHLC data table`}
+              tabIndex={0}
+            >
               <Table>
                 <TableHeader>
                   <TableHeadRow>

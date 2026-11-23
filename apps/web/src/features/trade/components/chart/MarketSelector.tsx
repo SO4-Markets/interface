@@ -53,7 +53,7 @@ function MarketRow({
       role="option"
       aria-selected={isActive}
       tabIndex={-1}
-      className={`flex w-full cursor-pointer items-center justify-between gap-4 rounded-sm px-3 py-2 text-start text-sm transition-colors ${
+      className={`touch-target flex w-full cursor-pointer items-center justify-between gap-4 rounded-sm px-3 py-2 text-start text-sm transition-colors ${
         isActive ? "bg-accent/60" : "hover:bg-accent"
       }`}
       onClick={onSelect}
@@ -263,7 +263,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleInputKeyDown}
               placeholder="Search markets..."
-              className="w-full rounded-sm bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
+              className="touch-target w-full rounded-sm bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
             />
           </div>
           <ul

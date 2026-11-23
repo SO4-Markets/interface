@@ -76,6 +76,20 @@ test.describe("chart controls on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0)
   })
 
+  test("market picker rows and search meet the 44px touch target", async ({ page }) => {
+    await openTrade(page)
+
+    await page.getByRole("button", { name: "BTC/USD", exact: true }).click()
+    const targets = [
+      page.getByRole("combobox", { name: "Search markets" }),
+      ...(await page.getByRole("option").all()),
+    ]
+    expect(targets.length).toBeGreaterThan(1)
+    for (const target of targets) {
+      await expect.poll(async () => (await box(target)).height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET)
+    }
+  })
+
   test("vertical swipes on the chart are left to the page", async ({ page }) => {
     await openTrade(page)
 
@@ -134,6 +148,20 @@ test.describe("chart controls with a keyboard", () => {
     await page.keyboard.press("ArrowDown")
     await page.keyboard.press("Enter")
     await expect(page.getByRole("button", { name: "XLM/USD", exact: true })).toBeVisible()
+  })
+
+  test("the OHLC table can be focused and scrolled with the keyboard", async ({ page }) => {
+    await openTrade(page)
+
+    const toggle = page.getByRole("button", { name: /OHLC Data/ })
+    await toggle.focus()
+    await page.keyboard.press("Enter")
+    await page.keyboard.press("Tab")
+    const table = page.getByRole("region", { name: "BTC/USD OHLC data table" })
+    await expect(table).toBeFocused()
+
+    await page.keyboard.press("End")
+    await expect.poll(() => table.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
   })
 })
 
