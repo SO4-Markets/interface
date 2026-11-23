@@ -37,7 +37,7 @@ export function KeyboardShortcutsHelp({ onStartTour }: KeyboardShortcutsHelpProp
         variant="outline"
         size="sm"
         data-tour-help-trigger
-        className="fixed end-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 shadow-md md:bottom-4"
+        className="fixed end-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 shadow-md max-md:hidden md:bottom-4"
         onClick={() => setOpen(true)}
       >
         Help

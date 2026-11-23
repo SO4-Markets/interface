@@ -100,7 +100,7 @@ export function TVChart({ symbol, onSelectToken }: Props) {
             aria-label={`${p} timeframe`}
             title={`Switch to ${p} chart (${p === period ? "current" : ""})`}
             className={cn(
-              "relative z-10 rounded-sm px-2 py-0.5 font-mono text-xs transition-colors duration-fast ease-spring-snappy",
+              "touch-target relative z-10 rounded-sm px-2 py-0.5 font-mono text-xs transition-colors duration-fast ease-spring-snappy",
               "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
               period === p
                 ? "text-primary-foreground font-semibold"
