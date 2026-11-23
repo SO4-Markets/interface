@@ -318,7 +318,7 @@
 :where(button, a, [role="button"]):after {
   position: absolute;
   inset: -0.25rem;
-  border: 0.125rem solid color-mix(in oklch, var(--ring) 50%, transparent);
+  border: 0.125rem solid color-mix(in oklch, var(--ring) 70%, transparent);
   border-radius: inherit;
   opacity: 0;
   pointer-events: none;

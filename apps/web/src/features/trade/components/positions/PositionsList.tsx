@@ -287,7 +287,10 @@ export function PositionsList({ onSelectPosition }: Props) {
               </p>
             )}
             <p className="text-xs text-muted-foreground">Start trading to open your first position</p>
-            <a href="/trade" className="text-xs text-primary hover:text-primary/80 font-medium">
+            <a
+              href="/trade"
+              className="rounded-sm text-xs text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
               Start trading →
             </a>
           </div>
@@ -334,4 +337,3 @@ export function PositionsList({ onSelectPosition }: Props) {
     </>
   )
 }
-
