@@ -172,7 +172,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
     const chart = createChart(containerRef.current, {
       ...buildChartOptions(palette),
       crosshair: { mode: CrosshairMode.Magnet },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale: { mouseWheel: true, pinch: true },
     })
 
@@ -384,16 +384,16 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
   return (
     <div className="relative flex h-full w-full flex-col">
       {/* ═══ Venue & Data Source Metadata Badge ═══════════════════════════════ */}
-      <div className="flex items-center justify-between border-b border-border bg-muted/20 px-3 py-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border bg-muted/20 px-3 py-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5 font-mono text-11">
           <span className="text-muted-foreground/70">Data Source:</span>
-          <span className="rounded-sm bg-muted px-1.5 py-0.5 font-medium text-foreground">
+          <span className="whitespace-nowrap rounded-sm bg-muted px-1.5 py-0.5 font-medium text-foreground">
             {sourceType === "oracle_reference" ? `Reference Price (${venueName})` : `Execution Fills (${venueName})`}
           </span>
         </div>
         <div className="flex items-center gap-3 font-mono text-10 uppercase text-muted-foreground/60">
           {legendBar && (
-            <dl className="flex items-center gap-2 normal-case" aria-label="Candle values" data-testid="ohlc-legend">
+            <dl className="flex flex-wrap items-center gap-x-2 normal-case" aria-label="Candle values" data-testid="ohlc-legend">
               {(["open", "high", "low", "close"] as const).map((key) => (
                 <div key={key} className="flex gap-0.5">
                   <dt>{key[0].toUpperCase()}</dt>
@@ -461,7 +461,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             </p>
             <button
               onClick={() => void refetch()}
-              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
+              className="touch-target mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
               aria-label={`Retry loading chart for ${label}`}
             >
               Retry
@@ -480,7 +480,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             </p>
             <button
               onClick={() => void refetch()}
-              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors pointer-events-auto"
+              className="touch-target mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors pointer-events-auto"
               aria-label={`Retry updating chart for ${label}`}
             >
               Refresh Now
@@ -496,7 +496,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
         <div
           ref={containerRef}
           className={cn("h-full w-full transition-opacity duration-base", isStale && "opacity-60")}
-          style={{ touchAction: "none" }}
+          style={{ touchAction: "pan-y" }}
           role="region"
           aria-label={`Price chart for ${label}`}
           aria-describedby="chart-desc"
@@ -506,11 +506,11 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
 
       {/* ═══ Data-table fallback ══════════════════════════════════════════════ */}
       {hasData && tableRows.length > 0 && (
-        <div className="border-t border-border">
+        <div className="flex max-h-1/2 min-h-0 flex-col border-t border-border">
           <button
             type="button"
             onClick={() => setShowTable((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            className="touch-target flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
             aria-expanded={showTable}
             aria-controls="ohlc-data-table"
           >
@@ -519,7 +519,13 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
           </button>
 
           {showTable && (
-            <div className="overflow-x-auto px-3 pb-2" id="ohlc-data-table">
+            <div
+              className="min-h-0 overflow-auto px-3 pb-2"
+              id="ohlc-data-table"
+              role="region"
+              aria-label={`${label} OHLC data table`}
+              tabIndex={0}
+            >
               <Table>
                 <TableHeader>
                   <TableHeadRow>

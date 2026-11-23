@@ -53,7 +53,7 @@ function MarketRow({
       role="option"
       aria-selected={isActive}
       tabIndex={-1}
-      className={`flex w-full cursor-pointer items-center justify-between gap-4 rounded-sm px-3 py-2 text-start text-sm transition-colors ${
+      className={`touch-target flex w-full cursor-pointer items-center justify-between gap-4 rounded-sm px-3 py-2 text-start text-sm transition-colors ${
         isActive ? "bg-accent/60" : "hover:bg-accent"
       }`}
       onClick={onSelect}
@@ -105,12 +105,12 @@ export function MarketSelector({ symbol, onSelect }: Props) {
 
   const activeMarket = markets.find((m) => m.indexTokenAddress === symbol)
 
-  const filtered = markets.filter((m) =>
+  const filtered = useMemo(() => markets.filter((m) =>
     search.trim() === ""
       ? true
       : m.name.toLowerCase().includes(search.toLowerCase()) ||
         m.indexTokenAddress.toLowerCase().includes(search.toLowerCase())
-  )
+  ), [markets, search])
   const recent = useMemo(() => recentMarkets.map((id) => markets.find((m) => m.indexTokenAddress === id)).filter((m): m is Market => Boolean(m)), [markets, recentMarkets])
   const orderedMarkets = useMemo(() => {
     if (search.trim() !== "") return filtered
@@ -208,7 +208,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
         data-tour-target="market-selector"
         aria-haspopup="listbox"
         aria-controls={open ? listboxId : undefined}
-        className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
+        className="touch-target flex items-center gap-1.5 rounded-sm border border-border bg-background px-2 py-1 transition-colors duration-fast ease-spring-snappy hover:bg-accent"
       >
         <span
           data-slot="market-name"
@@ -263,7 +263,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleInputKeyDown}
               placeholder="Search markets..."
-              className="w-full rounded-sm bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
+              className="touch-target w-full rounded-sm bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
             />
           </div>
           <ul
@@ -296,7 +296,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
           type="button"
           onClick={handleClear}
           aria-label="Clear selected market"
-          className="rounded-sm border border-border bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"
+          className="touch-target rounded-sm border border-border bg-background px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent"
         >
           ×
         </button>

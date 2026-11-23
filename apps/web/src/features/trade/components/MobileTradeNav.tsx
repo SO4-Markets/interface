@@ -72,7 +72,7 @@ export function MobileTradeNav({ active, onChange, className }: MobileTradeNavPr
 export function mobileViewClassName(view: MobileTradeView, active: MobileTradeView): string {
   // Show chart and book at all times on tablet/desktop, use tabs for others
   if (view === "chart" || view === "book") {
-    return "flex md:flex"
+    return view === active ? "flex" : "hidden md:flex"
   }
   // Trade and positions tabs: active on mobile, otherwise hidden until lg
   return view === active ? "flex md:hidden lg:flex" : "hidden md:hidden lg:flex"

@@ -113,7 +113,7 @@ export function TradePage() {
       variant="full"
       navbar={<Navbar variant="app" />}
       banner={<CircuitBreakerBanner symbol={trade.toTokenAddress} />}
-      className="overflow-hidden"
+      className="overflow-hidden max-md:h-svh"
     >
       {/* Main layout: stacked mobile, stacked-with-tabs tablet, side-by-side desktop */}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row md:px-4 lg:flex-row lg:px-6">
@@ -121,7 +121,10 @@ export function TradePage() {
         <div ref={chartColumnRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div
             ref={chartRowRef}
-            className="flex min-h-0 flex-1 flex-col md:flex-none md:h-[var(--chart-row-height)] md:flex-row lg:flex-none lg:h-[var(--chart-row-height)] lg:flex-row"
+            className={cn(
+              "flex min-h-0 flex-1 flex-col md:flex-none md:h-[var(--chart-row-height)] md:flex-row lg:flex-none lg:h-[var(--chart-row-height)] lg:flex-row",
+              mobileView !== "chart" && mobileView !== "book" && "max-md:hidden"
+            )}
             style={{ ["--chart-row-height" as string]: `${boundedChartRowHeight}px` }}
           >
             {/* Chart */}
@@ -150,7 +153,7 @@ export function TradePage() {
               id="mobile-trade-view-book"
               aria-label="Order book depth"
               className={cn(
-                "min-h-40 w-full flex-col overflow-hidden border-t border-border md:min-h-0 md:w-[var(--book-width)] md:border-t-0 md:border-s lg:min-h-0 lg:w-[var(--book-width)] lg:border-t-0 lg:border-s",
+                "min-h-40 w-full flex-1 flex-col overflow-hidden border-t border-border md:flex-none md:min-h-0 md:w-[var(--book-width)] md:border-t-0 md:border-s lg:min-h-0 lg:w-[var(--book-width)] lg:border-t-0 lg:border-s",
                 mobileViewClassName("book", mobileView)
               )}
               style={{ ["--book-width" as string]: `${bookWidth}px` }}

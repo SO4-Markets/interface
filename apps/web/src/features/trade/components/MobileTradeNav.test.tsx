@@ -22,6 +22,7 @@ describe("MobileTradeNav", () => {
   })
 
   it("keeps a minimum touch target below the safe-area inset", () => {
+    render(<MobileTradeNav active="chart" onChange={vi.fn()} />)
     expect(screen.getByRole("tablist").className).toContain("max(0.75rem,env(safe-area-inset-bottom))")
   })
 })
@@ -35,8 +36,15 @@ describe("mobileViewClassName", () => {
     expect(mobileViewClassName("trade", "chart")).toContain("hidden")
   })
 
+  it("shows only the active chart or book view below md", () => {
+    expect(mobileViewClassName("chart", "book")).toBe("hidden md:flex")
+    expect(mobileViewClassName("book", "chart")).toBe("hidden md:flex")
+    expect(mobileViewClassName("book", "book")).toBe("flex")
+  })
+
   it("always shows every view at lg and up, regardless of the mobile tab", () => {
-    expect(mobileViewClassName("chart", "trade")).toContain("lg:flex")
+    expect(mobileViewClassName("chart", "trade")).toContain("md:flex")
+    expect(mobileViewClassName("book", "positions")).toContain("md:flex")
     expect(mobileViewClassName("trade", "chart")).toContain("lg:flex")
     expect(mobileViewClassName("positions", "chart")).toContain("lg:flex")
   })
