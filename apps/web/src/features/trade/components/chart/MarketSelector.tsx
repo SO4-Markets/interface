@@ -267,7 +267,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
             />
           </div>
           <ul
-            className="max-h-72 overflow-y-auto px-1 pb-1"
+            className="max-h-72 overflow-y-auto overscroll-contain px-1 pb-1"
             role="listbox"
             id={listboxId}
             aria-labelledby={`${comboboxId}-label`}

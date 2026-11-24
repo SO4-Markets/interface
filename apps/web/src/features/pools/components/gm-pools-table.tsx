@@ -83,7 +83,7 @@ export function GmPoolsTable({ isLoading, pools, markets, sort, onSortChange }: 
   }
 
   return (
-    <div className="w-full overflow-auto">
+    <div className="w-full overflow-auto overscroll-contain">
       <div className="min-w-[400px]">
         <DataTable
           columns={columns}

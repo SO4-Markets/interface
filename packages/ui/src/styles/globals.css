@@ -848,6 +848,35 @@
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
+
+  /* Typographic wrapping (#967): balanced headings, no orphaned last words
+     in body copy. Unsupported browsers fall back to normal wrapping. */
+  h1, h2, h3, h4, h5, h6,
+  [data-slot="dialog-title"], [data-slot="sheet-title"] {
+    text-wrap: balance;
+  }
+  p, li, dd, blockquote, figcaption,
+  [data-slot="dialog-description"], [data-slot="sheet-description"] {
+    text-wrap: pretty;
+  }
+
+  /* Branded text selection (#968) instead of the browser-default blue. */
+  ::selection {
+    background-color: color-mix(in oklch, var(--primary) 40%, transparent);
+    color: var(--foreground);
+  }
+
+  /* Mobile tap polish (#970): no grey tap flash, and no double-tap-zoom
+     delay on interactive elements. Focus-visible rings are unaffected. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :where(a, button, input, select, textarea, label, summary,
+    [role="button"], [role="link"], [role="tab"], [role="menuitem"],
+    [role="option"], [role="checkbox"], [role="radio"], [role="switch"],
+    [role="slider"]) {
+    touch-action: manipulation;
+  }
 }
 
 @layer base {

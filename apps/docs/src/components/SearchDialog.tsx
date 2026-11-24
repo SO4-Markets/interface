@@ -103,7 +103,7 @@ export function SearchDialog({ isOpen, onClose, onSearch, initialQuery = "", cla
           </button>
         </div>
 
-        <div data-search-results className="max-h-96 overflow-y-auto p-4 space-y-2">
+        <div data-search-results className="max-h-96 overflow-y-auto overscroll-contain p-4 space-y-2">
           {loading && <p className="text-sm text-text-tertiary py-4 text-center">Searching...</p>}
           {error && <p className="text-sm text-error py-4 text-center">{error}</p>}
           {!loading && !error && query.trim() !== "" && results.length === 0 && (

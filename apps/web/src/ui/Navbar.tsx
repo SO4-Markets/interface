@@ -134,7 +134,7 @@ export function Navbar({ variant }: Props) {
       {open && (
         <div
           id={mobileMenuId}
-          className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-border bg-background px-4 pb-4 xl:hidden"
+          className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain border-t border-border bg-background px-4 pb-4 xl:hidden"
         >
           <ul className="flex flex-col gap-1 pt-2">
             {isApp

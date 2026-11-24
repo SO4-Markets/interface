@@ -219,7 +219,7 @@ export function TradePage() {
             id="mobile-trade-view-positions"
             data-tour-target="positions"
             className={cn(
-              "min-h-0 flex-1 flex-col overflow-auto border-t border-border md:border-t-0",
+              "min-h-0 flex-1 flex-col overflow-auto overscroll-contain border-t border-border md:border-t-0",
               mobileViewClassName("positions", mobileView)
             )}
           >
@@ -257,7 +257,7 @@ export function TradePage() {
         <div
           id="mobile-trade-view-trade"
           className={cn(
-            "w-full min-h-0 flex-col overflow-x-auto overflow-y-auto border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
+            "w-full min-h-0 flex-col overflow-x-auto overflow-y-auto overscroll-contain border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
             mobileViewClassName("trade", mobileView)
           )}
           style={{ ["--trade-panel-width" as string]: `${tradePanelWidth}px` }}

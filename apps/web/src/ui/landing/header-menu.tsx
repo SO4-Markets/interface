@@ -153,7 +153,7 @@ export function HeaderMenu() {
         data-instant={instant}
         className="landing-mobile-menu fixed inset-0 top-16 z-20 flex flex-col bg-gmx-slate-900 sm:hidden"
       >
-        <ul className="flex flex-1 flex-col overflow-y-auto px-4">
+        <ul className="flex flex-1 flex-col overflow-y-auto overscroll-contain px-4">
           {NAV_LINKS.map(({ label, to }) => (
             <li
               key={label}
