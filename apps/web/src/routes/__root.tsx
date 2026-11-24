@@ -21,6 +21,7 @@ import { RouteAnnouncer } from "../shared/components/RouteAnnouncer"
 import { RouteProgressBar } from "../shared/components/RouteProgressBar"
 import { useCspNonce } from "../shared/lib/csp-nonce"
 import { installWebVitalsReporting } from "@/features/observability/lib/web-vitals"
+import { TransactionActivityCenter } from "@/features/trade/components/TransactionActivityCenter"
 
 const TITLE = `${SITE_NAME} · On-chain perpetuals`
 const DESCRIPTION =
@@ -245,6 +246,7 @@ function RootComponent() {
   return (
     <>
       <RouteAnnouncer />
+      <TransactionActivityCenter />
       <Outlet />
     </>
   )

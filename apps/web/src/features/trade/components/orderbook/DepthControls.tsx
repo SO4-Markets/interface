@@ -62,7 +62,7 @@ export function DepthControls({
         }}
         disabled={!canGroup}
       >
-        <SelectTrigger aria-label="Price grouping" className="h-7 min-w-20 text-xs">
+        <SelectTrigger aria-label="Price grouping" className="h-11 min-w-20 text-xs sm:h-7">
           <SelectValue>
             {(value: string) => options.find((o) => String(o.multiplier) === value)?.label ?? "—"}
           </SelectValue>
@@ -86,12 +86,12 @@ export function DepthControls({
         }}
       >
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <RadioGroupItem value="base" />
+          <RadioGroupItem value="base" className="touch-target" />
           <span aria-hidden="true">{metadata?.baseSymbol ?? "Base"}</span>
           <VisuallyHidden>{`Size in ${metadata?.baseSymbol ?? "base asset"}`}</VisuallyHidden>
         </label>
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
-          <RadioGroupItem value="quote" />
+          <RadioGroupItem value="quote" className="touch-target" />
           <span aria-hidden="true">{metadata?.quoteSymbol ?? "Quote"}</span>
           <VisuallyHidden>{`Size in ${metadata?.quoteSymbol ?? "quote asset"}`}</VisuallyHidden>
         </label>
@@ -107,7 +107,7 @@ export function DepthControls({
       >
         {LAYOUT_LABELS.map(({ value, text, name }) => (
           <label key={value} className="flex items-center gap-1 text-xs text-muted-foreground">
-            <RadioGroupItem value={value} />
+            <RadioGroupItem value={value} className="touch-target" />
             <span aria-hidden="true">{text}</span>
             <VisuallyHidden>{name}</VisuallyHidden>
           </label>
