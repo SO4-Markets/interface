@@ -565,9 +565,9 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
 }
-/* Minimum 44px hit area on touch devices without changing desktop layout. */
+/* Minimum 44px hit area on touch devices and mobile widths without changing desktop density. */
 @utility touch-target {
-    @media (pointer: coarse) {
+    @media (pointer: coarse), (max-width: 639px) {
         min-width: 44px;
         min-height: 44px;
     }

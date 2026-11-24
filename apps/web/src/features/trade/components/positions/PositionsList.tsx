@@ -10,11 +10,8 @@ import { useFundingRate } from "../../hooks/useFundingRate"
 import { claimFundingFees } from "../../lib/stellar"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { usePositionActions } from "../../hooks/usePositionActions"
-import {
-  RISK_SOURCE_LABEL,
-  describePositionRisk,
-  riskSeverity,
-} from "../../lib/position-risk"
+import { describePositionRisk } from "../../lib/position-risk"
+import { PositionLiquidationRiskSummary, PositionRiskMeter } from "./PositionRiskMeter"
 import { CollateralDialog } from "./CollateralDialog"
 import { ClosePositionDialog } from "./ClosePositionDialog"
 import { SharePnlDialog } from "./SharePnlDialog"
@@ -75,7 +72,7 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
   const countdown = useFundingCountdown((fundingRate as any)?.nextEpochTs)
   const account = useWalletStore((state) => state.address)
   const queryClient = useQueryClient()
-  const { submitClose, submitCollateral, isBusy } = usePositionActions()
+  const { submitClose, submitCollateral, isBusy, getAction, clearAction } = usePositionActions()
   const [closing, setClosing] = useState<string | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [dialogPosition, setDialogPosition] = useState<Position | null>(null)
@@ -157,21 +154,12 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
           markPriceStaleness: getStaleness(p.indexToken),
         })
 
-        if (!reading.hasData) {
-          return <StatusBadge variant="muted">No data</StatusBadge>
-        }
-
         return (
-          <div className="flex flex-col items-start gap-0.5">
-            <Numeric
-              value={reading.availableRiskUsd}
-              format="usd"
-              role={riskSeverity(reading)}
-            />
-            <span className="text-10 text-muted-foreground">
-              {reading.isStale ? "Stale oracle" : RISK_SOURCE_LABEL[reading.source]} Est.
-            </span>
-          </div>
+          <PositionRiskMeter
+            marketName={p.marketName}
+            isLong={p.isLong}
+            reading={reading}
+          />
         )
       },
     },
@@ -213,10 +201,11 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
       id: "actions",
       header: "",
       accessor: (p) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 sm:gap-1">
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             onClick={(e) => {
               e.stopPropagation()
               setSharePosition(p)
@@ -228,6 +217,7 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             onClick={(e) => {
               e.stopPropagation()
               setDialogPosition(p)
@@ -239,6 +229,7 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             onClick={(e) => {
               e.stopPropagation()
               setDialogPosition(p)
@@ -251,6 +242,7 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
             <Button
               size="xs"
               variant="outline"
+              className="touch-target"
               disabled={claiming === p.key}
               onClick={(e) => {
                 e.stopPropagation()
@@ -263,9 +255,11 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             pending={closing === p.key || isBusy(p.key)}
             onClick={(e) => {
               e.stopPropagation()
+              clearAction(p.key)
               setCloseDialogPosition(p)
             }}
           >
@@ -276,13 +270,21 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
     },
   ]
 
+  const isDisconnected = !account && positions.length === 0 && !isLoading
+
   return (
     <>
       {isDisabled && (
-        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-500">
+        <div className="px-4 py-2 bg-warning-subtle border-b border-warning-border text-xs text-warning">
           ⚠️ Indexer disabled - Historical data unavailable. Showing live contract data only.
         </div>
       )}
+      <PositionLiquidationRiskSummary
+        positions={positions}
+        isLoading={isLoading}
+        isDisconnected={isDisconnected}
+        getStaleness={getStaleness}
+      />
       <DataTable
         columns={columns}
         data={positions}
@@ -338,15 +340,23 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
       <ClosePositionDialog
         position={closeDialogPosition}
         open={closeDialogPosition !== null}
+        isSubmitting={closeDialogPosition ? closing === closeDialogPosition.key || isBusy(closeDialogPosition.key) : false}
+        errorMessage={
+          closeDialogPosition
+            ? getAction(closeDialogPosition.key)?.status === "error"
+              ? getAction(closeDialogPosition.key)?.errorMessage ?? null
+              : null
+            : null
+        }
         onClose={() => setCloseDialogPosition(null)}
         onConfirm={async (payload) => {
           if (!closeDialogPosition) return
-          setClosing(closeDialogPosition.key)
+          const target = closeDialogPosition
+          setClosing(target.key)
           try {
-            await submitClose(closeDialogPosition, payload)
+            return await submitClose(target, payload)
           } finally {
             setClosing(null)
-            setCloseDialogPosition(null)
           }
         }}
       />

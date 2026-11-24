@@ -61,7 +61,7 @@ export function SlippageTolerancePopover({ slippagePct, onSlippageChange }: Slip
           variant="outline"
           size="sm"
           onClick={() => setOpen(true)}
-          className="w-auto min-w-[86px] text-xs"
+          className="touch-target w-auto min-w-[86px] text-xs"
         >
           Slippage <span className="font-medium">{slippagePct}%</span>
           <Kbd className="ml-1 size-2.5">▾</Kbd>
@@ -73,7 +73,7 @@ export function SlippageTolerancePopover({ slippagePct, onSlippageChange }: Slip
           Maximum allowable price movement before the order reverts.
         </PopoverDescription>
         <form onSubmit={handleCustomSubmit} className="mt-3 space-y-3">
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-3 gap-2 sm:gap-1">
             {PRESETS.map((value) => (
               <Button
                 key={value}
@@ -81,7 +81,7 @@ export function SlippageTolerancePopover({ slippagePct, onSlippageChange }: Slip
                 variant={slippagePct === value ? "default" : "outline"}
                 size="sm"
                 onClick={() => handlePreset(value)}
-                className="text-xs"
+                className="touch-target text-xs"
               >
                 {value}%
               </Button>

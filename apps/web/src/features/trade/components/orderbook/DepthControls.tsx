@@ -53,7 +53,7 @@ export function DepthControls({
   const canGroup = options.length > 0 && metadata !== null
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="group" aria-label="Order book display">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-y-1" role="group" aria-label="Order book display">
       <Select
         value={String(groupingMultiplier)}
         onValueChange={(value) => {
@@ -62,7 +62,7 @@ export function DepthControls({
         }}
         disabled={!canGroup}
       >
-        <SelectTrigger aria-label="Price grouping" className="h-11 min-w-20 text-xs sm:h-7">
+        <SelectTrigger aria-label="Price grouping" className="touch-target h-11 min-w-20 text-xs sm:h-7 sm:min-h-0">
           <SelectValue>
             {(value: string) => options.find((o) => String(o.multiplier) === value)?.label ?? "—"}
           </SelectValue>
@@ -78,19 +78,19 @@ export function DepthControls({
 
       <RadioGroup
         aria-label="Size unit"
-        className="flex flex-row items-center gap-2"
+        className="flex flex-row flex-wrap items-center gap-2"
         value={unit}
         disabled={metadata === null}
         onValueChange={(value) => {
           if (value === "base" || value === "quote") onUnitChange(value)
         }}
       >
-        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RadioGroupItem value="base" className="touch-target" />
           <span aria-hidden="true">{metadata?.baseSymbol ?? "Base"}</span>
           <VisuallyHidden>{`Size in ${metadata?.baseSymbol ?? "base asset"}`}</VisuallyHidden>
         </label>
-        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <RadioGroupItem value="quote" className="touch-target" />
           <span aria-hidden="true">{metadata?.quoteSymbol ?? "Quote"}</span>
           <VisuallyHidden>{`Size in ${metadata?.quoteSymbol ?? "quote asset"}`}</VisuallyHidden>
@@ -99,14 +99,14 @@ export function DepthControls({
 
       <RadioGroup
         aria-label="Order book layout"
-        className="flex flex-row items-center gap-2"
+        className="flex flex-row flex-wrap items-center gap-2"
         value={layout}
         onValueChange={(value) => {
           if (isBookLayout(value)) onLayoutChange(value)
         }}
       >
         {LAYOUT_LABELS.map(({ value, text, name }) => (
-          <label key={value} className="flex items-center gap-1 text-xs text-muted-foreground">
+          <label key={value} className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <RadioGroupItem value={value} className="touch-target" />
             <span aria-hidden="true">{text}</span>
             <VisuallyHidden>{name}</VisuallyHidden>

@@ -35,7 +35,7 @@ export function HistoryFilters({
         Market
         <select
           aria-label="Market filter"
-          className="h-7 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+          className="h-11 rounded-md border border-border bg-background px-2 text-xs text-foreground sm:h-7"
           value={marketKey ?? "all"}
           onChange={(event) => onMarketChange(event.target.value === "all" ? null : event.target.value)}
         >
@@ -53,7 +53,7 @@ export function HistoryFilters({
           Status
           <select
             aria-label="Order status filter"
-            className="h-7 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+            className="h-11 rounded-md border border-border bg-background px-2 text-xs text-foreground sm:h-7"
             value={stage}
             onChange={(event) => onStageChange(event.target.value)}
           >
@@ -70,7 +70,7 @@ export function HistoryFilters({
         Time
         <select
           aria-label="Time range filter"
-          className="h-7 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+          className="h-11 rounded-md border border-border bg-background px-2 text-xs text-foreground sm:h-7"
           value={range}
           onChange={(event) => onRangeChange(event.target.value as HistoryTimeRange)}
         >

@@ -58,7 +58,7 @@ function Row({
   const fill = `${(depthFraction(row, visible) * 100).toFixed(1)}%`
   const pressedRevision = useRef<{ revision: bigint | null } | null>(null)
   return (
-    <div role="row" className="relative flex h-5 items-center font-mono text-xs select-none">
+    <div role="row" className="relative flex min-h-11 items-center font-mono text-xs select-none sm:h-5 sm:min-h-0">
       {/* Depth bar. Deliberately not animated: rows re-sort as the book moves and a
           transition here would make the ladder shimmer rather than clarify anything. */}
       <div
@@ -82,7 +82,7 @@ function Row({
               onSelect(selectedRevision)
             }}
             aria-label={`Select exact ${side} limit price from ${formatBucketPrice(row.price, metadata)} depth level`}
-            className="cursor-pointer tabular-nums focus-visible:outline-2 focus-visible:outline-primary">
+            className="touch-target inline-flex cursor-pointer items-center tabular-nums focus-visible:outline-2 focus-visible:outline-primary">
             {formatBucketPrice(row.price, metadata)}
           </button>
         ) : formatBucketPrice(row.price, metadata)}
