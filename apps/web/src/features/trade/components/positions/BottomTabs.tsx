@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { usePositions } from "../../hooks/usePositions"
 import { hasFrozenOrders, useOrders } from "../../hooks/useOrders"
+import { LiquidationWarningAnnouncer } from "../LiquidationWarningAnnouncer"
 import { OrderExecutionFrozenBanner } from "./OrderExecutionFrozenBanner"
 import { PositionsList } from "./PositionsList"
 import { OrdersList } from "./OrdersList"
@@ -8,14 +9,23 @@ import { OrderHistoryList } from "./OrderHistoryList"
 import { TradeHistoryList } from "./TradeHistoryList"
 import { FundingActivityList } from "./FundingActivityList"
 import type { Position } from "../../hooks/usePositions"
+import type { SortState } from "@workspace/ui/components/data-table"
 
 type Props = {
   onSelectPosition?: (position: Position) => void
   value?: "positions" | "orders" | "history" | "trades" | "claims"
   onValueChange?: (value: "positions" | "orders" | "history" | "trades" | "claims") => void
+  positionsSort?: SortState | null
+  onPositionsSortChange?: (next: SortState | null) => void
 }
 
-export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
+export function BottomTabs({
+  onSelectPosition,
+  value,
+  onValueChange,
+  positionsSort,
+  onPositionsSortChange,
+}: Props) {
   const { data: positions = [] } = usePositions()
   const { data: orders = [] } = useOrders()
 
@@ -27,6 +37,9 @@ export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
   return (
     <Tabs value={value} defaultValue="positions" onValueChange={(next) => onValueChange?.(next as NonNullable<Props["value"]>)}>
       <OrderExecutionFrozenBanner visible={hasFrozenOrders(orders)} />
+      {/* issue 956: mounted with the tabs (not the positions panel) so warnings are
+          spoken whichever tab is open. */}
+      <LiquidationWarningAnnouncer positions={positions} />
       <div data-testid="account-tabs-viewport" className="min-w-0 overflow-x-auto">
         <TabsList aria-label="Account activity" className="w-full min-w-max border-b border-border bg-transparent px-4">
           <TabsTrigger value="positions">
@@ -53,7 +66,11 @@ export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
       </div>
 
       <TabsContent value="positions">
-        <PositionsList onSelectPosition={onSelectPosition} />
+        <PositionsList
+          onSelectPosition={onSelectPosition}
+          sort={positionsSort}
+          onSortChange={onPositionsSortChange}
+        />
       </TabsContent>
 
       <TabsContent value="orders">

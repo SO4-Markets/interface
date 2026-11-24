@@ -12,8 +12,21 @@ import { ProgramCards } from "../ui/landing/program-cards"
 import { FaqSection } from "../ui/landing/faq-section"
 import { RoadmapSection } from "../ui/landing/roadmap-section"
 import { SocialSection } from "../ui/landing/social-section"
+import {
+  jsonLdScript,
+  organizationJsonLd,
+  webApplicationJsonLd,
+} from "../shared/lib/structured-data"
 
-export const Route = createFileRoute("/")({ component: LandingPage })
+// The landing page describes who builds the product and what it is, so the
+// Organization and WebApplication schemas live here rather than on every
+// route (issue 954).
+export const Route = createFileRoute("/")({
+  head: () => ({
+    scripts: [jsonLdScript(organizationJsonLd()), jsonLdScript(webApplicationJsonLd())],
+  }),
+  component: LandingPage,
+})
 
 function LandingPage() {
   return (
