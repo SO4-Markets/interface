@@ -268,8 +268,12 @@ export function TradePage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-1.5 max-md:hidden">
-        <Button variant="ghost" size="sm" onClick={resetLayout}>
+      {/* Workspace footer. Help lives here at every width so it never floats
+          over panel controls; Reset layout only matters where the resize
+          handles exist (md and up). */}
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-1.5">
+        <KeyboardShortcutsHelp onStartTour={() => setTourReplayKey((key) => key + 1)} />
+        <Button variant="ghost" size="sm" onClick={resetLayout} className="max-md:hidden">
           Reset layout
         </Button>
       </div>
@@ -287,7 +291,6 @@ export function TradePage() {
         onFocusPositions={() => setMobileView("positions")}
         onToggleTheme={toggleTheme}
       />
-      <KeyboardShortcutsHelp onStartTour={() => setTourReplayKey((key) => key + 1)} />
       <TradeWorkspaceTour replayKey={tourReplayKey} onViewChange={setMobileView} />
     </AppShell>
   )

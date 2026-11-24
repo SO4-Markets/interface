@@ -149,13 +149,13 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
         <div className="flex items-center gap-2">
           {status === "connected" && (
             <span className="inline-flex items-center gap-1 font-mono text-10 text-green-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 motion-safe:animate-pulse" />
               Live
             </span>
           )}
           {status === "connecting" && (
             <span className="inline-flex items-center gap-1 font-mono text-10 text-amber-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 motion-safe:animate-pulse" />
               Connecting…
             </span>
           )}
@@ -197,7 +197,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
         {/* Chart canvas */}
         <div
           ref={containerRef}
-          className={cn("so4-depth-chart-canvas h-full w-full transition-opacity duration-base", isLoading && "opacity-60")}
+          className={cn("so4-depth-chart-canvas h-full w-full transition-opacity duration-base motion-reduce:transition-none", isLoading && "opacity-60")}
           role="img"
           aria-label={`Cumulative depth chart for ${symbol}`}
           aria-describedby="depth-chart-desc"

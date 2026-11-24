@@ -34,7 +34,7 @@ export function SourceHealthBadge({ health, className }: Props) {
         className={cn(
           "h-1.5 w-1.5 rounded-full",
           badgeConfig.dotColor,
-          badgeConfig.animate && "animate-pulse"
+          badgeConfig.animate && "motion-safe:animate-pulse"
         )}
         aria-hidden="true"
       />

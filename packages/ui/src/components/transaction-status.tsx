@@ -30,21 +30,21 @@ function StatusIcon({ status }: { status: TransactionStatusState["status"] }) {
     case "signing":
       return (
         <div
-          className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+          className="mt-0.5 size-4 shrink-0 motion-safe:animate-spin rounded-full border-2 border-current border-t-transparent"
           aria-hidden="true"
         />
       )
     case "submitting":
       return (
         <div
-          className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+          className="mt-0.5 size-4 shrink-0 motion-safe:animate-spin rounded-full border-2 border-current border-t-transparent"
           aria-hidden="true"
         />
       )
     case "confirming":
       return (
         <div
-          className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+          className="mt-0.5 size-4 shrink-0 motion-safe:animate-spin rounded-full border-2 border-current border-t-transparent"
           aria-hidden="true"
         />
       )

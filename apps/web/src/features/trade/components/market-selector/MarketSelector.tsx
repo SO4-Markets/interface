@@ -114,7 +114,7 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+          className={`text-muted-foreground transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
         >
           <path d="M6 9l6 6 6-6" />
         </svg>

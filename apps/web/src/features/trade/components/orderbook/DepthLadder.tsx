@@ -81,7 +81,7 @@ function DepthRow({ level, side, compact, onHover }: RowProps) {
       <div
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-y-0 transition-[width] duration-fast",
+          "pointer-events-none absolute inset-y-0 transition-[width] duration-fast motion-reduce:transition-none",
           isBid
             ? "right-0 bg-green-500/10"
             : "left-0 bg-red-500/10",
@@ -333,7 +333,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
           {Array.from({ length: 14 }).map((_, i) => (
             <div
               key={i}
-              className="h-[22px] rounded-sm animate-pulse bg-muted/40"
+              className="h-[22px] rounded-sm motion-safe:animate-pulse bg-muted/40"
             />
           ))}
         </div>

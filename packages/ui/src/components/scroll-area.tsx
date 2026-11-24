@@ -133,7 +133,6 @@ function ScrollArea({
       data-orientation={orientation}
       className={cn(
         "group/scroll-area relative flex min-h-0 min-w-0 flex-col",
-        "flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-s data-vertical:border-s-transparent",
         className
       )}
       {...props}
