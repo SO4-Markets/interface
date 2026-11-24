@@ -66,6 +66,7 @@ export function ConnectButton({ className, ...props }: ConnectButtonProps) {
   const address = useWalletStore((state) => state.address)
   const status = useWalletStore((state) => state.status)
   const isConnecting = status === "connecting"
+  const hasConnectionError = status === "error"
   // Issue 887: only the transition into `connected` should play the pill entrance,
   // not every render of an already-connected wallet.
   const wasConnecting = useRef(false)
@@ -131,13 +132,13 @@ export function ConnectButton({ className, ...props }: ConnectButtonProps) {
       <Button
         {...props}
         type="button"
-        aria-label="Connect wallet"
+        aria-label={hasConnectionError ? "Reconnect wallet" : "Connect wallet"}
         className={cn("w-full sm:w-auto", className)}
         disabled={props.disabled}
         onClick={() => setIsWalletModalOpen(true)}
       >
-        <span className="hidden sm:inline">Connect Wallet</span>
-        <span className="sm:hidden">Connect</span>
+        <span className="hidden sm:inline">{hasConnectionError ? "Reconnect Wallet" : "Connect Wallet"}</span>
+        <span className="sm:hidden">{hasConnectionError ? "Reconnect" : "Connect"}</span>
       </Button>
 
       <WalletModal open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen} />
@@ -206,13 +207,13 @@ function AccountBadge({
         className={cn("w-full justify-start gap-2 sm:w-auto", className)}
         onClick={() => setOpen(!open)}
       >
-        <span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />
+        <span className="size-2 rounded-full bg-success" aria-hidden="true" />
         <span className="font-mono">{formatAddress(address)}</span>
       </Button>
 
       {open && (
         <div className="absolute end-0 top-full z-50 mt-1 w-72 rounded-md border bg-popover p-3 shadow-md">
-          <p className="text-xs text-muted-foreground">Connected</p>
+          <p className="text-xs text-muted-foreground" role="status">Wallet connected</p>
           <p className="mt-1 truncate font-mono text-sm" title={address}>
             {address}
           </p>

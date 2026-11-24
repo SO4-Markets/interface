@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useWalletStore } from "../store/wallet-store"
 import { useNetwork } from "./useNetwork"
 
-export type NetworkHealthStatus = "healthy" | "offline" | "mismatch" | "disconnected"
+export type NetworkHealthStatus = "healthy" | "offline" | "mismatch" | "disconnected" | "connecting" | "error"
 
 export function useNetworkHealth() {
   const { mismatch, displayLabel } = useNetwork()
@@ -25,19 +25,27 @@ export function useNetworkHealth() {
 
   const status: NetworkHealthStatus = !online
     ? "offline"
-    : walletStatus !== "connected"
-      ? "disconnected"
-      : mismatch
-        ? "mismatch"
-        : "healthy"
+    : walletStatus === "connecting"
+      ? "connecting"
+      : walletStatus === "error"
+        ? "error"
+        : walletStatus !== "connected"
+          ? "disconnected"
+          : mismatch
+            ? "mismatch"
+            : "healthy"
 
   const message = status === "offline"
-    ? "Your browser is offline"
-    : status === "mismatch"
-      ? `Wallet network (${displayLabel}) does not match the selected network`
-      : status === "disconnected"
-        ? "Connect a wallet to verify network health"
-        : `Connected to ${displayLabel}`
+    ? "Browser offline. Check your internet connection."
+    : status === "connecting"
+      ? "Connecting wallet. Wait for the connection to finish."
+      : status === "error"
+        ? "Wallet connection failed. Reconnect your wallet to try again."
+        : status === "mismatch"
+          ? `Wallet network (${displayLabel}) does not match the selected network`
+          : status === "disconnected"
+            ? "Wallet disconnected. Connect a wallet to check its network."
+            : `Wallet connected to ${displayLabel}. This does not confirm any transaction.`
 
   return { status, message, online, displayLabel, isHealthy: status === "healthy" }
 }
