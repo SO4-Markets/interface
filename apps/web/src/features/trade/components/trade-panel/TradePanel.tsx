@@ -72,9 +72,9 @@ export function TradePanel({ trade }: TradePanelProps) {
   } = trade
 
   const marketRisk = useMarketRiskParams(marketAddress)
-  const { data: positions = [] } = usePositions()
-  const existingExposure = positions.find(
-    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong,
+  const { data: positions } = usePositions()
+  const existingExposure = positions?.find(
+    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong && position.collateralToken === collateralAddress,
   )
   const maxLeverage = marketRisk.params?.maxLeverage ?? 1
   const boundedLeverage = marketRisk.params
@@ -359,6 +359,7 @@ export function TradePanel({ trade }: TradePanelProps) {
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirmed={setConfirmedHash}
+        existingPosition={positions ? existingExposure ?? null : undefined}
         tradeState={trade}
         sizeUsd={sizeUsd}
         entryPrice={entryPrice}
