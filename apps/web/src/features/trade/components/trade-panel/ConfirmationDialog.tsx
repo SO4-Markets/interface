@@ -23,6 +23,8 @@ import { clampLeverage } from "../../lib/risk"
 import { getProtectionPrice } from "../../lib/fee-preview"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 import { validateExecutionRequest } from "../../lib/execution-support"
+import { PositionChangeSummary } from "./PositionChangeSummary"
+import type { Position } from "../../hooks/usePositions"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { ENV } from "@/app/config/env"
@@ -36,6 +38,7 @@ import { estimateFee } from "@/lib/soroban/simulate"
 import { formatAddress } from "@/shared/lib/format"
 
 type Props = {
+  existingPosition?: Position | null
   open: boolean
   onClose: () => void
   onConfirmed?: (hash: string) => void
@@ -50,6 +53,7 @@ export function ConfirmationDialog({
   open,
   onClose,
   onConfirmed,
+  existingPosition,
   tradeState,
   sizeUsd,
   entryPrice,
@@ -344,17 +348,12 @@ export function ConfirmationDialog({
         <div className="min-w-0 space-y-1.5 text-sm">
           {!tradeFlags.isSwap && (
             <>
-              <div className="rounded-sm border border-border/60 bg-muted/20 p-2" aria-label="Position size change">
-                <p className="mb-1 text-xs font-medium">Position size change</p>
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">Before</span>
-                  <span className="text-muted-foreground">After</span>
-                  <span className="text-muted-foreground">Change</span>
-                  <span className="font-mono">{formatUsd(0)}</span>
-                  <span className="font-mono">{formatUsd(sizeUsd)}</span>
-                  <span className="font-mono text-success">+{formatUsd(sizeUsd)}</span>
-                </div>
-              </div>
+              {existingPosition === undefined ? <p role="status">Position comparison unavailable.</p> :
+                <PositionChangeSummary existing={existingPosition} size={sizeUsd}
+                  collateral={effectiveLeverage > 0 ? sizeUsd / effectiveLeverage : 0}
+                  fill={tradeFlags.isMarket ? estimatedEntryPrice : Number(triggerPrice)}
+                  mark={entryPrice} long={tradeFlags.isLong}
+                  maintenance={marketRisk.params?.maintenanceMarginRateBps ?? null} />}
               <Row label="Size" value={formatUsd(sizeUsd)} />
               {maxPositionError && (
                 <p className="break-words text-xs text-red-500">{maxPositionError}</p>
