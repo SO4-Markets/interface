@@ -6,6 +6,9 @@
 
 ## Page(s)
 
+> Follow [AGENTS.md](../../AGENTS.md) when fixing issues: address the root cause, check for sibling instances, add regression coverage where applicable (or explain why not), and do not weaken checks/tests to get green.
+
+
 <!-- Route and file for each page, e.g. /guides/pools — apps/docs/content/guides/pools.mdx -->
 
 - Route: `/`
