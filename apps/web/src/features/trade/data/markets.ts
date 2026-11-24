@@ -1,6 +1,7 @@
 import { POOL_MARKETS } from "@/features/pools/data/markets"
 
 export type Market = {
+  isDisabled?: boolean
   address: string
   name: string
   indexTokenAddress: string   // the asset being priced (e.g. BTC)
