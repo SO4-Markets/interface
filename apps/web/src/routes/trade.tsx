@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Suspense, lazy } from "react"
 import { LoadingPage } from "../shared/components/LoadingPage"
+import { optionalSearchString } from "../shared/lib/table-sort"
 
 // Lazy load the heavy trade page to reduce initial bundle
 const TradePage = lazy(() =>
@@ -15,6 +16,8 @@ export type TradeSearch = {
   type?: "long" | "short"
   panel?: "positions" | "orders" | "history" | "trades" | "claims"
   ref?: string
+  /** Positions table order, e.g. `size.desc` (issue 966). */
+  positionsSort?: string
 }
 
 export const Route = createFileRoute("/trade")({
@@ -35,5 +38,6 @@ export const Route = createFileRoute("/trade")({
         ? search.panel
         : undefined,
     ref: typeof search.ref === "string" ? search.ref : undefined,
+    positionsSort: optionalSearchString(search.positionsSort),
   }),
 })

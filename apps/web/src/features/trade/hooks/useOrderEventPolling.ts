@@ -5,6 +5,7 @@ import {
   applyOrderEventRefreshMatrix,
   decodeOrderEvent,
 } from "../lib/order-event-decoder"
+import type { OrderEventType } from "../lib/order-event-decoder"
 import type { ContractEvent } from "@/lib/soroban/events"
 import { CONTRACTS } from "@/app/config/contracts"
 import { sorobanRpc } from "@/lib/soroban/client"
@@ -43,8 +44,21 @@ export function savePersistedCursor(account: string, cursor: string): void {
   } catch {}
 }
 
-export function useOrderEventPolling() {
+export type OrderEventPollingOptions = {
+  /**
+   * Called for each new order event that belongs to the connected account
+   * (issue 956). Events replayed by the first poll after connecting are history,
+   * not news, so they never reach this callback.
+   */
+  onAccountEvent?: (name: OrderEventType) => void
+}
+
+export function useOrderEventPolling({ onAccountEvent }: OrderEventPollingOptions = {}) {
   const account = useWalletStore((state) => state.address)
+  const onAccountEventRef = useRef(onAccountEvent)
+  useEffect(() => {
+    onAccountEventRef.current = onAccountEvent
+  }, [onAccountEvent])
   const network = useWalletStore((state) => state.network)
   const queryClient = useQueryClient()
   const lastCursor = useRef<string | null>(null)
@@ -59,6 +73,10 @@ export function useOrderEventPolling() {
     const isCurrent = () => generation.current === currentGeneration
     lastCursor.current = null
     processedEventIds.current.clear()
+    let caughtUp = false
+    const notify = (name: OrderEventType) => {
+      if (caughtUp) onAccountEventRef.current?.(name)
+    }
 
     const poll = async () => {
       try {
@@ -108,6 +126,7 @@ export function useOrderEventPolling() {
                   CHAIN_ID,
                   account,
                 )
+                notify(decoded.name)
               }
             } else {
               // Fallback for mocked test events with data / string representation
@@ -120,6 +139,8 @@ export function useOrderEventPolling() {
                 const queryNetwork = normalizeQueryNetwork(network)
                 const hasExecution = text.includes("orderexecuted")
                 const hasCancellation = text.includes("ordercancelled")
+                if (hasExecution) notify("OrderExecuted")
+                if (hasCancellation) notify("OrderCancelled")
 
                 await Promise.all([
                   ...(hasExecution
@@ -166,6 +187,12 @@ export function useOrderEventPolling() {
 
           pagesProcessed++
           hasMore = events.length === PAGE_LIMIT
+        }
+
+        // Once a poll drains the backlog, every later event is new: start
+        // reporting from the next poll (issue 956).
+        if (isCurrent() && (!hasMore || pagesProcessed < MAX_PAGES_PER_POLL)) {
+          caughtUp = true
         }
       } catch (error) {
         if (import.meta.env.DEV) console.warn("Order event polling failed", error)

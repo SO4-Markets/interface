@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { getRouteApi } from "@tanstack/react-router"
 import { AppShell } from "@workspace/ui/components/app-shell"
 import { Button } from "@workspace/ui/components/button"
 import { ResizeHandle } from "@workspace/ui/components/resize-handle"
+import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
 import { cn } from "@workspace/ui/lib/utils"
 import { useTradeState } from "../hooks/useTradeState"
 import { useOrderEventPolling } from "../hooks/useOrderEventPolling"
 import { useBoundedChartHeight } from "../hooks/useBoundedChartHeight"
 import { useLayoutPreferencesStore } from "../store/layout-preferences-store"
 import { seedLimitTicketPrice } from "../lib/orderbook/seed-limit-ticket"
+import { orderEventAnnouncement } from "../lib/trade-announcements"
 import { Navbar } from "../../../ui/Navbar"
 import { useWorkspaceShortcuts } from "../hooks/useWorkspaceShortcuts"
 import { TVChart } from "./chart/TVChart"
 import { TradePanel } from "./trade-panel/TradePanel"
 import { BottomTabs } from "./positions/BottomTabs"
+import { POSITION_SORT_COLUMNS } from "./positions/PositionsList"
 import { CircuitBreakerBanner } from "./CircuitBreakerBanner"
 import { PanelErrorBoundary } from "./PanelErrorBoundary"
 import { MobileTradeNav,  mobileViewClassName } from "./MobileTradeNav"
@@ -22,11 +25,13 @@ import { CommandPalette } from "./CommandPalette"
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp"
 import { TradeWorkspaceTour } from "./TradeWorkspaceTour"
 import type {MobileTradeView} from "./MobileTradeNav"
+import type { SortState } from "@workspace/ui/components/data-table"
 import { saveReferralCode } from "@/lib/contracts"
 import { validateReferralCode } from "@/features/referrals/lib/referrals"
 import { useAppFocusRecovery } from "@/shared/hooks/useAppFocusRecovery"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { useTheme } from "@/ui/theme-provider"
+import { formatSortParam, parseSortParam } from "@/shared/lib/table-sort"
 
 const tradeRoute = getRouteApi("/trade")
 
@@ -35,7 +40,18 @@ export function TradePage() {
   const { setToTokenAddress, setTradeType } = trade
   const account = useWalletStore((state) => state.address)
 
-  useOrderEventPolling()
+  // issue 956: fills land in the positions table without moving focus, so they
+  // are also spoken. Polite — a fill is good news, not an interruption.
+  const fillAnnouncer = useAnnouncer()
+  const announceFill = fillAnnouncer.announce
+  const handleAccountOrderEvent = useCallback(
+    (name: Parameters<typeof orderEventAnnouncement>[0]) => {
+      const message = orderEventAnnouncement(name)
+      if (message) announceFill(message)
+    },
+    [announceFill],
+  )
+  useOrderEventPolling({ onAccountEvent: handleAccountOrderEvent })
 
   // OB-114: Pause/reduce non-essential work when hidden or offline; revalidate
   // active market and account data on return to prevent stale execution estimates.
@@ -70,6 +86,15 @@ export function TradePage() {
   function handlePanelChange(panel: "positions" | "orders" | "history" | "trades" | "claims") {
     setActivePanel(panel)
     void navigate({ search: (previous) => ({ ...previous, panel }) })
+  }
+
+  const positionsSort = parseSortParam(search.positionsSort, POSITION_SORT_COLUMNS)
+  function handlePositionsSortChange(next: SortState | null) {
+    void navigate({
+      search: (previous) => ({ ...previous, positionsSort: formatSortParam(next) }),
+      replace: true,
+      resetScroll: false,
+    })
   }
 
   // ── Desktop workspace resizing (OB-038) ─────────────────────────────────
@@ -115,6 +140,12 @@ export function TradePage() {
       banner={<CircuitBreakerBanner symbol={trade.toTokenAddress} />}
       className="h-svh overflow-hidden"
     >
+      <LiveRegion
+        message={fillAnnouncer.message}
+        announcementKey={fillAnnouncer.announcementKey}
+        data-testid="order-fill-announcer"
+      />
+
       {/* Main layout: stacked mobile, stacked-with-tabs tablet, side-by-side desktop */}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row md:px-4 lg:flex-row lg:px-6">
         {/* ── Left: Chart + Book row, Bottom Tabs below ──────────────── */}
@@ -196,6 +227,8 @@ export function TradePage() {
               <BottomTabs
                 value={activePanel}
                 onValueChange={handlePanelChange}
+                positionsSort={positionsSort}
+                onPositionsSortChange={handlePositionsSortChange}
                 onSelectPosition={(pos) =>
                   trade.setActivePosition({
                     isLong: pos.isLong,
