@@ -198,21 +198,60 @@ bun format
 
 See [The quality gate](#the-quality-gate). All of it, not a subset.
 
-### 5. Verify in a clean checkout when touching dependencies
+### 5. Clean-room verification for dependency and build changes
 
-If you changed any `package.json`, `bun.lock`, `tsconfig.json`, or build config,
-your local `node_modules` may not represent what CI installs. Verify in a clean
-clone:
+If you changed any `package.json`, `bun.lock`, `tsconfig.json`, or other build
+configuration, your local `node_modules` may not represent what CI installs.
+Before proposing a commit or pull request, verify the change in an isolated
+environment that starts from the committed tree and lockfile, without relying on
+stale local caches or a reused `node_modules`.
+
+**Start from a clean checkout or equivalently isolated worktree** (from your
+repository root, on the branch/commit you intend to verify):
 
 ```bash
-git clone file://$PWD /tmp/so4-cleanroom
+# Option A: clean clone (recommended for a fully fresh environment)
+git clone --no-local "$PWD" /tmp/so4-cleanroom
 cd /tmp/so4-cleanroom
-bun install --frozen-lockfile
-bun lint && bun typecheck && bun run check:content && bun run test && bun run build
+
+# Option B: isolated detached worktree (equivalent clean tree using the same repo)
+# git worktree add --detach /tmp/so4-cleanroom HEAD
+# cd /tmp/so4-cleanroom
 ```
 
-This is not paranoia — it is how a whole class of "passes locally, fails in CI"
-bugs in this repo were found. See [Project-specific gotchas](#project-specific-gotchas).
+Use a path outside the current checkout. Do not copy `node_modules`, `.turbo`,
+or other local install/build caches into the clean environment.
+
+**Install from the committed lockfile (repository-appropriate, no re-resolution):**
+
+```bash
+# Requires the Bun version in package.json ("packageManager") and Node >= 20
+# (see "Getting set up"). Install dependencies exactly as CI does:
+bun install --frozen-lockfile
+```
+
+`bun install --frozen-lockfile` fails if `package.json` and `bun.lock` disagree,
+ensuring you test the same dependency graph CI will install.
+
+**Run the required verification checks** (see [AGENTS.md §1 — The commit gate](./AGENTS.md#1-the-commit-gate)):
+
+```bash
+bun lint
+bun typecheck
+bun run check:tokens
+bun run check:content
+bun run test
+bun run test:coverage
+bun run build
+```
+
+If the change touches `apps/s03-indexer` or `apps/web`, also run the additional
+Integration Checks documented in [AGENTS.md §1](./AGENTS.md#1-the-commit-gate)
+(e.g. indexer `codegen`/`build`/`test`, manifest sync/validation, and web
+`typecheck`/`build`) in the same clean environment.
+
+If local results differ from CI, reproduce in this clean environment before
+theorising — the clean room reflects what CI installs.
 
 ### 6. Push to your fork and open the PR
 
