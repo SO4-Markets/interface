@@ -116,10 +116,10 @@ describe("RouteAnnouncer", () => {
     act(() => filter.focus())
 
     await act(async () => {
-      await router.navigate({ to: "/pools", search: { tab: "orders" } })
+      await router.navigate({ to: "/pools", search: { sort: "tvl.desc" } })
     })
 
-    // Same pathname: the tab/filter state changed, not the page.
+    // Same pathname: the sort/filter state changed, not the page.
     expect(filter).toHaveFocus()
     expect(announcement()).toBe("Pools")
   })

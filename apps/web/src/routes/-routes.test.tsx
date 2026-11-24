@@ -50,6 +50,7 @@ vi.mock("@tanstack/react-router", () => {
       useMatch: () => ({}),
       useLoaderData: () => ({}),
       useParams: () => ({}),
+      useNavigate: () => vi.fn(),
     }),
     // __root now renders the route announcer above <Outlet /> (DS-078)
     Outlet: () => null,
