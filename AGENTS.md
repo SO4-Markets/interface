@@ -60,6 +60,15 @@ bun run --cwd apps/web build
 5. **After pushing, verify.** If you have repository access, confirm the run
    concluded (`gh run list`) rather than assuming.
 
+Pull request CI must enforce this commit gate. In `.github/workflows/ci.yml`,
+the `Lint · Typecheck · Build` job runs the commit-gate commands (including
+`bun run check:content`) for pull requests to `main` and fails the check on any
+command failure, alongside additional repository checks configured in CI (such
+as docs quality/drift/budget checks, dependency audit, E2E, and integration
+workflows). Keep CI enforcement and this documentation aligned with the
+repository's supported Bun setup and scripts; do not weaken, skip, or replace
+checks to obtain a passing workflow.
+
 ---
 
 ## 2. Never weaken a check to make it pass
