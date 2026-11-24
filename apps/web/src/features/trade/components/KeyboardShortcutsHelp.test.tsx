@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { clearShortcutRegistry, registerShortcut } from "@/lib/use-keyboard-shortcut"
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp"
+import { clearShortcutRegistry, registerShortcut } from "@/lib/use-keyboard-shortcut"
 
 describe("KeyboardShortcutsHelp (#1055)", () => {
   beforeEach(() => {
