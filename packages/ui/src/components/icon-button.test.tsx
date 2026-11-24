@@ -21,7 +21,9 @@ describe("IconButton accessibility", () => {
 
   it("uses the label as the accessible name", () => {
     render(<IconButton icon={<PlusIcon />} label="Add item" />)
-    expect(screen.getByRole("button", { name: "Add item" })).toBeInTheDocument()
+    const btn = screen.getByRole("button", { name: "Add item" })
+    expect(btn).toBeInTheDocument()
+    expect(btn).toHaveClass("touch-target")
   })
 
   it("supports disabled state without violations", async () => {

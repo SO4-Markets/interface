@@ -258,6 +258,8 @@ for (const viewport of VIEWPORTS.filter((v) => v.width < 768)) {
         ...(await page.getByRole("group", { name: "Chart view" }).getByRole("button").all()),
         page.getByRole("button", { name: /OHLC Data/ }),
         page.getByRole("button", { name: "Help", exact: true }),
+        page.getByRole("button", { name: "Toggle theme" }),
+        page.getByRole("button", { name: "Open menu" }),
       ]
       for (const control of controls) {
         await assertHorizontallyContained(control, viewport.width)
@@ -272,6 +274,33 @@ for (const viewport of VIEWPORTS.filter((v) => v.width < 768)) {
       const [a, i] = [(await active.boundingBox())!, (await indicator.boundingBox())!]
       expect(Math.abs(a.x - i.x)).toBeLessThanOrEqual(1)
       expect(Math.abs(a.width - i.width)).toBeLessThanOrEqual(1)
+
+      // Order-book tab pills meet touch target dimensions on mobile viewports.
+      const panelNav = page.getByRole("tablist", { name: "Trading panels" })
+      await panelNav.getByRole("tab", { name: "Book" }).tap()
+      const bookTabs = page.getByRole("tablist", { name: "Order book view" })
+      for (const tab of await bookTabs.getByRole("tab").all()) {
+        await assertHorizontallyContained(tab, viewport.width)
+        const box = (await tab.boundingBox())!
+        expect(box.width).toBeGreaterThanOrEqual(44)
+        expect(box.height).toBeGreaterThanOrEqual(44)
+      }
+
+      // Trade ticket tab pills and advanced toggle meet touch target dimensions.
+      await panelNav.getByRole("tab", { name: "Trade" }).tap()
+      for (const control of [
+        page.getByRole("tab", { name: "Long" }),
+        page.getByRole("tab", { name: "Short" }),
+        page.getByRole("tab", { name: "Swap" }),
+        page.getByRole("button", { name: "Show" }),
+      ]) {
+        await assertHorizontallyContained(control, viewport.width)
+        const box = (await control.boundingBox())!
+        expect(box.width).toBeGreaterThanOrEqual(44)
+        expect(box.height).toBeGreaterThanOrEqual(44)
+      }
+
+      await panelNav.getByRole("tab", { name: "Chart" }).tap()
 
       await page.getByRole("button", { name: "Zoom in chart" }).tap()
       await page.getByRole("button", { name: "Fit all candles in view" }).tap()

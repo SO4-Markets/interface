@@ -211,7 +211,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
           <button
             type="button"
             onClick={() => setShowTable((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            className="touch-target flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
             aria-expanded={showTable}
             aria-controls="depth-data-table"
           >

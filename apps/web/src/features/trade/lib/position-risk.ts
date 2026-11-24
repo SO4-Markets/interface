@@ -119,6 +119,127 @@ export function riskSeverity(
   return "neutral"
 }
 
+export type LiquidationRiskLevel = "safe" | "warning" | "danger" | "unavailable"
+
+export type MeterThreshold = "neutral" | "success" | "warning" | "danger"
+
+export type PositionRiskMeterModel = {
+  level: LiquidationRiskLevel
+  threshold: MeterThreshold
+  /** 0 (far from liquidation) to 100 (at or past liquidation). */
+  riskScore: number
+  statusLabel: string
+  distanceText: string
+  description: string
+}
+
+/** Distance at or above which the risk meter reads 0% liquidation risk (2x leverage buffer). */
+export const LIQUIDATION_SAFE_DISTANCE_PCT = 50
+
+export function formatLiquidationDistance(pct: number): string {
+  if (!Number.isFinite(pct) || pct < 0) return "0.0%"
+  return `${pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}%`
+}
+
+/**
+ * Derive accessible meter value, semantic threshold, and text equivalents
+ * from a {@link PositionRiskReading}.
+ */
+export function describePositionRiskMeter(
+  reading: PositionRiskReading,
+): PositionRiskMeterModel {
+  if (!reading.hasData) {
+    return {
+      level: "unavailable",
+      threshold: "neutral",
+      riskScore: 0,
+      statusLabel: "Unavailable",
+      distanceText: "—",
+      description: reading.isStale
+        ? "Liquidation risk unavailable — oracle price is stale"
+        : "Liquidation risk unavailable — missing mark or liquidation price",
+    }
+  }
+
+  const severity = riskSeverity(reading)
+  const level: LiquidationRiskLevel =
+    severity === "danger" ? "danger" : severity === "warning" ? "warning" : "safe"
+  const threshold: MeterThreshold =
+    level === "danger" ? "danger" : level === "warning" ? "warning" : "success"
+  const statusLabel =
+    level === "danger" ? "Critical" : level === "warning" ? "Warning" : "Safe"
+
+  const clampedDistance = Math.max(0, reading.liquidationDistancePct)
+  const rawScore =
+    ((LIQUIDATION_SAFE_DISTANCE_PCT - clampedDistance) /
+      LIQUIDATION_SAFE_DISTANCE_PCT) *
+    100
+  const riskScore = Math.round(Math.max(0, Math.min(100, rawScore)))
+  const distanceText = formatLiquidationDistance(clampedDistance)
+  const staleSuffix = reading.isStale ? " (stale oracle)" : ""
+
+  return {
+    level,
+    threshold,
+    riskScore,
+    statusLabel,
+    distanceText,
+    description: `${statusLabel} — ${distanceText} from liquidation${staleSuffix}`,
+  }
+}
+
+/**
+ * Select the position closest to liquidation (highest risk) among `positions`.
+ * Returns null when `positions` is empty.
+ */
+export function pickHighestRiskPosition<
+  T extends {
+    key: string
+    sizeUsd: number
+    markPrice: number
+    liquidationPrice: number
+    isLong: boolean
+    indexToken: string
+  },
+>(
+  positions: ReadonlyArray<T>,
+  getStaleness: (symbol: string) => OracleStaleness,
+): { position: T; reading: PositionRiskReading } | null {
+  if (positions.length === 0) return null
+
+  let best: { position: T; reading: PositionRiskReading } | null = null
+
+  for (const position of positions) {
+    const reading = describePositionRisk({
+      sizeUsd: position.sizeUsd,
+      markPriceUsd: position.markPrice,
+      liquidationPriceUsd: position.liquidationPrice,
+      isLong: position.isLong,
+      markPriceStaleness: getStaleness(position.indexToken),
+    })
+
+    if (!best) {
+      best = { position, reading }
+      continue
+    }
+
+    if (!best.reading.hasData && reading.hasData) {
+      best = { position, reading }
+      continue
+    }
+
+    if (
+      best.reading.hasData &&
+      reading.hasData &&
+      reading.liquidationDistancePct < best.reading.liquidationDistancePct
+    ) {
+      best = { position, reading }
+    }
+  }
+
+  return best
+}
+
 /** Percentage of the position size that the posted collateral covers. */
 export function collateralCoveragePct(
   sizeUsd: number,

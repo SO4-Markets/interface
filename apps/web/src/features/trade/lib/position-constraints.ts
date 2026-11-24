@@ -56,7 +56,7 @@ export type CollateralChangeInput = {
 }
 
 /** Fixed-point precision used when converting a USD delta into raw units. */
-const RAW_SCALE = 1_000_000_000n
+const RAW_SCALE = 1_000_000_000_000n
 
 /**
  * Validate a close request against *current* position state.
@@ -149,7 +149,7 @@ export function partialSizeToRaw(
   const ratio = sizeDeltaUsd / position.sizeUsd
   if (ratio >= 1) return undefined
 
-  // Keep ~9 decimal places of the ratio in integer space so the multiplication
+  // Keep ~12 decimal places of the ratio in integer space so the multiplication
   // stays exact for raw values far beyond Number.MAX_SAFE_INTEGER.
   const scaledRatio = BigInt(Math.round(ratio * Number(RAW_SCALE)))
   const raw = (position.sizeInUsdRaw * scaledRatio) / RAW_SCALE

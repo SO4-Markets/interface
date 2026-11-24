@@ -177,7 +177,7 @@ export class PendingActivityStore {
     try {
       const raw = window.localStorage.getItem(this.storageKey)
       if (!raw) return
-      const saved = JSON.parse(raw) as { items?: PendingActivityItem[]; readIds?: string[] }
+      const saved = JSON.parse(raw) as { items?: Array<PendingActivityItem>; readIds?: Array<string> }
       for (const item of saved.items ?? []) {
         if (
           typeof item.id === "string" &&

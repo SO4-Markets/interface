@@ -21,6 +21,7 @@ import { fetchFeeConfig } from "../../lib/data-store"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import { clampLeverage } from "../../lib/risk"
 import { getProtectionPrice } from "../../lib/fee-preview"
+import { formatPrecisePct, formatPreciseUsd, formatPreciseXlm } from "../../lib/fee-breakdown"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 import { validateExecutionRequest } from "../../lib/execution-support"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
@@ -371,7 +372,7 @@ export function ConfirmationDialog({
               )}
               <Row
                 label="Price impact"
-                value={priceImpactPct !== null ? `${priceImpactPct.toFixed(2)}%` : "Unavailable"}
+                value={priceImpactPct !== null ? formatPrecisePct(priceImpactPct) : "Unavailable"}
                 highlight={priceImpactPct !== null && Math.abs(priceImpactPct) > 0.5}
               />
               <Row
@@ -390,7 +391,7 @@ export function ConfirmationDialog({
               />
               <Row
                 label="Execution fee estimate"
-                value={typeof fees.executionFeeXlm === "number" ? `~${fees.executionFeeXlm.toFixed(2)} XLM` : "Unavailable"}
+                value={typeof fees.executionFeeXlm === "number" ? formatPreciseXlm(fees.executionFeeXlm) : "Unavailable"}
               />
               {estimateError && (
                 <p className="max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
@@ -425,7 +426,7 @@ export function ConfirmationDialog({
             value={`${fromAmount || "0"} ${formatAddress(collateralAddress!)}`}
           />
           <div className="border-t border-border pt-1.5">
-            <Row label="Total fees" value={fees.totalFeesUsd !== null ? formatUsd(fees.totalFeesUsd) : "Unavailable"} bold />
+            <Row label="Total fees" value={fees.totalFeesUsd !== null ? formatPreciseUsd(fees.totalFeesUsd) : "Unavailable"} bold />
           </div>
         </div>
 

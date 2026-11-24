@@ -283,7 +283,7 @@ export function TradePanel({ trade }: TradePanelProps) {
           <span className="font-medium">Advanced options</span>
           <button
             type="button"
-            className="text-xs font-medium text-primary hover:text-primary/80"
+            className="touch-target inline-flex items-center justify-center px-2 text-xs font-medium text-primary hover:text-primary/80"
             onClick={() => trade.setAdvanced({ advancedDisplay: !advanced.advancedDisplay })}
           >
             {advanced.advancedDisplay ? "Hide" : "Show"}
@@ -450,7 +450,7 @@ function TradeInputs({
 
       {/* Size quick-fill buttons */}
       {walletBalance !== undefined && walletBalance > 0 && (
-        <div className="flex flex-wrap gap-1 pt-1">
+        <div className="flex flex-wrap gap-2 pt-1 sm:gap-1">
           {[0.25, 0.5, 0.75, 1].map((pct) => (
             <Button
               key={pct}
@@ -458,7 +458,7 @@ function TradeInputs({
               variant="outline"
               size="xs"
               onClick={() => handleFill(pct)}
-              className="text-xs shrink-0"
+              className="touch-target shrink-0 text-xs"
             >
               {pct === 1 ? "Max" : `${Math.round(pct * 100)}%`}
             </Button>
@@ -469,8 +469,10 @@ function TradeInputs({
       {/* Swap arrow */}
       {tradeFlags.isSwap && (
         <button
+          type="button"
+          aria-label="Switch pay and receive tokens"
           onClick={switchTokens}
-          className="mx-auto flex size-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+          className="touch-target mx-auto flex size-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
         >
           ↕
         </button>
