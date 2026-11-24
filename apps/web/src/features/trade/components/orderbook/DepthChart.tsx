@@ -15,6 +15,7 @@ import { cn } from "@workspace/ui/lib/utils"
 import { buildChartOptions, getChartPalette } from "../../lib/chart-theme"
 import type { AreaData, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OrderBookLevel } from "../../hooks/useOrderBook"
+import { useHighContrast } from "@/shared/hooks/useHighContrast"
 import { formatUsd } from "@/shared/lib/format"
 
 type Props = {
@@ -37,6 +38,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
   const chartRef = useRef<IChartApi | null>(null)
   const bidsSeriesRef = useRef<ISeriesApi<"Area"> | null>(null)
   const asksSeriesRef = useRef<ISeriesApi<"Area"> | null>(null)
+  const highContrast = useHighContrast()
   const [showTable, setShowTable] = useState(false)
 
   const isEmpty = bids.length === 0 && asks.length === 0
@@ -197,6 +199,7 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
         {/* Chart canvas */}
         <div
           ref={containerRef}
+          hidden={highContrast && hasData}
           className={cn("so4-depth-chart-canvas h-full w-full transition-opacity duration-base", isLoading && "opacity-60")}
           role="img"
           aria-label={`Cumulative depth chart for ${symbol}`}
@@ -211,15 +214,16 @@ export function DepthChart({ symbol, bids, asks, isLoading, status }: Props) {
           <button
             type="button"
             onClick={() => setShowTable((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-            aria-expanded={showTable}
+            className="flex [&[hidden]]:hidden w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            hidden={highContrast}
+            aria-expanded={showTable || highContrast}
             aria-controls="depth-data-table"
           >
             <span className="font-medium">{symbol} Cumulative Depth</span>
             <span aria-hidden="true">{showTable ? "▲ Hide" : "▼ Show"}</span>
           </button>
 
-          <div className={cn("so4-depth-data-table overflow-x-auto px-3 pb-2", !showTable && "hidden")} id="depth-data-table" data-forced-colors-fallback>
+          <div className={cn("so4-depth-data-table overflow-x-auto px-3 pb-2", !showTable && !highContrast && "hidden")} id="depth-data-table" data-forced-colors-fallback>
               <Table>
                 <TableHeader>
                   <TableHeadRow>

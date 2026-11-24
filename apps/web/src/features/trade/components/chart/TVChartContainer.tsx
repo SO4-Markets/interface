@@ -26,6 +26,7 @@ import {
 } from "../../lib/chart-theme"
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OhlcBar } from "../../lib/oracle"
+import { useHighContrast } from "@/shared/hooks/useHighContrast"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { formatUsd } from "@/shared/lib/format"
 import { ENV } from "@/app/config/env"
@@ -138,6 +139,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
   const { data: orders = [] } = useOrders()
   const account = useWalletStore((state) => state.address)
 
+  const highContrast = useHighContrast()
   const [showTable, setShowTable] = useState(false)
   const [crosshairBar, setCrosshairBar] = useState<OhlcBar | null>(null)
   const crosshairTimeRef = useRef<number | null>(null)
@@ -497,6 +499,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
           ref={containerRef}
           className={cn("h-full w-full transition-opacity duration-base", isStale && "opacity-60")}
           style={{ touchAction: "none" }}
+          hidden={highContrast && hasData}
           role="region"
           aria-label={`Price chart for ${label}`}
           aria-describedby="chart-desc"
@@ -510,15 +513,16 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
           <button
             type="button"
             onClick={() => setShowTable((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-            aria-expanded={showTable}
+            className="flex [&[hidden]]:hidden w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            hidden={highContrast}
+            aria-expanded={showTable || highContrast}
             aria-controls="ohlc-data-table"
           >
             <span className="font-medium">{label} OHLC Data</span>
             <span aria-hidden="true">{showTable ? "▲ Hide" : "▼ Show"}</span>
           </button>
 
-          {showTable && (
+          {(highContrast || showTable) && (
             <div className="overflow-x-auto px-3 pb-2" id="ohlc-data-table">
               <Table>
                 <TableHeader>
