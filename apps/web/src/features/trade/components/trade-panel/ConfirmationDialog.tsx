@@ -453,7 +453,7 @@ export function ConfirmationDialog({
               <span
                 aria-hidden={isSubmitting}
                 className={cn(
-                  "col-start-1 row-start-1 transition-opacity duration-base ease-out",
+                  "col-start-1 row-start-1 transition-opacity duration-base ease-out motion-reduce:transition-none",
                   isSubmitting ? "opacity-0" : "opacity-100"
                 )}
               >
@@ -462,13 +462,13 @@ export function ConfirmationDialog({
               <span
                 aria-hidden={!isSubmitting}
                 className={cn(
-                  "col-start-1 row-start-1 flex items-center gap-2 transition-opacity duration-base ease-out",
+                  "col-start-1 row-start-1 flex items-center gap-2 transition-opacity duration-base ease-out motion-reduce:transition-none",
                   isSubmitting ? "opacity-100" : "opacity-0"
                 )}
               >
                 <span
                   aria-hidden="true"
-                  className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  className="size-3.5 motion-safe:animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
                 Submitting...
               </span>

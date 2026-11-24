@@ -205,7 +205,7 @@ export function TradePanel({ trade }: TradePanelProps) {
 
       {/* ── Trigger price input (Limit / Stop-Loss only) ─────────── */}
       {(tradeMode === "Limit" || tradeMode === "Trigger") && (
-        <div className="space-y-1 animate-in fade-in duration-base">
+        <div className="space-y-1 animate-in fade-in duration-base motion-reduce:animate-none">
           <label className="text-xs text-muted-foreground">
             {tradeMode === "Trigger" ? "Trigger price" : "Limit price"}
           </label>
@@ -240,7 +240,7 @@ export function TradePanel({ trade }: TradePanelProps) {
       {/* ── Leverage slider (positions only) ─────────────────────── */}
       {tradeFlags.isPosition && (
         marketRisk.state === "available" ? (
-          <div className="animate-in fade-in duration-base">
+          <div className="animate-in fade-in duration-base motion-reduce:animate-none">
             <LeverageSlider
               value={boundedLeverage}
               max={maxLeverage}

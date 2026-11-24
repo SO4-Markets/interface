@@ -26,7 +26,7 @@ const meterTrackVariants = cva("relative w-full overflow-hidden rounded-full", {
   defaultVariants: { size: "md" },
 })
 
-const meterFillVariants = cva("h-full transition-[width] duration-base ease-out", {
+const meterFillVariants = cva("h-full transition-[width] duration-base ease-out motion-reduce:transition-none", {
   variants: {
     threshold: {
       neutral: "bg-text-secondary",
@@ -213,7 +213,7 @@ function AllocationBar({
             <TooltipTrigger
               render={
                 <div
-                  className="h-full transition-[width] duration-base ease-out first:rounded-l-full last:rounded-r-full"
+                  className="h-full transition-[width] duration-base ease-out motion-reduce:transition-none first:rounded-l-full last:rounded-r-full"
                   style={{
                     width: `${segment.pct}%`,
                     backgroundColor: segment.color,

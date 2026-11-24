@@ -121,7 +121,7 @@ export function Navbar({ variant }: Props) {
               className="hidden h-9.5 gap-2 btn-landing px-4 text-13-5 sm:inline-flex"
             >
               Launch app
-              <span className="transition-transform group-hover:translate-x-0.5">
+              <span className="transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
                 →
               </span>
             </Button>

@@ -53,7 +53,7 @@ export function FaucetCooldown({ lastClaimLedger, nextClaimLedger, currentLedger
   }, [currentLedger, nextClaimLedger, cooldownLedgers])
 
   if (isLoading) {
-    return <div className="h-32 animate-pulse rounded-lg bg-muted" />
+    return <div className="h-32 motion-safe:animate-pulse rounded-lg bg-muted" />
   }
 
   const isAvailable = currentLedger >= nextClaimLedger
@@ -71,7 +71,7 @@ export function FaucetCooldown({ lastClaimLedger, nextClaimLedger, currentLedger
       <div className="space-y-2">
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={`h-full transition-all duration-500 ${isAvailable ? "bg-green-500" : "bg-blue-500"}`}
+            className={`h-full transition-[width,background-color] duration-slowest motion-reduce:transition-none ${isAvailable ? "bg-green-500" : "bg-blue-500"}`}
             style={{ width: `${progress}%` }}
           />
         </div>

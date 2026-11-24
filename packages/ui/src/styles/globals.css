@@ -1371,6 +1371,28 @@
     }
     .so4-dialog-content, .so4-sheet-content, .so4-popover-content { transform: none; }
 }
+/* Menus and listboxes keep their opacity fade (it marks open/close) but lose the
+   zoom and slide. The overrides beat the side-specific slide utilities. */
+@media (prefers-reduced-motion: reduce) {
+    [data-slot="select-content"],
+    [data-slot="dropdown-menu-content"] {
+        --tw-enter-scale: 1 !important;
+        --tw-exit-scale: 1 !important;
+        --tw-enter-translate-x: 0 !important;
+        --tw-enter-translate-y: 0 !important;
+        --tw-exit-translate-x: 0 !important;
+        --tw-exit-translate-y: 0 !important;
+    }
+}
+:root[data-reduced-motion="true"] [data-slot="select-content"],
+:root[data-reduced-motion="true"] [data-slot="dropdown-menu-content"] {
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+}
 :root[data-reduced-motion="true"] .so4-dialog-overlay,
 :root[data-reduced-motion="true"] .so4-sheet-overlay,
 :root[data-reduced-motion="true"] .so4-dialog-content,

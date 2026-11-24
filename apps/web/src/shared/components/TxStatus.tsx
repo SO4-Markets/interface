@@ -25,7 +25,7 @@ function Pending() {
   return (
     <>
       <span
-        className="mt-0.5 size-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
+        className="mt-0.5 size-4 shrink-0 motion-safe:animate-spin rounded-full border-2 border-current border-t-transparent"
         aria-hidden="true"
       />
       <span className="text-sm">Waiting for confirmation…</span>

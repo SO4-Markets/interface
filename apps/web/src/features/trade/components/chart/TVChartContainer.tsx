@@ -5,6 +5,9 @@ import { RollingNumber } from "@workspace/ui/components/rolling-number"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
 import { cn } from "@workspace/ui/lib/utils"
+import { Button } from "@workspace/ui/components/button"
+import { Icon } from "@workspace/ui/components/icon"
+import { FitToScreenIcon, ZoomInAreaIcon, ZoomOutAreaIcon } from "@hugeicons/core-free-icons"
 import {
   Table,
   TableBody,
@@ -37,6 +40,11 @@ type ChartLine = {
   color: string
   lineStyle?: LineStyle
 }
+
+/** Fewest bars a zoom-in may leave on screen, so the chart never empties. */
+const MIN_VISIBLE_BARS = 10
+const ZOOM_IN_FACTOR = 0.5
+const ZOOM_OUT_FACTOR = 2
 
 type CrosshairEvent = Parameters<Parameters<IChartApi["subscribeCrosshairMove"]>[0]>[0]
 
@@ -172,7 +180,10 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
     const chart = createChart(containerRef.current, {
       ...buildChartOptions(palette),
       crosshair: { mode: CrosshairMode.Magnet },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      // A vertical swipe over the chart scrolls the page; horizontal drag
+      // pans and pinch zooms. Paired with `touch-action: pan-y` below so the
+      // browser keeps vertical panning while the chart handles the rest.
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale: { mouseWheel: true, pinch: true },
     })
 
@@ -371,6 +382,20 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
     })
   }, [positions, orders, symbol, account, themeVersion])
 
+  // ── View controls: button equivalents of pinch, wheel, and drag ─────────────
+  function zoomBy(factor: number) {
+    const timeScale = chartRef.current?.timeScale()
+    const range = timeScale?.getVisibleLogicalRange()
+    if (!timeScale || !range) return
+    // Anchor on the right edge so the latest candle stays in view.
+    const span = Math.max(MIN_VISIBLE_BARS, (range.to - range.from) * factor)
+    timeScale.setVisibleLogicalRange({ from: range.to - span, to: range.to })
+  }
+
+  function resetView() {
+    chartRef.current?.timeScale().fitContent()
+  }
+
   // ── Throttled live-price announcements ────────────────────────────────────
   const THROTTLE_MS = 5000
   useEffect(() => {
@@ -384,25 +409,67 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
   return (
     <div className="relative flex h-full w-full flex-col">
       {/* ═══ Venue & Data Source Metadata Badge ═══════════════════════════════ */}
-      <div className="flex items-center justify-between border-b border-border bg-muted/20 px-3 py-1 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5 font-mono text-11">
-          <span className="text-muted-foreground/70">Data Source:</span>
-          <span className="rounded-sm bg-muted px-1.5 py-0.5 font-medium text-foreground">
+      {/* Wraps instead of clipping: on phones the source, the four candle
+          values, and the view controls each take their own line. */}
+      <div
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-muted/20 px-3 py-1 text-xs text-muted-foreground"
+        data-testid="chart-meta"
+      >
+        <div className="flex min-w-0 items-center gap-1.5 font-mono text-11">
+          <span className="text-muted-foreground/70 max-sm:sr-only">Data Source:</span>
+          <span className="min-w-0 rounded-sm bg-muted px-1.5 py-0.5 font-medium text-foreground">
             {sourceType === "oracle_reference" ? `Reference Price (${venueName})` : `Execution Fills (${venueName})`}
           </span>
+          <span className="shrink-0 text-10 uppercase text-muted-foreground/60">{network}</span>
         </div>
-        <div className="flex items-center gap-3 font-mono text-10 uppercase text-muted-foreground/60">
-          {legendBar && (
-            <dl className="flex items-center gap-2 normal-case" aria-label="Candle values" data-testid="ohlc-legend">
-              {(["open", "high", "low", "close"] as const).map((key) => (
-                <div key={key} className="flex gap-0.5">
-                  <dt>{key[0].toUpperCase()}</dt>
-                  <dd className="text-foreground"><RollingNumber value={formatUsd(legendBar[key], { decimals: 4 })} /></dd>
-                </div>
-              ))}
-            </dl>
-          )}
-          <span>{network}</span>
+        {legendBar && (
+          <dl
+            className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-10 text-muted-foreground/60"
+            aria-label="Candle values"
+            data-testid="ohlc-legend"
+          >
+            {(["open", "high", "low", "close"] as const).map((key) => (
+              <div key={key} className="flex shrink-0 gap-0.5 whitespace-nowrap">
+                <dt>{key[0].toUpperCase()}</dt>
+                <dd className="text-foreground"><RollingNumber value={formatUsd(legendBar[key], { decimals: 4 })} /></dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        <div role="group" aria-label="Chart view" className="ms-auto flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="touch-target"
+            disabled={!hasData}
+            onClick={() => zoomBy(ZOOM_OUT_FACTOR)}
+            aria-label="Zoom out chart"
+            title="Zoom out"
+          >
+            <Icon icon={ZoomOutAreaIcon} size="sm" tone="muted" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="touch-target"
+            disabled={!hasData}
+            onClick={() => zoomBy(ZOOM_IN_FACTOR)}
+            aria-label="Zoom in chart"
+            title="Zoom in"
+          >
+            <Icon icon={ZoomInAreaIcon} size="sm" tone="muted" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="touch-target"
+            disabled={!hasData}
+            onClick={resetView}
+            aria-label="Fit all candles in view"
+            title="Fit all candles"
+          >
+            <Icon icon={FitToScreenIcon} size="sm" tone="muted" aria-hidden="true" />
+          </Button>
         </div>
       </div>
 
@@ -433,7 +500,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-sm bg-background/80 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur border border-border"
             role="status"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-primary motion-safe:animate-pulse" />
             <span>Updating {period}…</span>
           </div>
         )}
@@ -461,7 +528,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             </p>
             <button
               onClick={() => void refetch()}
-              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
+              className="touch-target mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
               aria-label={`Retry loading chart for ${label}`}
             >
               Retry
@@ -480,7 +547,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             </p>
             <button
               onClick={() => void refetch()}
-              className="mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors pointer-events-auto"
+              className="touch-target mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors pointer-events-auto"
               aria-label={`Retry updating chart for ${label}`}
             >
               Refresh Now
@@ -495,8 +562,8 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             claiming the content is static. */}
         <div
           ref={containerRef}
-          className={cn("h-full w-full transition-opacity duration-base", isStale && "opacity-60")}
-          style={{ touchAction: "none" }}
+          className={cn("h-full w-full transition-opacity duration-base motion-reduce:transition-none", isStale && "opacity-60")}
+          style={{ touchAction: "pan-y" }}
           role="region"
           aria-label={`Price chart for ${label}`}
           aria-describedby="chart-desc"
@@ -510,7 +577,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
           <button
             type="button"
             onClick={() => setShowTable((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            className="touch-target flex w-full items-center justify-between px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
             aria-expanded={showTable}
             aria-controls="ohlc-data-table"
           >
