@@ -220,6 +220,14 @@ afterEach(() => {
 })
 
 describe("TradePanel input validation (#226)", () => {
+  it("fills the collateral input from the wallet balance by keyboard", async () => {
+    const user = userEvent.setup()
+    render(<TradePanelHarness />)
+    screen.getByRole("button", { name: "25%" }).focus()
+    await user.keyboard("{Enter}")
+    expect(amountInput()).toHaveValue(String(WALLET_BALANCE / 4))
+  })
+
   it("disables submit while no amount is entered", () => {
     render(<TradePanelHarness />)
     expect(submitDisabled()).toBe(true)
