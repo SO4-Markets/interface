@@ -6,10 +6,15 @@ const recordMotionEvidence = process.env.PLAYWRIGHT_MOTION_EVIDENCE === "1"
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
-  reporter: "list",
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+  ],
+  snapshotPathTemplate: "{testDir}/__snapshots__/{projectName}/{arg}{ext}",
   use: {
     baseURL: "http://127.0.0.1:3000",
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
     video: recordMotionEvidence ? "on" : "off",
   },
   projects: [

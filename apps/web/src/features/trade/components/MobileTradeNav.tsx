@@ -46,7 +46,7 @@ export function MobileTradeNav({ active, onChange, className }: MobileTradeNavPr
             aria-controls={`mobile-trade-view-${view}`}
             onClick={() => onChange(view)}
             className={cn(
-              "flex-1 py-3 text-center text-sm font-medium transition-colors motion-reduce:transition-none",
+              "min-h-11 flex-1 py-3 text-center text-sm font-medium transition-colors motion-reduce:transition-none",
               isActive
                 ? "text-foreground border-t-2 border-primary -mt-px"
                 : "text-muted-foreground"

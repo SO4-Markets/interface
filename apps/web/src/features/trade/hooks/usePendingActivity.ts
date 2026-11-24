@@ -24,5 +24,8 @@ export function usePendingActivity(account?: string) {
     addActivity: pendingActivity.addActivity.bind(pendingActivity),
     updateStage: pendingActivity.updateStage.bind(pendingActivity),
     removeActivity: pendingActivity.removeActivity.bind(pendingActivity),
+    unreadCount: pendingActivity.getUnreadCount(account),
+    markRead: pendingActivity.markRead.bind(pendingActivity),
+    markAllRead: pendingActivity.markAllRead.bind(pendingActivity),
   }
 }

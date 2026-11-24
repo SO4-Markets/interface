@@ -17,22 +17,25 @@ export function renderExcerpt(excerpt: string): React.ReactNode {
     } else if (part === "</mark>") {
       inMark = false
     } else if (part) {
-      // Escape the text to prevent any HTML injection
-      const escapedText = part
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;")
+      const text = decodeExcerptEntities(part)
 
       if (inMark) {
         elements.push(
           <mark key={`mark-${i}`} className="bg-yellow-200 dark:bg-yellow-800 font-semibold">
-            {escapedText}
+            {text}
           </mark>,
         )
       } else {
-        elements.push(escapedText)
+        elements.push(text)
+      }
+
+      function decodeExcerptEntities(text: string): string {
+        return text
+          .replace(/&lt;/gi, "<")
+          .replace(/&gt;/gi, ">")
+          .replace(/&quot;/gi, '"')
+          .replace(/&#39;|&apos;/gi, "'")
+          .replace(/&amp;/gi, "&")
       }
     }
   }
@@ -44,12 +47,7 @@ export function renderExcerpt(excerpt: string): React.ReactNode {
  * Test helper: render excerpt and extract plain text for testing
  */
 export function getExcerptText(excerpt: string): string {
-  return excerpt
+  return decodeExcerptEntities(excerpt
     .replace(/<mark>/g, "")
-    .replace(/<\/mark>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/<\/mark>/g, ""))
 }
