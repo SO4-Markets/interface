@@ -340,6 +340,8 @@ Open your PR from your fork's branch against `SO4-Markets/interface` `main`,
 with:
 
 - **What** changed and **why**.
+- **Root cause** (for fixes/behavior changes): why the bad state was reachable, and whether you searched for and addressed sibling instances of the same issue class (or documented what remains in a linked follow-up). See [AGENTS.md §3](./AGENTS.md#3-fix-issues-completely).
+- **Regression coverage**: name the test(s) that fail before the fix and pass after, or explain why a regression test is not applicable. Add focused tests for behavior this change introduces/fixes.
 - **How you verified it** — which gate commands you ran, and their result.
 - **Screenshots or recordings** for any UI change.
 - **Linked issue** (`Closes #123`).
@@ -349,8 +351,9 @@ A PR is ready for review when:
 
 - [ ] Every command in [The quality gate](#the-quality-gate) passes locally.
 - [ ] CI is green on the PR.
-- [ ] New behaviour has tests.
-- [ ] No check was disabled, skipped, or weakened to achieve green.
+- [ ] The root cause is addressed (not just the symptom), sibling instances were checked, and the fix is complete (or remaining work is explicitly documented with a linked follow-up).
+- [ ] Regression coverage is included, or the PR explains why a regression test is not applicable.
+- [ ] No check was disabled, skipped, or weakened to achieve green ([AGENTS.md §2](./AGENTS.md#2-never-weaken-a-check-to-make-it-pass)).
 - [ ] Commits follow Conventional Commits.
 
 Maintainers may ask for changes. Push follow-up commits to the same branch on
