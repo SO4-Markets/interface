@@ -64,7 +64,7 @@ export function DocsLayout({
                 <SheetDescription>
                   Browse documentation sections and pages.
                 </SheetDescription>
-                <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
+                <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain">
                   {sidebar}
                 </div>
               </SheetContent>
@@ -77,7 +77,7 @@ export function DocsLayout({
       <div className="mx-auto flex max-w-screen-2xl items-start px-4 md:px-6 lg:px-8">
         <aside
           data-slot="docs-sidebar"
-          className="sticky top-16 hidden max-h-[calc(100dvh-4rem)] w-56 shrink-0 overflow-y-auto py-8 pe-6 lg:block xl:w-64"
+          className="sticky top-16 hidden max-h-[calc(100dvh-4rem)] w-56 shrink-0 overflow-y-auto overscroll-contain py-8 pe-6 lg:block xl:w-64"
         >
           {sidebar}
         </aside>
@@ -102,7 +102,7 @@ export function DocsLayout({
         {toc ? (
           <aside
             data-slot="docs-toc"
-            className="sticky top-16 hidden max-h-[calc(100dvh-4rem)] w-56 shrink-0 overflow-y-auto py-8 ps-6 xl:block"
+            className="sticky top-16 hidden max-h-[calc(100dvh-4rem)] w-56 shrink-0 overflow-y-auto overscroll-contain py-8 ps-6 xl:block"
           >
             <nav aria-label="On this page">{toc}</nav>
           </aside>

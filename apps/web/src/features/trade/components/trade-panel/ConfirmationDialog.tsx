@@ -324,7 +324,7 @@ export function ConfirmationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] overflow-y-auto overflow-x-hidden sm:max-w-md">
+      <DialogContent className="max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain overflow-x-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="max-w-full pe-8 [overflow-wrap:anywhere]">
             Confirm {typeLabel} {!tradeFlags.isSwap && formatAddress(toTokenAddress)}
@@ -393,7 +393,7 @@ export function ConfirmationDialog({
                 value={typeof fees.executionFeeXlm === "number" ? formatPreciseXlm(fees.executionFeeXlm) : "Unavailable"}
               />
               {estimateError && (
-                <p className="max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
+                <p className="max-h-24 max-w-full overflow-y-auto overscroll-contain overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
                   Fee estimation warning: {estimateError}
                 </p>
               )}

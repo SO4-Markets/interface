@@ -45,7 +45,7 @@ export function TransactionActivityCenter() {
               </button>
             )}
           </div>
-          <div className="max-h-96 overflow-y-auto p-2" aria-live="polite">
+          <div className="max-h-96 overflow-y-auto overscroll-contain p-2" aria-live="polite">
             {activities.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-text-tertiary">No transactions yet</p>
             ) : (

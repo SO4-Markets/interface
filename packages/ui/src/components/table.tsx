@@ -58,7 +58,7 @@ function Table({
       aria-label={scrollable && labelled ? ariaLabel : undefined}
       aria-labelledby={scrollable && labelled ? ariaLabelledBy : undefined}
       className={cn(
-        "w-full overflow-x-auto",
+        "w-full overflow-x-auto overscroll-x-contain",
         scrollable &&
           "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
         containerClassName

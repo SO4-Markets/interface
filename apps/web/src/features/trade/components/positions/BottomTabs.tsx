@@ -40,7 +40,7 @@ export function BottomTabs({
       {/* issue 956: mounted with the tabs (not the positions panel) so warnings are
           spoken whichever tab is open. */}
       <LiquidationWarningAnnouncer positions={positions} />
-      <div data-testid="account-tabs-viewport" className="min-w-0 overflow-x-auto">
+      <div data-testid="account-tabs-viewport" className="min-w-0 overflow-x-auto overscroll-x-contain">
         <TabsList aria-label="Account activity" className="w-full min-w-max border-b border-border bg-transparent px-4">
           <TabsTrigger value="positions">
             Positions {positions.length > 0 && `(${positions.length})`}

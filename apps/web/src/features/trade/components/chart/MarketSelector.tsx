@@ -268,7 +268,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
           {isLoading && <p role="status">Loading markets…</p>}
           {isError && <p role="status">Market updates unavailable.</p>}
           <ul
-            className="max-h-72 overflow-y-auto px-1 pb-1"
+            className="max-h-72 overflow-y-auto overscroll-contain px-1 pb-1"
             role="listbox"
             id={listboxId}
             aria-labelledby={`${comboboxId}-label`}

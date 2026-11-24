@@ -359,7 +359,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
             className="flex min-h-0 flex-1 flex-col overflow-hidden relative"
           >
             <ColumnHeaders compact={compact} />
-            <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto">
+            <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain">
               {asks.map((level) => (
                 <div key={level.price} className="relative">
                   <DepthRow
@@ -388,7 +388,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
           <div
             role="rowgroup"
             aria-label="Bid orders"
-            className="flex min-h-0 flex-1 flex-col overflow-y-auto relative"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain relative"
           >
             {bids.map((level) => (
               <div key={level.price} className="relative">
