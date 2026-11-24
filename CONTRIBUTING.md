@@ -72,8 +72,9 @@ that CI will still catch. See [Project-specific gotchas](#project-specific-gotch
 
 ## The quality gate
 
-**Every change must pass all of the following before you commit.** These are the
-exact commands CI runs, in the same order. Run them from the repository root.
+**Every change must pass all of the following before you commit.** This is the
+commit gate defined in [AGENTS.md §1](./AGENTS.md#1-the-commit-gate). Run the
+commands from the repository root in this order.
 
 ```bash
 bun lint               # ESLint across all packages — zero errors
@@ -102,12 +103,25 @@ bun run --cwd apps/web typecheck
 bun run --cwd apps/web build
 ```
 
-End-to-end tests are not part of the push CI, but run them for UI changes:
+End-to-end tests also run in pull request CI (`Playwright E2E`, after the main
+`ci` checks), but you should run them locally for UI changes when relevant:
 
 ```bash
 bunx playwright install --with-deps   # first time only
 bun run test:e2e
 ```
+
+### What pull request CI enforces
+
+For pull requests to `main`, CI enforces:
+
+- **`.github/workflows/ci.yml`**
+  - `Dependency audit (high and critical)` — `bun audit` with the documented temporary exceptions.
+  - `Lint · Typecheck · Build` — the commit-gate commands (`bun lint`, `bun typecheck`, `bun run check:tokens`, `bun run check:content`, `bun run test`, `bun run test:coverage`, `bun run build`) plus additional repository checks run in that job: docs prose/lint checks, docs link and FAQ drift checks, generated-reference drift checks, docs performance budget, and Lighthouse CI.
+  - `Playwright E2E` — runs after the `Lint · Typecheck · Build` job succeeds.
+- **`.github/workflows/integration-checks.yml`** — indexer codegen/build/tests and manifest sync/validation, and web typecheck/build (run for relevant PRs to `main` as configured in the workflow).
+
+A failure in any enforced command or job fails that workflow check. Do not weaken, skip, or replace checks to obtain a passing workflow.
 
 ### Non-negotiables
 
@@ -196,7 +210,9 @@ bun format
 
 ### 4. Run the full gate
 
-See [The quality gate](#the-quality-gate). All of it, not a subset.
+See [The quality gate](#the-quality-gate). Run every command in the commit gate,
+not a subset, and make sure your changes also satisfy any additional CI checks
+relevant to what you changed.
 
 ### 5. Verify in a clean checkout when touching dependencies
 
