@@ -27,24 +27,30 @@ export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
   return (
     <Tabs value={value} defaultValue="positions" onValueChange={(next) => onValueChange?.(next as NonNullable<Props["value"]>)}>
       <OrderExecutionFrozenBanner visible={hasFrozenOrders(orders)} />
-      <TabsList className="border-b border-border bg-transparent px-4">
-        <TabsTrigger value="positions">
-          Positions {positions.length > 0 && `(${positions.length})`}
-        </TabsTrigger>
-        <TabsTrigger value="orders">
-          Orders {orders.length > 0 && `(${orders.length})`}
-        </TabsTrigger>
-        <TabsTrigger value="history">Order history</TabsTrigger>
-        <TabsTrigger value="trades">
-          Trades
-        </TabsTrigger>
-        <TabsTrigger value="claims">
-          {/* OB-088: Label updated to "Funding & Fees" to reflect that this tab
-              now shows the full activity history (accrued, settled, claimed) —
-              not just a snapshot of claimable amounts. */}
-          Funding &amp; Fees
-        </TabsTrigger>
-      </TabsList>
+      <div data-testid="account-tabs-viewport" className="min-w-0 overflow-x-auto">
+        <TabsList aria-label="Account activity" className="w-full min-w-max border-b border-border bg-transparent px-4">
+          <TabsTrigger value="positions">
+            Positions {positions.length > 0 && `(${positions.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="orders">
+            Orders {orders.length > 0 && `(${orders.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="history" aria-label="Order history">
+            <span className="sm:hidden">History</span>
+            <span className="hidden sm:inline">Order history</span>
+          </TabsTrigger>
+          <TabsTrigger value="trades">
+            Trades
+          </TabsTrigger>
+          <TabsTrigger value="claims" aria-label="Funding & Fees">
+            {/* OB-088: Label updated to "Funding & Fees" to reflect that this tab
+                now shows the full activity history (accrued, settled, claimed) —
+                not just a snapshot of claimable amounts. */}
+            <span className="sm:hidden">Funding</span>
+            <span className="hidden sm:inline">Funding &amp; Fees</span>
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="positions">
         <PositionsList onSelectPosition={onSelectPosition} />

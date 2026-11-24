@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
-import { useReducedMotion } from "@/lib/use-reduced-motion"
 import type { MobileTradeView } from "./MobileTradeNav"
+import { useReducedMotion } from "@/lib/use-reduced-motion"
 
 const TOUR_COMPLETE_KEY = "so4-trade-workspace-tour-v1-complete"
 

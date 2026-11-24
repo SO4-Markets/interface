@@ -24,6 +24,16 @@ describe("MarketStatsHeader", () => {
     expect(view.getByText(formatUsd(fixture.indexPrice))).toBeInTheDocument()
   })
 
+  it("reflows stats instead of forcing a single overflowing row", () => {
+    const view = render(<MarketStatsHeader {...fixture} />)
+    const stats = view.getByTestId("market-stats")
+
+    expect(stats.className).toContain("grid-cols-2")
+    expect(stats.className).toContain("sm:grid-cols-3")
+    expect(stats.className).toContain("xl:grid-cols-5")
+    expect(stats.className).not.toContain("min-w-max")
+  })
+
   it("uses the fallback for missing or unavailable values", () => {
     const view = render(
       <MarketStatsHeader volume24h={NaN} markPrice={Infinity} />
