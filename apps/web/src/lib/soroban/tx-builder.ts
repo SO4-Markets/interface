@@ -1,5 +1,6 @@
 import { sorobanRpc } from "./client"
 import type { Transaction } from "@stellar/stellar-sdk/minimal"
+import { assertOnlineForTransaction } from "@/shared/lib/network-safety"
 
 export interface SigningWallet {
   signTransaction: (xdr: string, options?: { networkPassphrase: string }) => Promise<{
@@ -25,6 +26,7 @@ export async function prepareAndSign(
   wallet: SigningWallet,
   networkPassphrase: string,
 ): Promise<string> {
+  assertOnlineForTransaction()
   try {
     const preparedTx = await sorobanRpc.prepareTransaction(tx)
     const preparedXdr = preparedTx.toXDR()
