@@ -1,4 +1,4 @@
-import { formatUsd } from "@/shared/lib/format"
+import { formatPct, formatUsd } from "@/shared/lib/format"
 
 type Props = {
   marketName?: string | null
@@ -19,7 +19,7 @@ export function MarketStatsHeader({
   const stats = [
     ["24h volume · venue", formatUsd(volume24h, { compact: true }), "Executed venue volume; unavailable until sourced"],
     ["Open interest · verified", formatUsd(openInterest, { compact: true }), "Aggregated perpetuals open interest"],
-    ["Funding · verified", fundingRate == null ? "—" : `${fundingRate.toFixed(4)}%`, "Perpetual funding rate per hour"],
+    ["Funding · verified", formatPct(fundingRate, { decimals: 4, sign: false }), "Perpetual funding rate per hour"],
     ["Mark price · reference", formatUsd(markPrice), "Reference price used for risk and liquidation"],
     ["Oracle price · reference", formatUsd(indexPrice), "Oracle/reference price; not an execution quote"],
   ]

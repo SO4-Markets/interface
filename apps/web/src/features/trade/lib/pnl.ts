@@ -1,4 +1,4 @@
-import { formatUsd } from "@/shared/lib/format"
+import { formatPct, formatUsd } from "@/shared/lib/format"
 
 const FALLBACK = "—"
 
@@ -29,7 +29,5 @@ export function formatPnl(pnlUsd: number | undefined | null): string {
  * @example formatPnlPercent(NaN)        // "—"
  */
 export function formatPnlPercent(pct: number | undefined | null): string {
-  if (isBad(pct)) return FALLBACK
-  const sign = pct! >= 0 ? "+" : ""
-  return `${sign}${pct!.toFixed(2)}%`
+  return formatPct(pct, { decimals: 2, sign: true })
 }

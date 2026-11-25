@@ -1,3 +1,5 @@
+import { formatPct } from "@/shared/lib/format"
+
 type PoolCompositionBarProps = {
   longPct: number
   shortPct: number
@@ -22,10 +24,10 @@ export function PoolCompositionBar({
       </div>
       <div className="mt-2 flex items-center justify-between gap-3 text-11 text-muted-foreground">
         <span className="truncate">
-          {longSymbol} {safeLong.toFixed(0)}%
+          {longSymbol} {formatPct(safeLong, { decimals: 0, sign: false })}
         </span>
         <span className="truncate">
-          {shortSymbol} {safeShort.toFixed(0)}%
+          {shortSymbol} {formatPct(safeShort, { decimals: 0, sign: false })}
         </span>
       </div>
     </div>

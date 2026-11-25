@@ -5,7 +5,7 @@ import { useOrderBook } from "../../hooks/useOrderBook"
 import { useRecentTrades } from "../../hooks/useRecentTrades"
 import { SourceHealthBadge } from "./SourceHealthBadge"
 import type { OrderBookLevel } from "../../hooks/useOrderBook"
-import { formatToken, formatUsd } from "@/shared/lib/format"
+import { formatPct, formatToken, formatUsd } from "@/shared/lib/format"
 
 type Props = {
   symbol: string | undefined
@@ -23,7 +23,7 @@ type RowProps = {
 
 function DepthRow({ level, side, compact, onHover }: RowProps) {
   const isBid = side === "bid"
-  const depthPct = `${(level.depth * 100).toFixed(1)}%`
+  const depthPct = formatPct(level.depth * 100, { decimals: 1, sign: false })
 
   // OB-011 / issue 873: 300ms price-tick flash on level size/price update
   const [flashDirection, setFlashDirection] = useState<"up" | "down" | null>(null)
@@ -239,7 +239,7 @@ function SpreadRow({
         ) : (
           "—"
         )}
-        {spreadPct !== null && <span className="ml-1">({spreadPct.toFixed(3)}%)</span>}
+        {spreadPct !== null && <span className="ml-1">({formatPct(spreadPct, { decimals: 3, sign: false })})</span>}
       </span>
       {referencePrice !== null && (
         <span
