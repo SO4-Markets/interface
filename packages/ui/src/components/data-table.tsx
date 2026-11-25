@@ -149,7 +149,7 @@ function DataTable<T>({
 
   if (isLoading) {
     return (
-      <Table containerClassName={className}>
+      <Table containerClassName={className} aria-label="Loading data" aria-busy="true">
         <TableBody>
           {[0, 1, 2].map((i) => (
             <TableRow key={i} interactive={false}>

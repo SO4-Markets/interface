@@ -220,6 +220,35 @@ afterEach(() => {
 })
 
 describe("TradePanel input validation (#226)", () => {
+  it("associates amount validation text with the amount control", async () => {
+    const user = userEvent.setup()
+    render(<TradePanelHarness />)
+
+    await user.type(amountInput(), "0")
+
+    const control = amountInput()
+    expect(control).toHaveAttribute("aria-invalid", "true")
+    expect(control).toHaveAccessibleDescription(/Amount must be greater than zero/)
+  })
+
+  it("explains and blocks an empty limit price until corrected", async () => {
+    const user = userEvent.setup()
+    render(<TradePanelHarness />)
+
+    await user.type(amountInput(), "100")
+    await user.click(screen.getByRole("button", { name: "Limit" }))
+
+    const priceInput = screen.getByRole("textbox", { name: "Limit price" })
+    expect(priceInput).toHaveAttribute("aria-invalid", "true")
+    expect(priceInput).toHaveAccessibleDescription("Enter a price")
+    expect(submitDisabled()).toBe(true)
+
+    await user.type(priceInput, "100")
+
+    expect(priceInput).not.toHaveAttribute("aria-invalid", "true")
+    expect(submitDisabled()).toBe(false)
+  })
+
   it("disables submit while no amount is entered", () => {
     render(<TradePanelHarness />)
     expect(submitDisabled()).toBe(true)

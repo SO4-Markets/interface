@@ -1,11 +1,11 @@
 import { CandlestickSeries, CrosshairMode, LineStyle, createChart } from "lightweight-charts"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Skeleton } from "@workspace/ui/components/skeleton"
+import { Button } from "@workspace/ui/components/button"
 import { RollingNumber } from "@workspace/ui/components/rolling-number"
 import { VisuallyHidden } from "@workspace/ui/components/visually-hidden"
 import { LiveRegion, useAnnouncer } from "@workspace/ui/components/live-region"
 import { cn } from "@workspace/ui/lib/utils"
-import { Button } from "@workspace/ui/components/button"
 import { Icon } from "@workspace/ui/components/icon"
 import { FitToScreenIcon, ZoomInAreaIcon, ZoomOutAreaIcon } from "@hugeicons/core-free-icons"
 import {
@@ -526,13 +526,14 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             <p className="text-xs text-muted-foreground/60">
               {venueName} data source is unavailable. Please try again.
             </p>
-            <button
+            <Button
               onClick={() => void refetch()}
-              className="touch-target mt-2 px-3 py-1 text-xs font-medium rounded border border-border hover:border-foreground transition-colors"
+              variant="outline"
+              className="mt-2"
               aria-label={`Retry loading chart for ${label}`}
             >
               Retry
-            </button>
+            </Button>
           </div>
         )}
 

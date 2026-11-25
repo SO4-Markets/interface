@@ -11,6 +11,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Numeric } from "@workspace/ui/components/numeric"
 import { toast } from "@workspace/ui/components/toast"
+import { Field } from "@workspace/ui/components/field"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { useTradeFees } from "../../hooks/useTradeFees"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
@@ -49,7 +50,6 @@ export function TradePanel({ trade }: TradePanelProps) {
   const { getMidPrice, getPrice, isStale } = useTokenPrices()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmedHash, setConfirmedHash] = useState<string | null>(null)
-  const [priceValidationError, setPriceValidationError] = useState<string | null>(null)
   const [amountValidationError, setAmountValidationError] = useState<string | null>(null)
   const [previousMode, setPreviousMode] = useState<TradeMode>(trade.tradeMode)
   const account = useWalletStore((state) => state.address)
@@ -118,8 +118,10 @@ export function TradePanel({ trade }: TradePanelProps) {
   const priceStale = isStale(toTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
   const activePrice = getPrice(toTokenAddress)
+  const priceRequired = tradeMode === "Limit" || tradeMode === "Trigger"
+  const priceValidationError = priceRequired ? validatePrice(trade.triggerPrice).error : null
   const canTrade = Boolean(account) && sizeUsd > 0 && !priceStale && !amountValidationError &&
-    (tradeFlags.isSwap || marketRisk.state === "available")
+    !priceValidationError && (tradeFlags.isSwap || marketRisk.state === "available")
 
   // Detect mode changes and notify user about discarded fields
   useEffect(() => {
@@ -206,34 +208,24 @@ export function TradePanel({ trade }: TradePanelProps) {
       {/* ── Trigger price input (Limit / Stop-Loss only) ─────────── */}
       {(tradeMode === "Limit" || tradeMode === "Trigger") && (
         <div className="space-y-1 animate-in fade-in duration-base motion-reduce:animate-none">
-          <label className="text-xs text-muted-foreground">
-            {tradeMode === "Trigger" ? "Trigger price" : "Limit price"}
-          </label>
-          <div className="relative">
+          <Field
+            id="order-price"
+            label={tradeMode === "Trigger" ? "Trigger price" : "Limit price"}
+            required
+            invalid={Boolean(priceValidationError ?? (trade.triggerPrice === "" ? "Enter a price" : null))}
+            error={priceValidationError ?? (trade.triggerPrice === "" ? "Enter a price" : null)}
+            trailing={<span className="text-xs text-muted-foreground">USD</span>}
+          >
             <Input
+              id="order-price"
               type="text"
               inputMode="decimal"
               placeholder="0.00"
               value={trade.triggerPrice}
               className="pe-12 font-mono text-sm"
-              onChange={(e) => {
-                const value = e.target.value
-                setTriggerPrice(value)
-                if (value) {
-                  const validation = validatePrice(value)
-                  setPriceValidationError(validation.error)
-                } else {
-                  setPriceValidationError(null)
-                }
-              }}
+              onChange={(e) => setTriggerPrice(e.target.value)}
             />
-            <span className="absolute top-1/2 end-3 -translate-y-1/2 text-xs text-muted-foreground">
-              USD
-            </span>
-          </div>
-          {priceValidationError && (
-            <p className="text-xs text-red-500">{priceValidationError}</p>
-          )}
+          </Field>
         </div>
       )}
 
@@ -332,7 +324,7 @@ export function TradePanel({ trade }: TradePanelProps) {
               ? "bg-short text-primary-foreground hover:bg-short/90"
               : ""
         }`}
-        disabled={!canTrade || priceValidationError !== null}
+        disabled={!canTrade}
         onClick={() => setConfirmOpen(true)}
       >
         {tradeType} {!tradeFlags.isSwap && toTokenLabel}
@@ -391,6 +383,8 @@ function TradeInputs({
   const walletBalance = balances?.[activeInputTokenAddress]
   const fromTokenLabel = formatTokenLabel(activeInputTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
+  const visibleAmountError =
+    amountValidationError ?? (fromAmount === "" ? "Enter an amount" : null)
 
   const handleAmountChange = (value: string) => {
     setFromAmount(value)
@@ -418,33 +412,36 @@ function TradeInputs({
     <div className="mt-3 min-w-0 space-y-2">
       {/* Pay */}
       <div className="space-y-1">
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <label className="text-xs text-muted-foreground">
-            {tradeFlags.isSwap ? "Pay" : "Collateral"}
-          </label>
-          {walletBalance !== undefined && (
-            <span className="min-w-0 text-right text-xs text-muted-foreground">
+        <Field
+          id="order-amount"
+          label={tradeFlags.isSwap ? "Pay" : "Collateral"}
+          required
+          invalid={Boolean(visibleAmountError)}
+          error={visibleAmountError}
+          description={
+            walletBalance !== undefined
+              ? `Available balance: ${walletBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${fromTokenLabel}`
+              : undefined
+          }
+        >
+          <NumberInput
+            id="order-amount"
+            value={fromAmount}
+            onValueChange={handleAmountChange}
+            placeholder="0.00"
+            className="font-mono text-sm"
+            onMax={walletBalance !== undefined ? () => {
+              const maxStr = walletBalance.toString()
+              handleAmountChange(maxStr)
+            } : undefined}
+            usdValue={fromUsd > 0 ? fromUsd : undefined}
+          />
+        </Field>
+        {walletBalance !== undefined && (
+          <span className="sr-only">
               Balance:{" "}
-              <span className="font-mono font-medium text-foreground [overflow-wrap:anywhere]">
-                {walletBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
-                {fromTokenLabel}
-              </span>
-            </span>
-          )}
-        </div>
-        <NumberInput
-          value={fromAmount}
-          onValueChange={handleAmountChange}
-          placeholder="0.00"
-          className="font-mono text-sm"
-          onMax={walletBalance !== undefined ? () => {
-            const maxStr = walletBalance.toString()
-            handleAmountChange(maxStr)
-          } : undefined}
-          usdValue={fromUsd > 0 ? fromUsd : undefined}
-        />
-        {amountValidationError && (
-          <p className="text-xs text-red-500 [overflow-wrap:anywhere]">{amountValidationError}</p>
+            {walletBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} {fromTokenLabel}
+          </span>
         )}
       </div>
 

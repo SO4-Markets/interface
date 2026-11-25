@@ -31,3 +31,15 @@ For every affected route, run an axe scan and manually verify with keyboard-only
 navigation and VoiceOver or NVDA. Test at 360px and desktop widths, with browser
 zoom at 200%, and with reduced motion enabled. Record any exception as a
 follow-up issue rather than weakening the target or focus behavior.
+
+## Trading data states
+
+- Chart, order-book, recent-trades, and positions views distinguish loading,
+  empty, stale, and unavailable states. Loading uses geometry-preserving
+  skeletons or a stable status region and never prints fabricated values.
+- Empty states describe the missing result (for example, no open orders or no
+  depth data). Feed, network, and wallet failures use explicit copy and a
+  retry/reconnect action where one is available.
+- State changes use `role="status"` for progress and `role="alert"` for failures
+  that require attention. Wallet connection and network health remain separate
+  from transaction confirmation and ledger execution status.

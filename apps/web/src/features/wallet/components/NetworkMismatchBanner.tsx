@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 import { useLocation } from "@tanstack/react-router"
+import { Button } from "@workspace/ui/components/button"
+
 import { useNetwork } from "../hooks/useNetwork"
 import { useWalletStore } from "../store/wallet-store"
 import { NETWORK } from "@/app/config/network"
@@ -43,13 +45,15 @@ export function NetworkMismatchBanner() {
         Your wallet is connected to {walletLabel} but this app is running on{" "}
         {appLabel}. Please switch networks in your wallet.
       </span>
-      <button
+      <Button
         onClick={dismiss}
-        className="ms-4 shrink-0 font-medium underline-offset-2 hover:underline"
+        variant="ghost"
+        size="xs"
+        className="ms-4 shrink-0"
         aria-label="Dismiss network mismatch warning"
       >
         Dismiss
-      </button>
+      </Button>
     </div>
   )
 }

@@ -101,6 +101,9 @@ describe("ConnectButton - Disconnected State", () => {
       render(<ConnectButton />)
 
       expect(screen.getByRole("button", { name: "Reconnect wallet" })).toHaveTextContent("Reconnect Wallet")
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Wallet connection failed. Reconnect to try again.",
+      )
     })
   })
 

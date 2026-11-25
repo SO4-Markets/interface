@@ -140,6 +140,16 @@ export function ConnectButton({ className, ...props }: ConnectButtonProps) {
         <span className="hidden sm:inline">{hasConnectionError ? "Reconnect Wallet" : "Connect Wallet"}</span>
         <span className="sm:hidden">{hasConnectionError ? "Reconnect" : "Connect"}</span>
       </Button>
+      {hasConnectionError && (
+        <p role="status" aria-live="polite" className="mt-1 text-11 text-destructive">
+          Wallet connection failed. Reconnect to try again.
+        </p>
+      )}
+      {address == null && status === "disconnected" && (
+        <span className="sr-only" role="status">
+          Wallet disconnected. Connect a wallet to continue.
+        </span>
+      )}
 
       <WalletModal open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen} />
     </>

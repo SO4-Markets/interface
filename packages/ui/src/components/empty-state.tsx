@@ -107,6 +107,7 @@ function EmptyState({
     <div
       data-slot="empty-state"
       data-variant={variant}
+      role="status"
       className={cn(emptyStateVariants({ variant }), className)}
       {...props}
     >

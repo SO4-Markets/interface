@@ -62,6 +62,10 @@ describe("DataTable", () => {
     )
     const skeletons = container.querySelectorAll('[data-slot="skeleton"]')
     expect(skeletons.length).toBe(columns.length * 3)
+    expect(screen.getByRole("table", { name: "Loading data" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    )
   })
 
   it("renders empty state with message", () => {
@@ -74,6 +78,7 @@ describe("DataTable", () => {
       />
     )
     expect(screen.getByText("No items found")).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent("No items found")
   })
 
   it("renders empty state with action", () => {
