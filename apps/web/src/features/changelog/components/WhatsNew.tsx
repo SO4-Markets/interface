@@ -104,7 +104,7 @@ export function WhatsNew({ className }: { className?: string }) {
           </DialogHeader>
 
           {newestRelease && (
-            <div className="max-h-96 space-y-4 overflow-y-auto pe-1">
+            <div className="max-h-96 space-y-4 overflow-y-auto overscroll-contain pe-1">
               {groupedEntries.map((group) => (
                 <section
                   key={group.type}

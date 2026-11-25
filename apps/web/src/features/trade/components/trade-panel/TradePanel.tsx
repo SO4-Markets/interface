@@ -74,9 +74,9 @@ export function TradePanel({ trade }: TradePanelProps) {
   } = trade
 
   const marketRisk = useMarketRiskParams(marketAddress)
-  const { data: positions = [] } = usePositions()
-  const existingExposure = positions.find(
-    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong,
+  const { data: positions } = usePositions()
+  const existingExposure = positions?.find(
+    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong && position.collateralToken === collateralAddress,
   )
   const maxLeverage = marketRisk.params?.maxLeverage ?? 1
   const boundedLeverage = marketRisk.params
@@ -207,7 +207,7 @@ export function TradePanel({ trade }: TradePanelProps) {
 
       {/* ── Trigger price input (Limit / Stop-Loss only) ─────────── */}
       {(tradeMode === "Limit" || tradeMode === "Trigger") && (
-        <div className="space-y-1 animate-in fade-in duration-base">
+        <div className="space-y-1 animate-in fade-in duration-base motion-reduce:animate-none">
           <label className="text-xs text-muted-foreground">
             {tradeMode === "Trigger" ? "Trigger price" : "Limit price"}
           </label>
@@ -242,7 +242,7 @@ export function TradePanel({ trade }: TradePanelProps) {
       {/* ── Leverage slider (positions only) ─────────────────────── */}
       {tradeFlags.isPosition && (
         marketRisk.state === "available" ? (
-          <div className="animate-in fade-in duration-base">
+          <div className="animate-in fade-in duration-base motion-reduce:animate-none">
             <LeverageSlider
               value={boundedLeverage}
               max={maxLeverage}
@@ -285,7 +285,7 @@ export function TradePanel({ trade }: TradePanelProps) {
           <span className="font-medium">Advanced options</span>
           <button
             type="button"
-            className="text-xs font-medium text-primary hover:text-primary/80"
+            className="touch-target inline-flex items-center justify-center px-2 text-xs font-medium text-primary hover:text-primary/80"
             onClick={() => trade.setAdvanced({ advancedDisplay: !advanced.advancedDisplay })}
           >
             {advanced.advancedDisplay ? "Hide" : "Show"}
@@ -361,6 +361,7 @@ export function TradePanel({ trade }: TradePanelProps) {
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirmed={setConfirmedHash}
+        existingPosition={positions ? existingExposure ?? null : undefined}
         tradeState={trade}
         sizeUsd={sizeUsd}
         entryPrice={entryPrice}
@@ -452,13 +453,29 @@ function TradeInputs({
       {/* Size quick-fill buttons */}
       {walletBalance !== undefined && walletBalance > 0 && (
         <SizePresets onFill={handleFill} />
+        <div className="flex flex-wrap gap-2 pt-1 sm:gap-1">
+          {[0.25, 0.5, 0.75, 1].map((pct) => (
+            <Button
+              key={pct}
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => handleFill(pct)}
+              className="touch-target shrink-0 text-xs"
+            >
+              {pct === 1 ? "Max" : `${Math.round(pct * 100)}%`}
+            </Button>
+          ))}
+        </div>
       )}
 
       {/* Swap arrow */}
       {tradeFlags.isSwap && (
         <button
+          type="button"
+          aria-label="Switch pay and receive tokens"
           onClick={switchTokens}
-          className="mx-auto flex size-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+          className="touch-target mx-auto flex size-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
         >
           ↕
         </button>

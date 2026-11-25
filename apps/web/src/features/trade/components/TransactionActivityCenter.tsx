@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { Icon } from "@workspace/ui/components/icon"
-import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { usePendingActivity } from "../hooks/usePendingActivity"
 import { getStellarExpertLink } from "../lib/transaction-explorer"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 export function TransactionActivityCenter() {
   const account = useWalletStore((state) => state.address) ?? undefined
@@ -45,7 +45,7 @@ export function TransactionActivityCenter() {
               </button>
             )}
           </div>
-          <div className="max-h-96 overflow-y-auto p-2" aria-live="polite">
+          <div className="max-h-96 overflow-y-auto overscroll-contain p-2" aria-live="polite">
             {activities.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-text-tertiary">No transactions yet</p>
             ) : (

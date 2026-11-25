@@ -1,26 +1,21 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react"
+import { useId, useMemo, useRef, useState } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover"
+import { activeQueryNetwork } from "../../lib/query-keys"
 import { useTokenPrices } from "../../hooks/useTokenPrices"
 import { usePriceDelta24h } from "../../hooks/usePriceDelta24h"
 import { useMarkets } from "../../hooks/useMarkets"
+import { readMarketLists, saveMarketLists } from "./market-lists"
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
 } from "react"
 import type { Market } from "../../hooks/useMarkets"
+import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { formatUsd } from "@/shared/lib/format"
 
 type Props = {
   symbol: string | undefined
   onSelect: (indexTokenAddress: string) => void
-}
-
-const RECENT_MARKETS_KEY = "so4-recent-markets-v1"
-function readRecentMarkets(): Array<string> {
-  try {
-    const value = JSON.parse(localStorage.getItem(RECENT_MARKETS_KEY) ?? "[]")
-    return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string") : []
-  } catch { return [] }
 }
 
 function MarketRow({
@@ -90,7 +85,14 @@ export function MarketSelector({ symbol, onSelect }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [activeIndex, setActiveIndex] = useState(0)
-  const [recentMarkets, setRecentMarkets] = useState<Array<string>>(() => readRecentMarkets())
+  const network = activeQueryNetwork()
+  const [lists, setLists] = useState(() => readMarketLists(network))
+  const [section, setSection] = useState<"All markets" | "Watchlist" | "Recent markets">("All markets")
+  const connected = useWalletStore((state) => Boolean(state.address))
+  function updateLists(next: typeof lists) {
+    setLists(next)
+    saveMarketLists(network, next)
+  }
   const inputRef = useRef<HTMLInputElement>(null)
   const comboboxId = useId()
   const listboxId = `${comboboxId}-listbox`
@@ -101,39 +103,26 @@ export function MarketSelector({ symbol, onSelect }: Props) {
     setSearch("")
   }
 
-  const { markets } = useMarkets()
+  const { markets, isLoading, isError } = useMarkets()
 
   const activeMarket = markets.find((m) => m.indexTokenAddress === symbol)
 
-  const filtered = markets.filter((m) =>
-    search.trim() === ""
-      ? true
-      : m.name.toLowerCase().includes(search.toLowerCase()) ||
-        m.indexTokenAddress.toLowerCase().includes(search.toLowerCase())
-  )
-  const recent = useMemo(() => recentMarkets.map((id) => markets.find((m) => m.indexTokenAddress === id)).filter((m): m is Market => Boolean(m)), [markets, recentMarkets])
   const orderedMarkets = useMemo(() => {
-    if (search.trim() !== "") return filtered
-    const recentIds = new Set(recent.map((market) => market.indexTokenAddress))
-    return [...recent, ...filtered.filter((market) => !recentIds.has(market.indexTokenAddress))]
-  }, [filtered, recent, search])
-
-  useEffect(() => {
-    if (!open) return
-
-    const currentIndex = orderedMarkets.findIndex(
-      (m) => m.indexTokenAddress === symbol
-    )
-    setActiveIndex(Math.max(0, currentIndex))
-  }, [open, orderedMarkets, symbol])
+    const ids = section === "Watchlist" ? lists.watchlist : lists.recent
+    const source = section === "All markets" ? markets :
+      ids.flatMap((id) => markets.filter((market) => market.indexTokenAddress === id))
+    const term = search.trim().toLowerCase()
+    return source.filter((market) => !market.isDisabled &&
+      (market.name.toLowerCase().includes(term) || market.indexTokenAddress.toLowerCase().includes(term)))
+  }, [lists, markets, search, section])
+  const highlighted = orderedMarkets.at(activeIndex)
+  const watched = highlighted && lists.watchlist.includes(highlighted.indexTokenAddress)
 
   const selectMarket = (market: Market) => {
-    const nextRecent = [market.indexTokenAddress, ...recentMarkets.filter((id) => id !== market.indexTokenAddress)].slice(0, 5)
-    setRecentMarkets(nextRecent)
-    try { localStorage.setItem(RECENT_MARKETS_KEY, JSON.stringify(nextRecent)) } catch { /* optional preference */ }
+    updateLists({ ...lists, recent: [market.indexTokenAddress, ...lists.recent.filter((id) => id !== market.indexTokenAddress)].slice(0, 5) })
     const prefersReduced =
       typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (
       typeof document !== "undefined" &&
       "startViewTransition" in document &&
@@ -191,6 +180,7 @@ export function MarketSelector({ symbol, onSelect }: Props) {
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
+    if (next) setActiveIndex(Math.max(0, orderedMarkets.findIndex((market) => market.indexTokenAddress === symbol)))
     if (!next) setSearch("")
   }
 
@@ -260,22 +250,32 @@ export function MarketSelector({ symbol, onSelect }: Props) {
               }
               aria-autocomplete="list"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setActiveIndex(0) }}
               onKeyDown={handleInputKeyDown}
               placeholder="Search markets..."
               className="w-full rounded-sm bg-background px-2.5 py-1.5 text-xs text-foreground ring-1 ring-border outline-none placeholder:text-muted-foreground focus:ring-primary"
             />
           </div>
+          <div role="group" aria-label="Market lists" className="flex flex-wrap gap-2 px-2">
+            {(["All markets", "Watchlist", "Recent markets"] as const).map((name) =>
+              <button type="button" key={name} aria-pressed={section === name} onClick={() => {
+                setSection(name)
+                setActiveIndex(0)
+                inputRef.current?.focus()
+              }}>{name}</button>)}
+          </div>
+          {!connected && <p className="px-2 text-xs text-muted-foreground">Wallet disconnected. Lists are saved on this device.</p>}
+          {isLoading && <p role="status">Loading markets…</p>}
+          {isError && <p role="status">Market updates unavailable.</p>}
           <ul
-            className="max-h-72 overflow-y-auto px-1 pb-1"
+            className="max-h-72 overflow-y-auto overscroll-contain px-1 pb-1"
             role="listbox"
             id={listboxId}
             aria-labelledby={`${comboboxId}-label`}
           >
-            {recent.length > 0 && search.trim() === "" && <li className="px-3 pb-1 pt-2 text-10 font-medium uppercase tracking-wider text-muted-foreground">Recent markets</li>}
             {orderedMarkets.length === 0 ? (
               <li className="px-3 py-4 text-center text-xs text-muted-foreground">
-                No markets found
+                {search || section === "All markets" ? "No markets found" : section === "Watchlist" ? "Your watchlist is empty" : "No recent markets"}
               </li>
             ) : (
               orderedMarkets.map((market, index) => (
@@ -289,6 +289,11 @@ export function MarketSelector({ symbol, onSelect }: Props) {
               ))
             )}
           </ul>
+          {highlighted && <button type="button" className="px-3 py-2 text-xs" onClick={() => {
+            const id = highlighted.indexTokenAddress
+            updateLists({ ...lists, watchlist: watched ? lists.watchlist.filter((value) => value !== id) : [...lists.watchlist, id] })
+            setActiveIndex(0)
+          }}>{watched ? "Remove " + highlighted.name + " from watchlist" : "Add " + highlighted.name + " to watchlist"}</button>}
       </PopoverContent>
      </Popover>
       {symbol && (

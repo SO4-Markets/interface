@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import { TVChartContainer } from "./TVChartContainer"
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -754,5 +754,76 @@ describe("TVChartContainer", () => {
     // Original candles array should not grow
     mockCandles = SAMPLE_CANDLES
     expect(mockCandles).toHaveLength(3)
+  })
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // Touch and view controls (#1056)
+  // ═════════════════════════════════════════════════════════════════════════
+
+  describe("touch and view controls", () => {
+    it("lets vertical swipes scroll the page while horizontal drag and pinch drive the chart", () => {
+      mockCandles = SAMPLE_CANDLES
+      render(<TVChartContainer {...defaultProps} />)
+
+      const options = mockCreateChart.mock.calls[0][1]
+      expect(options.handleScroll).toMatchObject({ horzTouchDrag: true, vertTouchDrag: false })
+      expect(options.handleScale).toMatchObject({ pinch: true })
+      // `touch-action: none` swallowed every swipe that started on the chart.
+      const chart = screen.getByRole("region", { name: /price chart for btc/i })
+      expect(chart.style.touchAction).toBe("pan-y")
+    })
+
+    it("offers zoom and fit buttons as keyboard equivalents of the gestures", () => {
+      mockCandles = SAMPLE_CANDLES
+      mockTimeScale.getVisibleLogicalRange.mockReturnValue({ from: 20, to: 100 })
+      render(<TVChartContainer {...defaultProps} />)
+
+      const group = screen.getByRole("group", { name: "Chart view" })
+      const zoomIn = within(group).getByRole("button", { name: "Zoom in chart" })
+      const zoomOut = within(group).getByRole("button", { name: "Zoom out chart" })
+      const fit = within(group).getByRole("button", { name: "Fit all candles in view" })
+
+      // Every control meets the shared 44px touch-target rule on coarse pointers.
+      for (const button of [zoomIn, zoomOut, fit]) expect(button).toHaveClass("touch-target")
+
+      mockTimeScale.setVisibleLogicalRange.mockClear()
+      fireEvent.click(zoomIn)
+      expect(mockTimeScale.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 60, to: 100 })
+
+      fireEvent.click(zoomOut)
+      expect(mockTimeScale.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: -60, to: 100 })
+
+      mockTimeScale.fitContent.mockClear()
+      fireEvent.click(fit)
+      expect(mockTimeScale.fitContent).toHaveBeenCalledTimes(1)
+    })
+
+    it("never zooms in past a readable number of candles", () => {
+      mockCandles = SAMPLE_CANDLES
+      mockTimeScale.getVisibleLogicalRange.mockReturnValue({ from: 90, to: 100 })
+      render(<TVChartContainer {...defaultProps} />)
+
+      fireEvent.click(screen.getByRole("button", { name: "Zoom in chart" }))
+      expect(mockTimeScale.setVisibleLogicalRange).toHaveBeenLastCalledWith({ from: 90, to: 100 })
+    })
+
+    it("disables view controls until there are candles to show", () => {
+      mockCandles = []
+      render(<TVChartContainer {...defaultProps} />)
+
+      for (const name of ["Zoom in chart", "Zoom out chart", "Fit all candles in view"]) {
+        expect(screen.getByRole("button", { name })).toBeDisabled()
+      }
+    })
+
+    it("lets the source, legend, and controls wrap instead of clipping", () => {
+      mockCandles = SAMPLE_CANDLES
+      render(<TVChartContainer {...defaultProps} />)
+
+      expect(screen.getByTestId("chart-meta")).toHaveClass("flex-wrap")
+      const legend = screen.getByTestId("ohlc-legend")
+      expect(legend).toHaveClass("flex-wrap")
+      for (const item of Array.from(legend.children)) expect(item).toHaveClass("whitespace-nowrap")
+    })
   })
 })

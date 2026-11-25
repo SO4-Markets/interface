@@ -59,7 +59,7 @@ function DialogContent({
           // would apply the -50% shift twice and push the dialog off-screen.
           "fixed top-1/2 start-1/2 z-50 w-full max-w-[calc(100%-2rem)] origin-(--transform-origin)",
           // Mobile: cap height so content scrolls inside rather than overflowing the viewport
-          "max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto",
+          "max-h-[calc(100dvh-2rem)] overflow-x-hidden overflow-y-auto overscroll-contain",
           // Layout, surface, typography
           "flex flex-col gap-4 rounded-xl bg-popover p-4 text-xs/relaxed text-popover-foreground",
           "ring-1 ring-foreground/10 outline-none",

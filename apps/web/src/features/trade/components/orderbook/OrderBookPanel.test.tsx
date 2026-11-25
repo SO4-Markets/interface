@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { axe } from "vitest-axe"
 import { useChartPreferencesStore } from "../../store/chart-preferences-store"
 import { OrderBookPanel } from "./OrderBookPanel"
 
@@ -325,6 +326,21 @@ describe("OrderBookPanel", () => {
       expect(badge).toBeInTheDocument()
       expect(badge.closest("[title]")?.getAttribute("title")).toMatch(/connection may be dead/)
       expect(screen.getByText("(30s ago)")).toBeInTheDocument()
+    })
+  })
+
+  describe("mobile touch targets (#1082)", () => {
+    it("applies shared touch-target sizing and spacing to order-book tab pills without a11y violations", async () => {
+      const { container } = render(<OrderBookPanel symbol="BTC" />)
+      const tablist = screen.getByRole("tablist", { name: "Order book view" })
+      expect(tablist.className).toContain("gap-2")
+      expect(tablist.className).toContain("sm:gap-1")
+
+      for (const tab of within(tablist).getAllByRole("tab")) {
+        expect(tab).toHaveClass("touch-target")
+      }
+
+      expect(await axe(container)).toHaveNoViolations()
     })
   })
 })

@@ -37,7 +37,7 @@ function RollingDigit({ digit }: { digit: number }) {
   return (
     <span aria-hidden="true" className="relative inline-block h-[1lh] w-[1ch] overflow-hidden">
       <span
-        className="flex flex-col transition-transform duration-base ease-out"
+        className="flex flex-col transition-transform duration-base ease-out motion-reduce:transition-none"
         style={{ transform: `translateY(-${digit * 10}%)` }}
       >
         {DIGITS.map((d) => (

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { cleanup, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { axe } from "vitest-axe"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
 function createWrapper() {
@@ -74,6 +75,19 @@ let OrdersList: typeof import("./OrdersList").OrdersList
  */
 describe("account workspace responsive (OB-090)", () => {
   beforeEach(async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }),
+    )
     OrdersList = (await import("./OrdersList")).OrdersList
     mockData = []
     mockIsLoading = false
@@ -85,6 +99,7 @@ describe("account workspace responsive (OB-090)", () => {
   afterEach(() => {
     cleanup()
     document.body.innerHTML = ""
+    vi.unstubAllGlobals()
     Object.defineProperty(window, "innerWidth", { value: 1024, writable: true, configurable: true })
   })
 
@@ -150,5 +165,22 @@ describe("account workspace responsive (OB-090)", () => {
     expect(edit).toBeDisabled()
     expect(edit.getAttribute("title")).toMatch(/market orders/i)
     expect(screen.queryByText(/amend order/i)).toBeNull()
+  })
+
+  it("enforces touch-target classes on mobile card toggles and actions without a11y violations (#1082)", async () => {
+    const user = userEvent.setup()
+    mockData = [createMockOrder()]
+    render(<OrdersList />, { wrapper: createWrapper() })
+
+    const detailsBtn = screen.getByRole("button", { name: "Details" })
+    expect(detailsBtn).toHaveClass("touch-target")
+    await user.click(detailsBtn)
+
+    const card = detailsBtn.closest("article") as HTMLElement
+    for (const btn of within(card).getAllByRole("button")) {
+      expect(btn).toHaveClass("touch-target")
+    }
+
+    expect(await axe(card)).toHaveNoViolations()
   })
 })

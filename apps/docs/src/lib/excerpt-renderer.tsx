@@ -1,5 +1,14 @@
 import React from "react"
 
+function decodeExcerptEntities(text: string): string {
+  return text
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&")
+}
+
 /**
  * Safely render a Pagefind excerpt by splitting on <mark> tags and building React elements.
  * This prevents HTML injection while preserving the search result highlighting.
@@ -29,14 +38,6 @@ export function renderExcerpt(excerpt: string): React.ReactNode {
         elements.push(text)
       }
 
-      function decodeExcerptEntities(text: string): string {
-        return text
-          .replace(/&lt;/gi, "<")
-          .replace(/&gt;/gi, ">")
-          .replace(/&quot;/gi, '"')
-          .replace(/&#39;|&apos;/gi, "'")
-          .replace(/&amp;/gi, "&")
-      }
     }
   }
 
