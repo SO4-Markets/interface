@@ -19,10 +19,12 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { Numeric } from "@workspace/ui/components/numeric"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
+import { EmptyState, LoadingCardsState } from "@workspace/ui/components/states"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAccountFeeClaims } from "../../hooks/useAccountFeeClaims"
 import { claimFundingFees } from "../../lib/stellar"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
+import { AccountOrderCard } from "./AccountRowDetails"
 import type { FeeClaim } from "@/lib/graphql/types"
 import type { Column } from "@workspace/ui/components/data-table"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
@@ -238,9 +240,10 @@ export function FundingActivityList({ feeType = null }: Props) {
 
   if (feeHistory.isDisabled) {
     return (
-      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-        Fee activity is unavailable while the indexer is disabled.
-      </div>
+      <EmptyState
+        title="Fee activity unavailable"
+        description="Fee activity is unavailable while the indexer is disabled."
+      />
     )
   }
 
@@ -255,19 +258,98 @@ export function FundingActivityList({ feeType = null }: Props) {
         </p>
       )}
 
-      <DataTable
-        columns={columns}
-        data={feeHistory.data}
-        isLoading={feeHistory.isLoading}
-        emptyMessage={
-          feeHistory.error
-            ? "Unable to load fee activity. Try again shortly."
-            : feeType === "funding"
-              ? "No funding activity"
-              : "No fee activity"
-        }
-        keyExtractor={(row) => row.id}
-      />
+      <div className="hidden md:block">
+        <DataTable
+          columns={columns}
+          data={feeHistory.data}
+          ariaLabel="Fee activity"
+          isLoading={feeHistory.isLoading}
+          error={feeHistory.error ? "Unable to load fee activity." : undefined}
+          onRetry={feeHistory.refetch ? () => feeHistory.refetch() : undefined}
+          emptyMessage={
+            feeHistory.error
+              ? "Unable to load fee activity. Try again shortly."
+              : feeType === "funding"
+                ? "No funding activity"
+                : "No fee activity"
+          }
+          keyExtractor={(row) => row.id}
+        />
+      </div>
+
+      {/* Narrow-screen cards mirror the table with identical labels and actions (OB-090). */}
+      <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Fee activity">
+        {feeHistory.isLoading ? (
+          <LoadingCardsState count={3} label="Loading fee activity…" />
+        ) : feeHistory.data.length === 0 ? (
+          <EmptyState
+            title={
+              feeHistory.error
+                ? "Unable to load fee activity"
+                : feeType === "funding"
+                  ? "No funding activity"
+                  : "No fee activity"
+            }
+            description={feeHistory.error ? "Please check your network and try again." : undefined}
+            actions={
+              feeHistory.error && feeHistory.refetch
+                ? {
+                    primary: (
+                      <Button size="sm" variant="outline" onClick={() => feeHistory.refetch?.()}>
+                        Try again
+                      </Button>
+                    ),
+                  }
+                : undefined
+            }
+          />
+        ) : (
+          feeHistory.data.map((row) => {
+            const token = row.token
+            const amount = parseAmount(row.amount, token?.decimals ?? 7)
+            const isPositive = amount > 0
+            const isClaimable = row.status === "settled" && isPositive && isFundingClaim(row.feeType)
+            const symbol = token?.symbol ?? "XLM"
+
+            return (
+              <div key={row.id} role="listitem">
+                <AccountOrderCard
+                  rowKey={row.id}
+                  marketName={row.marketAddress ? `${row.marketAddress.slice(0, 6)}…${row.marketAddress.slice(-4)}` : "Market"}
+                  sideBadge={{ label: row.feeType, variant: "neutral" }}
+                  statusBadge={{ label: feeStatusLabel(row.status), variant: feeStatusVariant(row.status) }}
+                  fields={[
+                    {
+                      label: "Amount",
+                      value: (
+                        <span className="font-mono tabular-nums">
+                          {amount.toFixed(4)} {symbol}
+                        </span>
+                      ),
+                    },
+                    {
+                      label: "Time",
+                      value: <RelativeTime className="text-muted-foreground" value={new Date(row.timestamp).getTime()} />,
+                    },
+                  ]}
+                  actions={
+                    isClaimable
+                      ? [
+                          {
+                            label: "Claim",
+                            pending: claiming === row.id,
+                            disabled: claiming !== null,
+                            onClick: () => void handleClaim(row),
+                          },
+                        ]
+                      : []
+                  }
+                />
+              </div>
+            )
+          })
+        )}
+      </div>
 
       {feeHistory.hasNextPage && (
         <div className="flex justify-center border-t border-border p-3">

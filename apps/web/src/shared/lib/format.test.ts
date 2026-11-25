@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest"
 import {
   formatAddress,
   formatCompact,
+  formatCurrency,
   formatDate,
   formatDateTime,
+  formatMarketAmount,
+  formatMarketPrice,
+  formatNumber,
   formatPct,
+  formatPercent,
   formatRelativeTime,
   formatSmall,
   formatTime,
@@ -343,5 +348,99 @@ describe("large values with grouping separators", () => {
 
   it("formatUsd groups with de-DE locale", () => {
     expect(formatUsd(1_234_567.89, { locale: "de-DE" })).toBe("1.234.567,89\u00a0$")
+  })
+
+  it("formats trillions with compact formatting", () => {
+    expect(formatCompact(2_500_000_000_000)).toBe("2500.0B")
+  })
+})
+
+// ─── formatMarketPrice & formatMarketAmount ───────────────────────────────────
+
+describe("formatMarketPrice", () => {
+  it("formats market price with default 2 decimals and comma grouping", () => {
+    expect(formatMarketPrice(1234.5)).toBe("1,234.50")
+    expect(formatMarketPrice(67890.1234)).toBe("67,890.12")
+  })
+
+  it("respects custom decimals number shorthand", () => {
+    expect(formatMarketPrice(67890.12345, 4)).toBe("67,890.1235")
+  })
+
+  it("derives decimals from tickSize option", () => {
+    expect(formatMarketPrice(123.4567, { tickSize: 0.001 })).toBe("123.457")
+    expect(formatMarketPrice(123.4567, { tickSize: 0.01 })).toBe("123.46")
+  })
+
+  it("supports custom locale (de-DE)", () => {
+    expect(formatMarketPrice(1234.56, { locale: "de-DE" })).toBe("1.234,56")
+  })
+
+  it("handles zero and negative zero", () => {
+    expect(formatMarketPrice(0)).toBe("0.00")
+    expect(formatMarketPrice(-0)).toBe("0.00")
+  })
+
+  it("handles invalid or missing values", () => {
+    expect(formatMarketPrice(null)).toBe("—")
+    expect(formatMarketPrice(undefined)).toBe("—")
+    expect(formatMarketPrice(Number.NaN)).toBe("—")
+  })
+})
+
+describe("formatMarketAmount", () => {
+  it("formats base amounts with default 4 decimals", () => {
+    expect(formatMarketAmount(12.345678)).toBe("12.3457")
+  })
+
+  it("respects number shorthand for decimals", () => {
+    expect(formatMarketAmount(12.345678, 2)).toBe("12.35")
+  })
+
+  it("supports minDecimals padding", () => {
+    expect(formatMarketAmount(5, { minDecimals: 2 })).toBe("5.00")
+  })
+
+  it("supports custom locale (de-DE)", () => {
+    expect(formatMarketAmount(1234.5, { locale: "de-DE", minDecimals: 2 })).toBe("1.234,50")
+  })
+
+  it("handles zero and fallback", () => {
+    expect(formatMarketAmount(0)).toBe("0")
+    expect(formatMarketAmount(null)).toBe("—")
+  })
+})
+
+// ─── formatNumber, formatCurrency, formatPercent ──────────────────────────────
+
+describe("shared formatters aliases and precision handling", () => {
+  it("formatCurrency aliases formatUsd", () => {
+    expect(formatCurrency(1234.5)).toBe(formatUsd(1234.5))
+    expect(formatCurrency(null)).toBe("—")
+  })
+
+  it("formatPercent aliases formatPct with locale support", () => {
+    expect(formatPercent(5.25)).toBe("+5.25%")
+    expect(formatPercent(5.25, { locale: "de-DE" })).toBe("+5,25%")
+  })
+
+  it("formatNumber formats generic numbers with grouping and decimals", () => {
+    expect(formatNumber(1234567.89)).toBe("1,234,567.89")
+    expect(formatNumber(1234.5, { minDecimals: 2 })).toBe("1,234.50")
+    expect(formatNumber(1234.5678, { decimals: 2 })).toBe("1,234.57")
+    expect(formatNumber(1234.56, { locale: "de-DE" })).toBe("1.234,56")
+  })
+
+  it("handles tiny and sub-cent values across formatters", () => {
+    expect(formatSmall(0.00001)).toBe("<0.0001")
+    expect(formatMarketPrice(0.00012, { decimals: 5 })).toBe("0.00012")
+    expect(formatPct(0.001, { decimals: 3 })).toBe("+0.001%")
+  })
+
+  it("handles rounding edge cases consistently", () => {
+    expect(formatUsd(1.005)).toBe("$1.01")
+    expect(formatPct(2.455, { decimals: 2 })).toBe("+2.46%")
+    expect(formatMarketPrice(99.994, 2)).toBe("99.99")
+    expect(formatMarketPrice(99.995, 2)).toBe("100.00")
   })
 })

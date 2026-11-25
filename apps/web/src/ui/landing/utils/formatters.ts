@@ -1,6 +1,7 @@
 // Formatting only — covered by formatters.test.ts against representative
-// magnitudes; will need a second look once the indexer exposes real numbers
-// and their actual scale is known.
+// magnitudes; routes through shared formatters in shared/lib/format.ts.
+
+import { formatCompact, formatPct, formatUsd } from "@/shared/lib/format"
 
 /** 230000 -> "230K", 5_200_000 -> "5.2M", 1_400_000_000 -> "1.4B" */
 export function shortFormat(value: number): string {
@@ -24,7 +25,7 @@ export function cleanFormatUsd(value: number): string {
 
 /** 0.1465 -> "14.65%" */
 export function percentFormat(value: number): string {
-  return `${(value * 100).toFixed(2)}%`
+  return formatPct(value * 100, { decimals: 2, sign: false })
 }
 
 function trimZero(value: number): string {

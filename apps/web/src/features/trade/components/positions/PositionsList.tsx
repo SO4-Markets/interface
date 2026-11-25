@@ -4,6 +4,7 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
 import { Numeric } from "@workspace/ui/components/numeric"
+import { EmptyState, LoadingCardsState } from "@workspace/ui/components/states"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import { usePositionsWithIndexer } from "../../hooks/usePositionsWithIndexer"
 import { useFundingRate } from "../../hooks/useFundingRate"
@@ -16,16 +17,12 @@ import {
   riskSeverity,
 } from "../../lib/position-risk"
 import { AccountOrderCard } from "./AccountRowDetails"
-import { CollateralDialog } from "./CollateralDialog"
-import { ClosePositionDialog } from "./ClosePositionDialog"
-import { describePositionRisk } from "../../lib/position-risk"
 import { PositionLiquidationRiskSummary, PositionRiskMeter } from "./PositionRiskMeter"
 import { CollateralDialog } from "./CollateralDialog"
 import { ClosePositionDialog } from "./ClosePositionDialog"
 import { SharePnlDialog } from "./SharePnlDialog"
 import type { Column, SortState } from "@workspace/ui/components/data-table"
 import type { Position } from "../../hooks/usePositions"
-import type { Column } from "@workspace/ui/components/data-table"
 import { TokenIcon } from "@/shared/components/TokenIcon"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
@@ -316,9 +313,22 @@ export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
       </div>
       <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Open positions">
         {isLoading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading positions…</p>
+          <LoadingCardsState count={3} label="Loading positions…" />
         ) : positions.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">No open positions</p>
+          <EmptyState
+            title="No open positions"
+            description={isDisabled ? "Indexer disabled - showing contract-only data" : "Start trading to open your first position"}
+            actions={{
+              primary: (
+                <a
+                  href="/trade"
+                  className="rounded-sm text-xs text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Start trading →
+                </a>
+              ),
+            }}
+          />
         ) : positions.map((p) => {
           const reading = describePositionRisk({
             sizeUsd: p.sizeUsd,

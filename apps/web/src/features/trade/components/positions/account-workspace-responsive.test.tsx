@@ -186,4 +186,26 @@ describe("account workspace responsive (OB-090)", () => {
 
     expect(await axe(card)).toHaveNoViolations()
   })
+
+  it("renders standardized loading cards state on mobile without accessibility violations", async () => {
+    mockIsLoading = true
+    const { container } = render(<OrdersList />, { wrapper: createWrapper() })
+
+    const loadingRegion = container.querySelector('[data-slot="loading-cards-state"]')
+    expect(loadingRegion).toBeInTheDocument()
+    expect(loadingRegion).toHaveAttribute("role", "status")
+    expect(loadingRegion).toHaveAttribute("aria-live", "polite")
+    expect(screen.getByText("Loading orders…")).toBeInTheDocument()
+    expect(await axe(loadingRegion as HTMLElement)).toHaveNoViolations()
+  })
+
+  it("renders standardized empty state on mobile without accessibility violations", async () => {
+    mockData = []
+    const { container } = render(<OrdersList />, { wrapper: createWrapper() })
+
+    const emptyRegion = container.querySelector('[data-slot="empty-state"]')
+    expect(emptyRegion).toBeInTheDocument()
+    expect(screen.getByText("No open orders")).toBeInTheDocument()
+    expect(await axe(emptyRegion as HTMLElement)).toHaveNoViolations()
+  })
 })

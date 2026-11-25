@@ -3,6 +3,7 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { Numeric } from "@workspace/ui/components/numeric"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
+import { EmptyState, LoadingCardsState } from "@workspace/ui/components/states"
 import { useOrderHistory } from "../../hooks/useOrderHistory"
 import { amendOrderViaReplace, cancelOrder } from "../../lib/stellar"
 import {
@@ -221,6 +222,8 @@ export function OrderHistoryList() {
           data={history.rows}
           ariaLabel="Order history"
           isLoading={history.isLoading}
+          error={history.error ? "Order history unavailable" : undefined}
+          onRetry={history.refetch ? () => history.refetch() : undefined}
           emptyMessage={history.error ? "Order history unavailable" : `No orders in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
           keyExtractor={(row) => row.rowKey}
         />
@@ -228,11 +231,23 @@ export function OrderHistoryList() {
       {/* Narrow-screen cards mirror the table with identical labels and actions (OB-090). */}
       <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Order history">
         {history.isLoading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading order history…</p>
+          <LoadingCardsState count={3} label="Loading order history…" />
         ) : history.rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {history.error ? "Order history unavailable" : `No orders in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
-          </p>
+          <EmptyState
+            title={history.error ? "Order history unavailable" : `No orders in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
+            description={history.error ? "Unable to retrieve order history at this time." : "No orders found for the selected time range."}
+            actions={
+              history.error && history.refetch
+                ? {
+                    primary: (
+                      <Button size="sm" variant="outline" onClick={() => history.refetch()}>
+                        Try again
+                      </Button>
+                    ),
+                  }
+                : undefined
+            }
+          />
         ) : (
           history.rows.map((row) => {
             const capability = getOrderAmendCapability({ orderType: row.orderType, stage: row.stage })

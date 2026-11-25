@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import {  DataTable } from '@workspace/ui/components/data-table'
+import { DataTable } from '@workspace/ui/components/data-table'
 import { Numeric } from '@workspace/ui/components/numeric'
-import { EmptyState } from '@workspace/ui/components/empty-state'
+import { EmptyState, LoadingCardsState } from '@workspace/ui/components/states'
 import type { Column, SortState } from '@workspace/ui/components/data-table'
 import type { PoolMarketConfig } from '../data/markets'
 
@@ -79,20 +79,62 @@ export function GmPoolsTable({ isLoading, pools, markets, sort, onSortChange }: 
   ], [])
 
   if (!isLoading && data.length === 0) {
-    return <EmptyState title="No pools found" />
+    return <EmptyState title="No pools found" description="No liquidity pools matched your criteria." />
   }
 
   return (
-    <div className="w-full overflow-auto overscroll-contain">
-      <div className="min-w-[400px]">
-        <DataTable
-          columns={columns}
-          data={data}
-          isLoading={isLoading}
-          keyExtractor={(row) => row.id}
-          sort={sort}
-          onSortChange={onSortChange}
-        />
+    <div className="w-full">
+      {/* Mobile responsive card list: preserves labels, values, and screen-reader relationships */}
+      <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Liquidity pools">
+        {isLoading ? (
+          <LoadingCardsState count={3} label="Loading liquidity pools…" />
+        ) : (
+          data.map((row) => {
+            const tvlNum = row.tvl === '...' ? null : parseNumericString(row.tvl)
+            const aprNum = row.apr === '...' ? null : parseNumericString(row.apr)
+
+            return (
+              <div
+                key={row.id}
+                role="listitem"
+                className="rounded-lg border border-border bg-card px-4 py-3 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm text-foreground">{row.name}</span>
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <dt className="text-muted-foreground">TVL</dt>
+                    <dd className="font-mono tabular-nums text-foreground">
+                      {row.tvl === '...' ? '...' : tvlNum !== null ? <Numeric value={tvlNum} format="usd" compact /> : row.tvl}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">APR</dt>
+                    <dd className="font-mono tabular-nums text-foreground">
+                      {row.apr === '...' ? '...' : aprNum !== null ? <Numeric value={aprNum} format="pct" /> : row.apr}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Desktop data table */}
+      <div className="hidden md:block w-full overflow-auto overscroll-contain">
+        <div className="min-w-[400px]">
+          <DataTable
+            columns={columns}
+            data={data}
+            isLoading={isLoading}
+            ariaLabel="Liquidity pools"
+            keyExtractor={(row) => row.id}
+            sort={sort}
+            onSortChange={onSortChange}
+          />
+        </div>
       </div>
     </div>
   )

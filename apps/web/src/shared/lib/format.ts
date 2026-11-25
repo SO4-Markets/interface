@@ -43,6 +43,8 @@ export function formatUsd(
   }).format(value)
 }
 
+export const formatCurrency = formatUsd
+
 // ─── Compact number ──────────────────────────────────────────────────────────
 
 type FormatCompactOpts = {
@@ -71,6 +73,83 @@ export function formatCompact(
 
   return value.toLocaleString(locale, {
     minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  })
+}
+
+// ─── Generic Number ──────────────────────────────────────────────────────────
+
+export type FormatNumberOpts = {
+  locale?: string
+  decimals?: number
+  minDecimals?: number
+}
+
+export function formatNumber(
+  n: number | undefined | null,
+  opts?: FormatNumberOpts,
+): string {
+  if (isBad(n)) return FALLBACK
+
+  const { locale = DEFAULT_LOCALE, decimals, minDecimals = 0 } = opts ?? {}
+  const value = normalize(n)
+
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: minDecimals,
+    ...(decimals !== undefined ? { maximumFractionDigits: decimals } : {}),
+  })
+}
+
+// ─── Market Precision ────────────────────────────────────────────────────────
+
+export type FormatMarketPriceOpts = {
+  locale?: string
+  decimals?: number
+  minDecimals?: number
+  tickSize?: number
+}
+
+export function formatMarketPrice(
+  price: number | undefined | null,
+  opts?: FormatMarketPriceOpts | number,
+): string {
+  if (isBad(price)) return FALLBACK
+
+  const options = typeof opts === "number" ? { decimals: opts } : (opts ?? {})
+  const { locale = DEFAULT_LOCALE, minDecimals = 2 } = options
+  let decimals = options.decimals
+  if (decimals === undefined && options.tickSize && options.tickSize > 0) {
+    const tickStr = options.tickSize.toString()
+    const decIndex = tickStr.indexOf(".")
+    decimals = decIndex >= 0 ? tickStr.length - decIndex - 1 : 0
+  }
+  const maxDec = Math.max(decimals ?? 2, minDecimals)
+  const value = normalize(price)
+
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: minDecimals,
+    maximumFractionDigits: maxDec,
+  })
+}
+
+export type FormatMarketAmountOpts = {
+  locale?: string
+  decimals?: number
+  minDecimals?: number
+}
+
+export function formatMarketAmount(
+  amount: number | undefined | null,
+  opts?: FormatMarketAmountOpts | number,
+): string {
+  if (isBad(amount)) return FALLBACK
+
+  const options = typeof opts === "number" ? { decimals: opts } : (opts ?? {})
+  const { locale = DEFAULT_LOCALE, decimals = 4, minDecimals = 0 } = options
+  const value = normalize(amount)
+
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: minDecimals,
     maximumFractionDigits: decimals,
   })
 }
@@ -135,6 +214,7 @@ export function formatSmall(
 // ─── Percentage ──────────────────────────────────────────────────────────────
 
 type FormatPctOpts = {
+  locale?: string
   decimals?: number
   sign?: boolean
 }
@@ -145,12 +225,19 @@ export function formatPct(
 ): string {
   if (isBad(n)) return FALLBACK
 
-  const { decimals = 2, sign = true } = opts ?? {}
+  const { locale = DEFAULT_LOCALE, decimals = 2, sign = true } = opts ?? {}
   const value = normalize(n)
   const prefix = sign ? (value >= 0 ? "+" : "") : ""
 
-  return `${prefix}${value.toFixed(decimals)}%`
+  const formattedNum = value.toLocaleString(locale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+
+  return `${prefix}${formattedNum}%`
 }
+
+export const formatPercent = formatPct
 
 // ─── Date / Time ─────────────────────────────────────────────────────────────
 
