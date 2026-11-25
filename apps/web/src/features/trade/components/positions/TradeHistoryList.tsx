@@ -3,16 +3,16 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { Numeric } from "@workspace/ui/components/numeric"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
+import { EmptyState, LoadingCardsState } from "@workspace/ui/components/states"
 import { useAccountFillPages } from "../../hooks/useAccountFillPages"
 import {
   DEFAULT_FILL_FILTERS,
-  
-  
   HISTORY_TIME_RANGE_LABEL,
   filterFills
 } from "../../lib/order-history"
 import { HistoryFilters } from "./HistoryFilters"
-import type {FillFilters, FillRecord} from "../../lib/order-history";
+import { AccountOrderCard } from "./AccountRowDetails"
+import type { FillFilters, FillRecord } from "../../lib/order-history"
 import type { Column } from "@workspace/ui/components/data-table"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { RelativeTime } from "@/shared/components/RelativeTime"
@@ -72,7 +72,12 @@ export function TradeHistoryList() {
   }
 
   if (history.isDisabled) {
-    return <div className="px-4 py-8 text-center text-sm text-muted-foreground">Trade history is unavailable while the indexer is disabled.</div>
+    return (
+      <EmptyState
+        title="Trade history unavailable"
+        description="Trade history is unavailable while the indexer is disabled."
+      />
+    )
   }
 
   return (
@@ -104,15 +109,60 @@ export function TradeHistoryList() {
           Unable to load executed fills. Try again shortly.
         </p>
       )}
-      <DataTable
-        columns={columns}
-        data={rows}
-        ariaLabel="Trade history"
-        animateRows
-        isLoading={history.isLoading}
-        emptyMessage={history.error ? "Trade history unavailable" : `No executed fills in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
-        keyExtractor={(row) => row.id}
-      />
+      <div className="hidden md:block">
+        <DataTable
+          columns={columns}
+          data={rows}
+          ariaLabel="Trade history"
+          animateRows
+          isLoading={history.isLoading}
+          error={history.error ? "Trade history unavailable" : undefined}
+          onRetry={history.refetch ? () => history.refetch() : undefined}
+          emptyMessage={history.error ? "Trade history unavailable" : `No executed fills in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
+          keyExtractor={(row) => row.id}
+        />
+      </div>
+      {/* Narrow-screen cards mirror the table with identical labels and values (OB-090). */}
+      <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Trade history">
+        {history.isLoading ? (
+          <LoadingCardsState count={3} label="Loading trade history…" />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            title={history.error ? "Trade history unavailable" : `No executed fills in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}
+            description={history.error ? "Unable to load trade history at this time." : "Fills will appear here once executed."}
+            actions={
+              history.error && history.refetch
+                ? {
+                    primary: (
+                      <Button size="sm" variant="outline" onClick={() => history.refetch?.()}>
+                        Try again
+                      </Button>
+                    ),
+                  }
+                : undefined
+            }
+          />
+        ) : (
+          rows.map((row) => (
+            <div key={row.id} role="listitem">
+              <AccountOrderCard
+                rowKey={row.id}
+                marketName={row.marketName}
+                sideBadge={{ label: row.isLong ? "Long" : "Short", variant: row.isLong ? "success" : "danger" }}
+                summarySizeUsd={row.sizeUsd}
+                fields={[
+                  { label: "Side", value: <span className="text-muted-foreground">{row.changeType}</span> },
+                  { label: "Executed size", value: <Numeric value={row.sizeUsd} format="usd" /> },
+                  { label: "Execution price", value: <Numeric value={row.executionPriceUsd} format="usd" /> },
+                  { label: "Fee", value: <Numeric value={row.positionFeeUsd} format="usd" /> },
+                  { label: "Executed", value: <RelativeTime className="text-muted-foreground" value={row.timestamp} /> },
+                ]}
+                actions={[]}
+              />
+            </div>
+          ))
+        )}
+      </div>
       {history.hasNextPage && (
         <div className="flex justify-center border-t border-border p-3">
           <Button
