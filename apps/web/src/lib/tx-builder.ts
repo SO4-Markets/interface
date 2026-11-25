@@ -17,6 +17,7 @@
 
 import { TransactionBuilder, rpc } from "@stellar/stellar-sdk/minimal"
 import { NETWORK } from "../app/config/network"
+import { assertOnlineForTransaction } from "../shared/lib/network-safety"
 import type { xdr } from "@stellar/stellar-sdk/minimal";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,6 +95,7 @@ export async function sendAndPoll(
   signedXdr: string,
   options?: SendAndPollOptions,
 ): Promise<TxResult> {
+  assertOnlineForTransaction()
   const timeoutMs = options?.timeoutMs ?? 30_000
   const server = new rpc.Server(NETWORK.rpcUrl)
 

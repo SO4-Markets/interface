@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { HttpResponse, http } from "msw"
 import { server } from "../../test/msw/server"
 import { TxFailedError, TxTimeoutError, sendAndPoll } from "./tx-builder"
+import { OFFLINE_TRANSACTION_MESSAGE } from "@/shared/lib/network-safety"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pre-generated signed XDR (manageData op, testnet passphrase).
@@ -73,7 +74,16 @@ async function drive<T>(promise: Promise<T>): Promise<T> {
 
 describe("sendAndPoll", () => {
   beforeEach(() => vi.useFakeTimers())
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true })
+  })
+
+  it("does not broadcast a signed transaction while the browser is offline", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false })
+
+    await expect(sendAndPoll(signedXdr)).rejects.toThrow(OFFLINE_TRANSACTION_MESSAGE)
+  })
 
   it("returns hash and status on successful round-trip", async () => {
     const hash = "aaaa1111bbbb2222cccc3333dddd4444eeee5555ffff6666aaaabbbbccccddddeeee"

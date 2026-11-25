@@ -27,6 +27,7 @@ import {
 import { serializeJsonLd, websiteJsonLd } from "../shared/lib/structured-data"
 import { RouteAnnouncer } from "../shared/components/RouteAnnouncer"
 import { RouteProgressBar } from "../shared/components/RouteProgressBar"
+import { ConnectivityStatusBanner } from "../shared/components/ConnectivityStatusBanner"
 import { useCspNonce } from "../shared/lib/csp-nonce"
 import { installWebVitalsReporting } from "@/features/observability/lib/web-vitals"
 import { TransactionActivityCenter } from "@/features/trade/components/TransactionActivityCenter"
@@ -213,9 +214,16 @@ function NotFoundPage() {
 // (DS-078) is installed exactly once, inside router context.
 function RootComponent() {
   useEffect(() => installWebVitalsReporting(), [])
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return
+    void navigator.serviceWorker.register("/sw.js").catch((error: unknown) => {
+      console.warn("SO4 offline support could not be registered", error)
+    })
+  }, [])
   return (
     <>
       <RouteAnnouncer />
+      <ConnectivityStatusBanner />
       <TransactionActivityCenter />
       <Outlet />
     </>

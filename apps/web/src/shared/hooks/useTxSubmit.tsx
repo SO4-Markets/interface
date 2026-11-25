@@ -4,6 +4,7 @@ import { useTxFeedback } from "./useTxFeedback"
 import { sendAndPoll } from "@/lib/tx-builder"
 import { explorerTxUrl } from "@/app/config/network"
 import { haptic } from "@/shared/lib/haptics"
+import { assertOnlineForTransaction, OFFLINE_TRANSACTION_MESSAGE } from "@/shared/lib/network-safety"
 
 export type SubmitTxOptions = {
   loadingMessage: string
@@ -18,6 +19,14 @@ export async function submitTx(
   getSignedXdr: () => Promise<string>,
   options: SubmitTxOptions,
 ): Promise<string> {
+  try {
+    assertOnlineForTransaction()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : OFFLINE_TRANSACTION_MESSAGE
+    toast.error(message)
+    throw error
+  }
+
   const toastId = toast.loading(options.loadingMessage)
 
   try {
@@ -94,6 +103,14 @@ export function useTxSubmit() {
       // Issue 733: Prevent duplicate submission (double-click, accidental Enter+click, rerender)
       if (submitInProgressRef.current) {
         throw new Error("Submission already in progress")
+      }
+      try {
+        assertOnlineForTransaction()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : OFFLINE_TRANSACTION_MESSAGE
+        feedback.handleEvent({ type: "error", message })
+        setState({ isLoading: false, txHash: null, error: message })
+        throw error
       }
       submitInProgressRef.current = true
 
