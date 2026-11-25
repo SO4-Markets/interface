@@ -29,6 +29,7 @@ import {
 } from "../../lib/chart-theme"
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, UTCTimestamp } from "lightweight-charts"
 import type { OhlcBar } from "../../lib/oracle"
+import { useHighContrast } from "@/shared/hooks/useHighContrast"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { formatUsd } from "@/shared/lib/format"
 import { ENV } from "@/app/config/env"
@@ -146,6 +147,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
   const { data: orders = [] } = useOrders()
   const account = useWalletStore((state) => state.address)
 
+  const highContrast = useHighContrast()
   const [showTable, setShowTable] = useState(false)
   const [crosshairBar, setCrosshairBar] = useState<OhlcBar | null>(null)
   const crosshairTimeRef = useRef<number | null>(null)
@@ -585,7 +587,7 @@ export function TVChartContainer({ symbol, period, marketLabel }: Props) {
             <span aria-hidden="true">{showTable ? "▲ Hide" : "▼ Show"}</span>
           </button>
 
-          {showTable && (
+          {(highContrast || showTable) && (
             <div className="overflow-x-auto px-3 pb-2" id="ohlc-data-table">
               <Table>
                 <TableHeader>

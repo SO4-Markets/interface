@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import { cn } from "@workspace/ui/lib/utils"
 import { useOrderBook } from "../../hooks/useOrderBook"
 import { useRecentTrades } from "../../hooks/useRecentTrades"
+import { SourceHealthBadge } from "./SourceHealthBadge"
 import type { OrderBookLevel } from "../../hooks/useOrderBook"
 import { formatToken, formatUsd } from "@/shared/lib/format"
 
@@ -86,6 +87,7 @@ function DepthRow({ level, side, compact, onHover }: RowProps) {
             ? "right-0 bg-green-500/10"
             : "left-0 bg-red-500/10",
         )}
+        data-depth-side={side}
         style={{ width: depthPct }}
       />
 
@@ -97,6 +99,7 @@ function DepthRow({ level, side, compact, onHover }: RowProps) {
           isBid ? "text-green-500" : "text-red-500",
         )}
       >
+        <span className="so4-depth-side" aria-hidden="true">{isBid ? "Bid " : "Ask "}</span>
         {formatUsd(level.price, { decimals: 2 })}
       </span>
 
@@ -292,7 +295,7 @@ export function DepthLadder({ symbol, compact = false }: Props) {
     if (rootRef.current) observer.observe(rootRef.current)
     return () => observer.disconnect()
   }, [])
-  const { bids, asks, spread, spreadPct, midPrice, status, isLoading } =
+  const { bids, asks, spread, spreadPct, midPrice, status, isLoading, sourceHealth } =
     useOrderBook(visible ? symbol : undefined)
   const { trades } = useRecentTrades(symbol)
 
@@ -319,10 +322,16 @@ export function DepthLadder({ symbol, compact = false }: Props) {
           {symbol ?? "Market"} Depth
         </span>
         <div className="flex items-center gap-2">
-          <LiveIndicator status={status} className="text-10" />
+          {sourceHealth ? <SourceHealthBadge health={sourceHealth} /> : <LiveIndicator status={status} className="text-10" />}
         </div>
       </div>
 
+      {sourceHealth && ["stale", "reconnecting", "revision-gap"].includes(sourceHealth.status) && (
+        <p role="status" className="border-b border-border px-2 py-1 text-xs">
+          <strong>{sourceHealth.status === "stale" ? "Data Stale" : sourceHealth.status === "reconnecting" ? "Reconnecting" : "Resyncing"}</strong>
+          {" "}<span>{sourceHealth.message}</span>
+        </p>
+      )}
       {/* ── Loading skeleton ───────────────────────────────────────────── */}
       {isLoading && isEmpty && (
         <div

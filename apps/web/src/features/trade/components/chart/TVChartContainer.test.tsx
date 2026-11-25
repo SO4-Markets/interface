@@ -222,6 +222,17 @@ describe("TVChartContainer", () => {
   // Data-table semantics
   // ═════════════════════════════════════════════════════════════════════════
 
+  it("exposes the OHLC table when the OS requests increased contrast", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    try {
+      mockCandles = SAMPLE_CANDLES
+      render(<TVChartContainer {...defaultProps} />)
+      expect(screen.getByRole("columnheader", { name: "Close" })).toBeVisible()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it("provides a toggle button to show OHLC data", () => {
     mockCandles = SAMPLE_CANDLES
     render(<TVChartContainer {...defaultProps} />)
