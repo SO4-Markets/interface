@@ -76,7 +76,7 @@ export function OrderBookPanel({ symbol, verifiedDepth, activeMarketId, onSeedLi
           role="tablist"
           aria-label="Order book view"
           onKeyDown={handleKeyDown}
-          className="flex min-w-0 flex-wrap items-center gap-1"
+          className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-1"
         >
           {ORDERBOOK_TABS.map(({ view, label }) => {
             const isActive = orderbookView === view
@@ -94,7 +94,7 @@ export function OrderBookPanel({ symbol, verifiedDepth, activeMarketId, onSeedLi
                 aria-controls={panelId(view)}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setOrderbookView(view)}
-                className={`rounded-sm px-2 py-1 font-mono text-xs font-semibold transition-colors ${
+                className={`touch-target inline-flex items-center justify-center rounded-sm px-2.5 py-1 font-mono text-xs font-semibold transition-colors ${
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:text-foreground"

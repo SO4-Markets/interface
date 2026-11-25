@@ -219,7 +219,7 @@ export function TradePage() {
             id="mobile-trade-view-positions"
             data-tour-target="positions"
             className={cn(
-              "min-h-0 flex-1 flex-col overflow-auto border-t border-border md:border-t-0",
+              "min-h-0 flex-1 flex-col overflow-auto overscroll-contain border-t border-border md:border-t-0",
               mobileViewClassName("positions", mobileView)
             )}
           >
@@ -257,7 +257,7 @@ export function TradePage() {
         <div
           id="mobile-trade-view-trade"
           className={cn(
-            "w-full min-h-0 flex-col overflow-x-auto overflow-y-auto border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
+            "w-full min-h-0 flex-col overflow-x-auto overflow-y-auto overscroll-contain border-t border-border md:w-[var(--trade-panel-width)] md:border-t-0 md:border-s md:shrink-0 lg:w-[var(--trade-panel-width)] lg:border-t-0 lg:border-s lg:shrink-0",
             mobileViewClassName("trade", mobileView)
           )}
           style={{ ["--trade-panel-width" as string]: `${tradePanelWidth}px` }}
@@ -268,8 +268,12 @@ export function TradePage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-1.5 max-md:hidden">
-        <Button variant="ghost" size="sm" onClick={resetLayout}>
+      {/* Workspace footer. Help lives here at every width so it never floats
+          over panel controls; Reset layout only matters where the resize
+          handles exist (md and up). */}
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-1.5">
+        <KeyboardShortcutsHelp onStartTour={() => setTourReplayKey((key) => key + 1)} />
+        <Button variant="ghost" size="sm" onClick={resetLayout} className="max-md:hidden">
           Reset layout
         </Button>
       </div>
@@ -287,7 +291,6 @@ export function TradePage() {
         onFocusPositions={() => setMobileView("positions")}
         onToggleTheme={toggleTheme}
       />
-      <KeyboardShortcutsHelp onStartTour={() => setTourReplayKey((key) => key + 1)} />
       <TradeWorkspaceTour replayKey={tourReplayKey} onViewChange={setMobileView} />
     </AppShell>
   )

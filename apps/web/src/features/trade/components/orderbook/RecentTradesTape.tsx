@@ -43,7 +43,7 @@ export function RecentTradesTape({ symbol }: Props) {
       </div>
 
       {/* ── Scrollable trades list ───────────────────────────────────────── */}
-      <div ref={containerRef} onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)} className="flex-1 overflow-y-auto px-2 py-1">
+      <div ref={containerRef} onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)} className="flex-1 overflow-y-auto overscroll-contain px-2 py-1">
         {isLoading && trades.length === 0 ? (
           <div className="flex flex-col gap-1.5 p-2" role="status" aria-label="Loading recent trades…">
             <Skeleton className="h-5 w-full" />

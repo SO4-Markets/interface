@@ -220,17 +220,17 @@ describe("PositionsList", () => {
     render(<PositionsList />, { wrapper: createWrapper() })
     const pnlElements = screen.getAllByText(/\$950\.00/)
     expect(pnlElements.length).toBeGreaterThanOrEqual(1)
-    expect(pnlElements[0].className).toContain("text-green-500")
+    const numeric = pnlElements[0].closest("[data-slot='numeric']")
+    expect(numeric?.className).toContain("text-green-500")
   })
 
   it("shows negative PnL in red", () => {
     mockPositions = [createMockPosition({ pnlAfterFees: -500 })]
     render(<PositionsList />, { wrapper: createWrapper() })
-    const pnlElements = screen.getAllByText((_content, element) => {
-      const text = element?.textContent ?? ""
-      return text.includes("$-") && text.includes("500")
-    })
+    const pnlElements = screen.getAllByText("-$500.00")
     expect(pnlElements.length).toBeGreaterThanOrEqual(1)
+    const numeric = pnlElements[0].closest("[data-slot='numeric']")
+    expect(numeric?.className).toContain("text-red-500")
   })
 })
 

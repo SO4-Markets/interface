@@ -88,7 +88,7 @@ export function TradeHistoryList() {
           Side
           <select
             aria-label="Fill side filter"
-            className="h-7 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+            className="h-11 rounded-md border border-border bg-background px-2 text-xs text-foreground sm:h-7"
             value={filters.side}
             onChange={(event) => setFilter("side", event.target.value as FillFilters["side"])}
           >

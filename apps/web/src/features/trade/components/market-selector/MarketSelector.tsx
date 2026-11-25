@@ -101,7 +101,7 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
         aria-expanded={open}
         aria-controls={open ? listboxId : undefined}
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-semibold transition-colors hover:bg-accent"
+        className="touch-target flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-semibold transition-colors hover:bg-accent"
       >
         {activeMarket?.name ?? "Select Market"}
         <svg
@@ -114,7 +114,7 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+          className={`text-muted-foreground transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
         >
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -155,7 +155,7 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
                       onSelect(market.id)
                       closeAndRestoreFocus()
                     }}
-                    className={`min-w-0 flex-1 px-3 py-2 text-start text-sm disabled:cursor-not-allowed ${market.id === activeMarketId ? "font-medium" : ""}`}
+                    className={`touch-target min-w-0 flex-1 px-3 py-2 text-start text-sm disabled:cursor-not-allowed ${market.id === activeMarketId ? "font-medium" : ""}`}
                   >
                     {market.name}
                   </button>
@@ -164,7 +164,7 @@ export function MarketSelector({ markets: marketsProp, activeMarketId, onSelect,
                     aria-label={`${validFavorites.includes(market.id) ? "Remove" : "Add"} ${market.name} favorite`}
                     aria-pressed={validFavorites.includes(market.id)}
                     onClick={() => toggleFavorite(market.id)}
-                    className="px-3 py-2 text-muted-foreground hover:text-foreground"
+                    className="touch-target px-3 py-2 text-muted-foreground hover:text-foreground"
                   >
                     {validFavorites.includes(market.id) ? "★" : "☆"}
                   </button>

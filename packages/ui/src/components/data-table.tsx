@@ -182,7 +182,7 @@ function DataTable<T>({
   }
 
   return (
-    <Table containerClassName={cn(className, virtual && "max-h-[32rem] overflow-y-auto")} containerOnScroll={virtual ? (event) => setScrollTop(event.currentTarget.scrollTop) : undefined}>
+    <Table containerClassName={cn(className, virtual && "max-h-[32rem] overflow-y-auto overscroll-contain")} containerOnScroll={virtual ? (event) => setScrollTop(event.currentTarget.scrollTop) : undefined}>
       <TableHeader>
         <TableHeadRow>
           {columns.map((col) => {

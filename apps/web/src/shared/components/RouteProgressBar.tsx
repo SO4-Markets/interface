@@ -11,7 +11,7 @@ export function RouteProgressBar() {
     >
       <div
         className={cn(
-          "h-full origin-left bg-primary transition-[transform,opacity] duration-slow ease-in-out",
+          "h-full origin-left bg-primary transition-[transform,opacity] duration-slow ease-in-out motion-reduce:transition-none",
           isLoading ? "scale-x-75 opacity-100" : "scale-x-0 opacity-0"
         )}
       />

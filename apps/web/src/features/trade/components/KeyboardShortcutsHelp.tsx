@@ -33,11 +33,14 @@ export function KeyboardShortcutsHelp({ onStartTour }: KeyboardShortcutsHelpProp
 
   return (
     <>
+      {/* Rendered in flow by the caller. A fixed, floating trigger sat on top
+          of whatever control shared its corner at each width (the OHLC table
+          toggle, the Positions tab, Reset layout). */}
       <Button
         variant="outline"
         size="sm"
         data-tour-help-trigger
-        className="fixed end-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 shadow-md md:bottom-4"
+        className="touch-target"
         onClick={() => setOpen(true)}
       >
         Help
@@ -48,13 +51,13 @@ export function KeyboardShortcutsHelp({ onStartTour }: KeyboardShortcutsHelpProp
         <DialogDescription>
           Press <Kbd>?</Kbd> to open this help at any time.
         </DialogDescription>
-        <ScrollArea className="max-h-[60vh] overflow-y-auto space-y-2 mt-3">
+        <ScrollArea tone="overlay" className="mt-3 max-h-[60vh]" viewportClassName="space-y-2">
           {shortcuts.length === 0 ? (
             <p className="text-xs text-muted-foreground">No shortcuts registered yet.</p>
           ) : (
             shortcuts.map((shortcut) => (
               <div key={shortcut.combo} className="flex items-center justify-between gap-3 text-xs">
-                <span className="min-w-0 truncate">{shortcut.description}</span>
+                <span className="min-w-0 break-words">{shortcut.description}</span>
                 <KbdGroup className="shrink-0">
                   {formatShortcut(shortcut.combo).split(" + ").map((key, i) => (
                     <Kbd key={i}>{key}</Kbd>

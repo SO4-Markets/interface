@@ -308,6 +308,24 @@ describe("ScrollArea", () => {
     expect(getViewport()).toHaveClass("p-2")
   })
 
+  // Regression: scrollbar-thumb sizing (`data-vertical:w-2.5`, `touch-none`)
+  // once leaked onto the wrapper. `data-orientation` matches those variants,
+  // so every vertical area collapsed to a 10px column (the trade shortcuts
+  // dialog rendered blank) and touch scrolling and text selection were off.
+  it.each(["vertical", "horizontal", "both"] as const)(
+    "keeps the %s wrapper full-size, touch-scrollable, and selectable",
+    (orientation) => {
+      render(<ScrollArea orientation={orientation}>Content</ScrollArea>)
+      const classes = getRoot().className.split(/\s+/)
+      for (const forbidden of ["touch-none", "select-none", "p-px"]) {
+        expect(classes).not.toContain(forbidden)
+      }
+      expect(classes.some((c) => /^data-(vertical|horizontal):/.test(c))).toBe(
+        false
+      )
+    }
+  )
+
   it("has no accessibility violations", async () => {
     const { container } = render(
       <ScrollArea focusable aria-label="Positions">

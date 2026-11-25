@@ -21,8 +21,11 @@ import { fetchFeeConfig } from "../../lib/data-store"
 import { activeQueryNetwork, queryKeys } from "../../lib/query-keys"
 import { clampLeverage } from "../../lib/risk"
 import { getProtectionPrice } from "../../lib/fee-preview"
+import { formatPrecisePct, formatPreciseUsd, formatPreciseXlm } from "../../lib/fee-breakdown"
 import { useMarketRiskParams } from "../../hooks/useMarketRiskParams"
 import { validateExecutionRequest } from "../../lib/execution-support"
+import { PositionChangeSummary } from "./PositionChangeSummary"
+import type { Position } from "../../hooks/usePositions"
 import type { DecreaseOrderParams, IncreaseOrderParams } from "../../lib/stellar"
 import type { useTradeState } from "../../hooks/useTradeState"
 import { ENV } from "@/app/config/env"
@@ -36,6 +39,7 @@ import { estimateFee } from "@/lib/soroban/simulate"
 import { formatAddress } from "@/shared/lib/format"
 
 type Props = {
+  existingPosition?: Position | null
   open: boolean
   onClose: () => void
   onConfirmed?: (hash: string) => void
@@ -50,6 +54,7 @@ export function ConfirmationDialog({
   open,
   onClose,
   onConfirmed,
+  existingPosition,
   tradeState,
   sizeUsd,
   entryPrice,
@@ -319,7 +324,7 @@ export function ConfirmationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v: boolean) => !v && onClose()}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] overflow-y-auto overflow-x-hidden sm:max-w-md">
+      <DialogContent className="max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),28rem)] max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain overflow-x-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="max-w-full pe-8 [overflow-wrap:anywhere]">
             Confirm {typeLabel} {!tradeFlags.isSwap && formatAddress(toTokenAddress)}
@@ -344,17 +349,12 @@ export function ConfirmationDialog({
         <div className="min-w-0 space-y-1.5 text-sm">
           {!tradeFlags.isSwap && (
             <>
-              <div className="rounded-sm border border-border/60 bg-muted/20 p-2" aria-label="Position size change">
-                <p className="mb-1 text-xs font-medium">Position size change</p>
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">Before</span>
-                  <span className="text-muted-foreground">After</span>
-                  <span className="text-muted-foreground">Change</span>
-                  <span className="font-mono">{formatUsd(0)}</span>
-                  <span className="font-mono">{formatUsd(sizeUsd)}</span>
-                  <span className="font-mono text-success">+{formatUsd(sizeUsd)}</span>
-                </div>
-              </div>
+              {existingPosition === undefined ? <p role="status">Position comparison unavailable.</p> :
+                <PositionChangeSummary existing={existingPosition} size={sizeUsd}
+                  collateral={effectiveLeverage > 0 ? sizeUsd / effectiveLeverage : 0}
+                  fill={tradeFlags.isMarket ? estimatedEntryPrice : Number(triggerPrice)}
+                  mark={entryPrice} long={tradeFlags.isLong}
+                  maintenance={marketRisk.params?.maintenanceMarginRateBps ?? null} />}
               <Row label="Size" value={formatUsd(sizeUsd)} />
               {maxPositionError && (
                 <p className="break-words text-xs text-red-500">{maxPositionError}</p>
@@ -371,7 +371,7 @@ export function ConfirmationDialog({
               )}
               <Row
                 label="Price impact"
-                value={priceImpactPct !== null ? `${priceImpactPct.toFixed(2)}%` : "Unavailable"}
+                value={priceImpactPct !== null ? formatPrecisePct(priceImpactPct) : "Unavailable"}
                 highlight={priceImpactPct !== null && Math.abs(priceImpactPct) > 0.5}
               />
               <Row
@@ -390,10 +390,10 @@ export function ConfirmationDialog({
               />
               <Row
                 label="Execution fee estimate"
-                value={typeof fees.executionFeeXlm === "number" ? `~${fees.executionFeeXlm.toFixed(2)} XLM` : "Unavailable"}
+                value={typeof fees.executionFeeXlm === "number" ? formatPreciseXlm(fees.executionFeeXlm) : "Unavailable"}
               />
               {estimateError && (
-                <p className="max-h-24 max-w-full overflow-y-auto overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
+                <p className="max-h-24 max-w-full overflow-y-auto overscroll-contain overflow-x-hidden rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-500 [overflow-wrap:anywhere]">
                   Fee estimation warning: {estimateError}
                 </p>
               )}
@@ -425,7 +425,7 @@ export function ConfirmationDialog({
             value={`${fromAmount || "0"} ${formatAddress(collateralAddress!)}`}
           />
           <div className="border-t border-border pt-1.5">
-            <Row label="Total fees" value={fees.totalFeesUsd !== null ? formatUsd(fees.totalFeesUsd) : "Unavailable"} bold />
+            <Row label="Total fees" value={fees.totalFeesUsd !== null ? formatPreciseUsd(fees.totalFeesUsd) : "Unavailable"} bold />
           </div>
         </div>
 
@@ -453,7 +453,7 @@ export function ConfirmationDialog({
               <span
                 aria-hidden={isSubmitting}
                 className={cn(
-                  "col-start-1 row-start-1 transition-opacity duration-base ease-out",
+                  "col-start-1 row-start-1 transition-opacity duration-base ease-out motion-reduce:transition-none",
                   isSubmitting ? "opacity-0" : "opacity-100"
                 )}
               >
@@ -462,13 +462,13 @@ export function ConfirmationDialog({
               <span
                 aria-hidden={!isSubmitting}
                 className={cn(
-                  "col-start-1 row-start-1 flex items-center gap-2 transition-opacity duration-base ease-out",
+                  "col-start-1 row-start-1 flex items-center gap-2 transition-opacity duration-base ease-out motion-reduce:transition-none",
                   isSubmitting ? "opacity-100" : "opacity-0"
                 )}
               >
                 <span
                   aria-hidden="true"
-                  className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  className="size-3.5 motion-safe:animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
                 Submitting...
               </span>
