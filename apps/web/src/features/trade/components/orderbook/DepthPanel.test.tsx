@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { axe } from "vitest-axe"
 import { useOrderBookDisplayStore } from "../../store/orderbook-display-store"
 import { DepthPanel } from "./DepthPanel"
 import type { SourceHealth } from "../../hooks/useSourceHealth"
@@ -391,5 +392,36 @@ describe("interrupted price selection (OB-055)", () => {
     )} bookRevision={43n} />)
     fireEvent.click(button)
     expect(seed).not.toHaveBeenCalled()
+  })
+})
+
+describe("mobile touch targets (#1082)", () => {
+  it("applies mobile touch-target sizing to depth controls and price buttons while preserving desktop density", async () => {
+    render(
+      <DepthPanel
+        metadata={BTC}
+        bids={BIDS}
+        asks={ASKS}
+        rows={4}
+        health={LIVE}
+        activeMarketId="BTC-USD"
+        feedActionable
+        bookRevision={1n}
+        onSeedLimitPrice={vi.fn()}
+      />,
+    )
+
+    const grouping = screen.getByRole("combobox", { name: "Price grouping" })
+    expect(grouping).toHaveClass("touch-target", "h-11", "sm:h-7")
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toHaveClass("touch-target")
+    }
+
+    for (const priceButton of screen.getAllByRole("button", { name: /select exact bid limit price/i })) {
+      expect(priceButton).toHaveClass("touch-target")
+    }
+
+    expect(await axe(screen.getByRole("group", { name: "Order book display" }))).toHaveNoViolations()
   })
 })

@@ -206,7 +206,7 @@ function SidebarSection({
           viewBox="0 0 16 16"
           fill="currentColor"
           className={cn(
-            "size-3.5 shrink-0 transition-transform",
+            "size-3.5 shrink-0 transition-transform motion-reduce:transition-none",
             isExpanded && "rotate-90",
           )}
         >

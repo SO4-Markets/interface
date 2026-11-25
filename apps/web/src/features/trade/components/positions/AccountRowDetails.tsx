@@ -79,6 +79,7 @@ export function AccountOrderCard({
             id={buttonId}
             size="xs"
             variant="outline"
+            className="touch-target"
             aria-expanded={expanded}
             aria-controls={regionId}
             onClick={() => setExpanded((value) => !value)}
@@ -99,12 +100,13 @@ export function AccountOrderCard({
             ))}
           </dl>
           {actions.length > 0 && (
-            <div className="mt-3 flex items-center gap-1.5">
+            <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-1.5">
               {actions.map((action) => (
                 <Button
                   key={action.label}
                   size="xs"
                   variant="outline"
+                  className="touch-target"
                   disabled={action.disabled || action.pending}
                   title={action.disabled ? (action.disabledReason ?? "Unavailable") : undefined}
                   aria-label={

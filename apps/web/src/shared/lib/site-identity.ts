@@ -10,3 +10,12 @@ export const SOCIAL_URLS = {
   telegram: "https://t.me/so4market",
   github: REPO_URL,
 } as const
+
+// Shared by page metadata, structured data (issue 954) and share cards (issue 955), so
+// every surface that names the product reads the same values.
+export const ORGANIZATION_NAME = "SO4 Markets"
+export const SITE_TAGLINE = "On-chain perpetuals"
+export const SITE_DESCRIPTION =
+  "A unified-liquidity perp DEX. Deep books, sub-second matching, and self-custodied risk — built for traders who care where their fills come from."
+export const SITE_LOGO_URL = `${SITE_URL}/logo512.png`
+export const TWITTER_HANDLE = "@so4market"

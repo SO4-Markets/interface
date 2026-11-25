@@ -74,4 +74,20 @@ describe("pending-activity (OB-116)", () => {
     // Confirmed items no longer reserve margin in the in-flight stage
     expect(store.getPendingMarginReservations("user-1")).toBe(0)
   })
+
+  it("tracks unread activity and failed network state transitions", () => {
+    store.addActivity({
+      id: "act-network",
+      account: "user-1",
+      activityType: "withdraw",
+    })
+
+    expect(store.getUnreadCount("user-1")).toBe(1)
+    store.updateStage("act-network", "failed", { error: "Network connection lost" })
+    expect(store.getActivities("user-1")[0]?.stage).toBe("failed")
+    expect(store.getActivities("user-1")[0]?.error).toBe("Network connection lost")
+
+    store.markAllRead("user-1")
+    expect(store.getUnreadCount("user-1")).toBe(0)
+  })
 })

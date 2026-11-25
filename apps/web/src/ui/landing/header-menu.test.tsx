@@ -42,7 +42,7 @@ describe("HeaderMenu", () => {
     expect(document.body.style.overflow).toBe("")
   })
 
-  it("keeps Tab focus inside the open menu", async () => {
+  it("keeps Tab focus inside the open menu and its toggle", async () => {
     vi.stubGlobal("matchMedia", () => ({
       matches: false,
       addEventListener: vi.fn(),
@@ -50,14 +50,21 @@ describe("HeaderMenu", () => {
     }))
     const user = userEvent.setup()
     render(<HeaderMenu />)
-    await user.click(screen.getByRole("button", { name: "Open menu" }))
+    const trigger = screen.getByRole("button", { name: "Open menu" })
+    await user.click(trigger)
     const panel = screen.getByRole("dialog", { name: "Site menu" })
     const focusables = panel.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
     )
+    expect(focusables[0]).toHaveFocus()
+
     focusables[focusables.length - 1].focus()
     await user.tab()
+    expect(trigger).toHaveFocus()
+    await user.tab()
     expect(focusables[0]).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(trigger).toHaveFocus()
   })
 
   it("renders the mobile menu outside the scrolled header", () => {

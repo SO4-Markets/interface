@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { toast } from "@workspace/ui/components/toast"
 import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
@@ -19,6 +18,12 @@ import {
 import { AccountOrderCard } from "./AccountRowDetails"
 import { CollateralDialog } from "./CollateralDialog"
 import { ClosePositionDialog } from "./ClosePositionDialog"
+import { describePositionRisk } from "../../lib/position-risk"
+import { PositionLiquidationRiskSummary, PositionRiskMeter } from "./PositionRiskMeter"
+import { CollateralDialog } from "./CollateralDialog"
+import { ClosePositionDialog } from "./ClosePositionDialog"
+import { SharePnlDialog } from "./SharePnlDialog"
+import type { Column, SortState } from "@workspace/ui/components/data-table"
 import type { Position } from "../../hooks/usePositions"
 import type { Column } from "@workspace/ui/components/data-table"
 import { TokenIcon } from "@/shared/components/TokenIcon"
@@ -26,7 +31,18 @@ import { useWalletStore } from "@/features/wallet/store/wallet-store"
 
 type Props = {
   onSelectPosition?: (position: Position) => void
+  /** Controlled sort; pass `onSortChange` to make the headers sortable (issue 966). */
+  sort?: SortState | null
+  onSortChange?: (next: SortState | null) => void
 }
+
+/**
+ * Columns the positions table can be ordered by. Only slowly changing position
+ * state is sortable: ordering by mark price, PnL, or available risk would let
+ * every oracle tick reshuffle the rows and move the Close/Collateral buttons
+ * out from under the pointer (OB-085).
+ */
+export const POSITION_SORT_COLUMNS = ["market", "size", "collateral", "entry", "liq"] as const
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "0m"
@@ -58,27 +74,20 @@ function useFundingCountdown(nextEpochTs: number | undefined): string {
   return formatCountdown(remaining)
 }
 
-export function PositionsList({ onSelectPosition }: Props) {
+export function PositionsList({ onSelectPosition, sort, onSortChange }: Props) {
   const { data: positions = [], isLoading, isDisabled } = usePositionsWithIndexer()
   const { data: fundingRate } = useFundingRate()
   const { getStaleness } = useTokenPrices()
   const countdown = useFundingCountdown((fundingRate as any)?.nextEpochTs)
   const account = useWalletStore((state) => state.address)
   const queryClient = useQueryClient()
-  const { submitClose, submitCollateral, isBusy } = usePositionActions()
+  const { submitClose, submitCollateral, isBusy, getAction, clearAction } = usePositionActions()
   const [closing, setClosing] = useState<string | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
   const [dialogPosition, setDialogPosition] = useState<Position | null>(null)
   const [closeDialogPosition, setCloseDialogPosition] = useState<Position | null>(null)
   const [dialogMode, setDialogMode] = useState<"add" | "remove" | null>(null)
-
-  function handleShare(position: Position) {
-    const url = `${window.location.origin}/trade?market=${encodeURIComponent(position.indexToken)}&type=${position.isLong ? "long" : "short"}`
-    void navigator.clipboard.writeText(url).then(
-      () => toast.success("Position link copied", { description: url }),
-      () => toast.error("Could not copy link to clipboard"),
-    )
-  }
+  const [sharePosition, setSharePosition] = useState<Position | null>(null)
 
   async function handleClaim(position: Position) {
     setClaiming(position.key)
@@ -109,21 +118,25 @@ export function PositionsList({ onSelectPosition }: Props) {
           </StatusBadge>
         </div>
       ),
+      sortValue: (p) => `${p.marketName} ${p.isLong ? "long" : "short"}`,
     },
     {
       id: "size",
       header: "Size",
       accessor: (p) => <Numeric value={p.sizeUsd} format="usd" role="neutral" />,
+      sortValue: (p) => p.sizeUsd,
     },
     {
       id: "collateral",
       header: "Collateral",
       accessor: (p) => <Numeric value={p.collateralUsd} format="usd" role="neutral" />,
+      sortValue: (p) => p.collateralUsd,
     },
     {
       id: "entry",
       header: "Entry",
       accessor: (p) => <Numeric value={p.entryPrice} format="usd" role="neutral" />,
+      sortValue: (p) => p.entryPrice,
     },
     {
       id: "mark",
@@ -137,6 +150,7 @@ export function PositionsList({ onSelectPosition }: Props) {
         const closeToLiq = Math.abs(p.markPrice - p.liquidationPrice) / p.markPrice <= 0.1
         return <Numeric value={p.liquidationPrice} format="usd" role={closeToLiq ? "danger" : "neutral"} />
       },
+      sortValue: (p) => p.liquidationPrice,
     },
     {
       id: "risk",
@@ -150,21 +164,12 @@ export function PositionsList({ onSelectPosition }: Props) {
           markPriceStaleness: getStaleness(p.indexToken),
         })
 
-        if (!reading.hasData) {
-          return <StatusBadge variant="muted">No data</StatusBadge>
-        }
-
         return (
-          <div className="flex flex-col items-start gap-0.5">
-            <Numeric
-              value={reading.availableRiskUsd}
-              format="usd"
-              role={riskSeverity(reading)}
-            />
-            <span className="text-10 text-muted-foreground">
-              {reading.isStale ? "Stale oracle" : RISK_SOURCE_LABEL[reading.source]} Est.
-            </span>
-          </div>
+          <PositionRiskMeter
+            marketName={p.marketName}
+            isLong={p.isLong}
+            reading={reading}
+          />
         )
       },
     },
@@ -206,20 +211,23 @@ export function PositionsList({ onSelectPosition }: Props) {
       id: "actions",
       header: "",
       accessor: (p) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 sm:gap-1">
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             onClick={(e) => {
               e.stopPropagation()
-              handleShare(p)
+              setSharePosition(p)
             }}
+            aria-label={`Share PnL for ${p.marketName} ${p.isLong ? "long" : "short"}`}
           >
             Share
           </Button>
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             onClick={(e) => {
               e.stopPropagation()
               setDialogPosition(p)
@@ -231,6 +239,7 @@ export function PositionsList({ onSelectPosition }: Props) {
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             onClick={(e) => {
               e.stopPropagation()
               setDialogPosition(p)
@@ -243,6 +252,7 @@ export function PositionsList({ onSelectPosition }: Props) {
             <Button
               size="xs"
               variant="outline"
+              className="touch-target"
               disabled={claiming === p.key}
               onClick={(e) => {
                 e.stopPropagation()
@@ -255,9 +265,11 @@ export function PositionsList({ onSelectPosition }: Props) {
           <Button
             size="xs"
             variant="outline"
+            className="touch-target"
             pending={closing === p.key || isBusy(p.key)}
             onClick={(e) => {
               e.stopPropagation()
+              clearAction(p.key)
               setCloseDialogPosition(p)
             }}
           >
@@ -268,10 +280,12 @@ export function PositionsList({ onSelectPosition }: Props) {
     },
   ]
 
+  const isDisconnected = !account && positions.length === 0 && !isLoading
+
   return (
     <>
       {isDisabled && (
-        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-500">
+        <div className="px-4 py-2 bg-warning-subtle border-b border-warning-border text-xs text-warning">
           ⚠️ Indexer disabled - Historical data unavailable. Showing live contract data only.
         </div>
       )}
@@ -342,6 +356,39 @@ export function PositionsList({ onSelectPosition }: Props) {
           )
         })}
       </div>
+      <PositionLiquidationRiskSummary
+        positions={positions}
+        isLoading={isLoading}
+        isDisconnected={isDisconnected}
+        getStaleness={getStaleness}
+      />
+      <DataTable
+        columns={columns}
+        data={positions}
+        animateRows
+        isLoading={isLoading}
+        emptyMessage="No open positions"
+        emptyAction={
+          <div className="flex flex-col items-center gap-2">
+            {isDisabled && (
+              <p className="text-xs text-amber-500">
+                ⚠️ Indexer disabled - showing contract-only data
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">Start trading to open your first position</p>
+            <a
+              href="/trade"
+              className="rounded-sm text-xs text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              Start trading →
+            </a>
+          </div>
+        }
+        keyExtractor={(p) => p.key}
+        sort={sort}
+        onSortChange={onSortChange}
+        onRowClick={onSelectPosition ? (p) => onSelectPosition(p) : undefined}
+      />
       <CollateralDialog
         position={dialogPosition}
         mode={dialogMode}
@@ -363,22 +410,36 @@ export function PositionsList({ onSelectPosition }: Props) {
           return hash
         }}
       />
+      <SharePnlDialog
+        position={sharePosition}
+        open={sharePosition !== null}
+        onOpenChange={(open) => {
+          if (!open) setSharePosition(null)
+        }}
+      />
       <ClosePositionDialog
         position={closeDialogPosition}
         open={closeDialogPosition !== null}
+        isSubmitting={closeDialogPosition ? closing === closeDialogPosition.key || isBusy(closeDialogPosition.key) : false}
+        errorMessage={
+          closeDialogPosition
+            ? getAction(closeDialogPosition.key)?.status === "error"
+              ? getAction(closeDialogPosition.key)?.errorMessage ?? null
+              : null
+            : null
+        }
         onClose={() => setCloseDialogPosition(null)}
         onConfirm={async (payload) => {
           if (!closeDialogPosition) return
-          setClosing(closeDialogPosition.key)
+          const target = closeDialogPosition
+          setClosing(target.key)
           try {
-            await submitClose(closeDialogPosition, payload)
+            return await submitClose(target, payload)
           } finally {
             setClosing(null)
-            setCloseDialogPosition(null)
           }
         }}
       />
     </>
   )
 }
-

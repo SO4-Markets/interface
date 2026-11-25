@@ -95,7 +95,6 @@ jobs:
         run: bun run test
 
       - name: Coverage
-        if: ${{ !cancelled() }}
         run: bun run test:coverage
 
       - name: Build
@@ -111,7 +110,7 @@ jobs:
 
   e2e:
     name: Playwright E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: ci
 
     steps:
@@ -135,7 +134,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
+        run: bunx --bun playwright@1.61.1 install --with-deps chromium
 
       # Security header coverage (e2e/security-headers.spec.ts) runs against
       # the built production server, not the dev webServer.
@@ -147,8 +146,18 @@ jobs:
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: ${{ !cancelled() }}
+        if: ${{ failure() }}
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright traces
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ failure() }}
+        with:
+          name: playwright-traces
+          path: |
+            test-results/
+            playwright-report/
           retention-days: 7

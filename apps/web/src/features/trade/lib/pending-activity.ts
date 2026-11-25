@@ -40,6 +40,12 @@ export interface PendingActivityItem {
 export class PendingActivityStore {
   private items: Map<string, PendingActivityItem> = new Map()
   private listeners: Set<() => void> = new Set()
+  private readIds: Set<string> = new Set()
+  private readonly storageKey = "so4-pending-activity"
+
+  constructor() {
+    this.restore()
+  }
 
   public addActivity(activity: Omit<PendingActivityItem, "stage" | "timestamp">): PendingActivityItem {
     const item: PendingActivityItem = {
@@ -95,6 +101,25 @@ export class PendingActivityStore {
     }
   }
 
+  public markRead(id: string): void {
+    if (!this.items.has(id) || this.readIds.has(id)) return
+    this.readIds.add(id)
+    this.persist()
+  }
+
+  public markAllRead(account?: string): void {
+    for (const item of this.getActivities(account)) this.readIds.add(item.id)
+    this.persist()
+  }
+
+  public isUnread(id: string): boolean {
+    return this.items.has(id) && !this.readIds.has(id)
+  }
+
+  public getUnreadCount(account?: string): number {
+    return this.getActivities(account).filter((item) => this.isUnread(item.id)).length
+  }
+
   public removeActivity(id: string): void {
     if (this.items.delete(id)) {
       this.notify()
@@ -115,6 +140,8 @@ export class PendingActivityStore {
 
   public clear(): void {
     this.items.clear()
+    this.readIds.clear()
+    this.persist()
     this.notify()
   }
 
@@ -124,11 +151,45 @@ export class PendingActivityStore {
   }
 
   private notify(): void {
+    this.persist()
     for (const cb of this.listeners) {
       try {
         cb()
       } catch {}
     }
+  }
+
+  private persist(): void {
+    if (typeof window === "undefined") return
+    try {
+      window.localStorage.setItem(
+        this.storageKey,
+        JSON.stringify({
+          items: Array.from(this.items.values()),
+          readIds: Array.from(this.readIds),
+        }),
+      )
+    } catch {}
+  }
+
+  private restore(): void {
+    if (typeof window === "undefined") return
+    try {
+      const raw = window.localStorage.getItem(this.storageKey)
+      if (!raw) return
+      const saved = JSON.parse(raw) as { items?: Array<PendingActivityItem>; readIds?: Array<string> }
+      for (const item of saved.items ?? []) {
+        if (
+          typeof item.id === "string" &&
+          typeof item.account === "string" &&
+          typeof item.timestamp === "number" &&
+          ["submitting", "confirming", "confirmed", "failed"].includes(item.stage)
+        ) {
+          this.items.set(item.id, item)
+        }
+      }
+      this.readIds = new Set((saved.readIds ?? []).filter((id) => typeof id === "string"))
+    } catch {}
   }
 }
 

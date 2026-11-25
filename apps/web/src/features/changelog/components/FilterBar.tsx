@@ -89,7 +89,7 @@ export function FilterBar({
           </span>
           <Icon
             icon={ChevronDownIcon}
-            className={`transition-transform ${isFilterOpen ? "rotate-180" : ""}`}
+            className={`transition-transform motion-reduce:transition-none ${isFilterOpen ? "rotate-180" : ""}`}
           />
         </Button>
 

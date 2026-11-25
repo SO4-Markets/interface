@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp"
@@ -58,6 +59,27 @@ describe("TradeWorkspaceTour", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     expect(localStorage.getItem("so4-trade-workspace-tour-v1-complete")).toBe("true")
+  })
+
+  it("keeps Tab focus inside the tour card and returns focus to Help on Escape", async () => {
+    const user = userEvent.setup()
+    render(<TourHarness onViewChange={onViewChange} />)
+    const card = await screen.findByRole("dialog", { name: "Choose a market" })
+    await waitFor(() => expect(card).toHaveFocus())
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Skip tour" })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Next" })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Skip tour" })).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(screen.getByRole("button", { name: "Next" })).toHaveFocus()
+
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(screen.getByRole("button", { name: "Help" })).toHaveFocus()
   })
 
   it("replays from Help after first-run completion", async () => {

@@ -188,6 +188,11 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe("ConfirmationDialog (#227)", () => {
+  it("shows the before and after table when reviewing a new position", () => {
+    renderDialog({ existingPosition: null })
+    expect(screen.getByRole("table", { name: "Estimated position changes" })).toBeVisible()
+    expect(screen.getByRole("columnheader", { name: "After" })).toBeVisible()
+  })
   it("renders the order summary from the fixture", async () => {
     renderDialog()
 

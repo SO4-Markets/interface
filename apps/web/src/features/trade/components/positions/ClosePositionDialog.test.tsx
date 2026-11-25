@@ -255,4 +255,185 @@ describe("ClosePositionDialog", () => {
       expect(onClose).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe("live PnL preview, presets, keyboard, and transaction states (#1081)", () => {
+    it("shows live PnL preview for full close and updates proportionally for partial presets", async () => {
+      const user = userEvent.setup()
+      render(
+        <ClosePositionDialog
+          position={createMockPosition({
+            sizeUsd: 50_000,
+            collateralUsd: 5_000,
+            pnlAfterFees: 1_000,
+            pnlPercent: 20,
+          })}
+          open={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      )
+
+      const preview = screen.getByLabelText("Close preview")
+      expect(preview).toHaveTextContent("$1,000.00")
+      expect(preview).toHaveTextContent("+20.00%")
+      expect(preview).toHaveTextContent("$0.00")
+
+      await user.click(screen.getByRole("button", { name: /Partial close/i }))
+      await user.click(screen.getByRole("button", { name: "Close 50% of position" }))
+
+      expect(screen.getByDisplayValue("25000.00")).toBeInTheDocument()
+      expect(preview).toHaveTextContent("$500.00")
+      expect(preview).toHaveTextContent("$25,000.00")
+      expect(preview).toHaveTextContent("$2,500.00")
+
+      await user.click(screen.getByRole("button", { name: "Close 75% of position" }))
+      expect(screen.getByDisplayValue("37500.00")).toBeInTheDocument()
+      expect(preview).toHaveTextContent("$750.00")
+      expect(preview).toHaveTextContent("$12,500.00")
+    })
+
+    it("preserves sub-cent precision for non-even position sizes", async () => {
+      const onConfirm = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <ClosePositionDialog
+          position={createMockPosition({ sizeUsd: 100.333333 })}
+          open={true}
+          onClose={vi.fn()}
+          onConfirm={onConfirm}
+        />,
+      )
+
+      await user.click(screen.getByRole("button", { name: /Partial close/i }))
+      await user.click(screen.getByRole("button", { name: "Close 25% of position" }))
+      expect(screen.getByDisplayValue("25.083333")).toBeInTheDocument()
+
+      await user.click(screen.getByRole("button", { name: "Confirm Close" }))
+      expect(onConfirm).toHaveBeenCalledWith({ isFull: false, sizeDeltaUsd: 25.083333 })
+    })
+
+    it("switches back to full close when 100% preset is selected", async () => {
+      const onConfirm = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <ClosePositionDialog
+          position={createMockPosition()}
+          open={true}
+          onClose={vi.fn()}
+          onConfirm={onConfirm}
+        />,
+      )
+
+      await user.click(screen.getByRole("button", { name: /Partial close/i }))
+      await user.click(screen.getByRole("button", { name: "Close 100% of position" }))
+      expect(screen.getByText(/Closes the entire position/)).toBeInTheDocument()
+
+      await user.click(screen.getByRole("button", { name: "Confirm Close" }))
+      expect(onConfirm).toHaveBeenCalledWith({ isFull: true, sizeDeltaUsd: 50_000 })
+    })
+
+    it("supports keyboard arrow navigation between presets and Enter submit", async () => {
+      const onConfirm = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <ClosePositionDialog
+          position={createMockPosition()}
+          open={true}
+          onClose={vi.fn()}
+          onConfirm={onConfirm}
+        />,
+      )
+
+      await user.click(screen.getByRole("button", { name: /Partial close/i }))
+      const preset25 = screen.getByRole("button", { name: "Close 25% of position" })
+      preset25.focus()
+      await user.keyboard("{ArrowRight}")
+      expect(screen.getByRole("button", { name: "Close 50% of position" })).toHaveFocus()
+      await user.keyboard("{Enter}")
+      expect(screen.getByDisplayValue("25000.00")).toBeInTheDocument()
+
+      const input = screen.getByLabelText("Size to close (USD)")
+      input.focus()
+      await user.keyboard("{Enter}")
+      expect(onConfirm).toHaveBeenCalledWith({ isFull: false, sizeDeltaUsd: 25_000 })
+    })
+
+    it("resets draft state when reopened for another position", async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(
+        <ClosePositionDialog
+          position={createMockPosition({ key: "pos-1" })}
+          open={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      )
+
+      await user.click(screen.getByRole("button", { name: /Partial close/i }))
+      await user.type(screen.getByPlaceholderText("0.00"), "1000")
+
+      rerender(
+        <ClosePositionDialog
+          position={createMockPosition({ key: "pos-2", marketName: "ETH/USD" })}
+          open={true}
+          onClose={vi.fn()}
+          onConfirm={vi.fn()}
+        />,
+      )
+
+      expect(screen.getByText(/Closes the entire position/)).toBeInTheDocument()
+      expect(screen.queryByPlaceholderText("0.00")).not.toBeInTheDocument()
+    })
+
+    it("disables duplicate submission while async close is pending and surfaces errors", async () => {
+      const user = userEvent.setup()
+      let rejectFn!: (err: Error) => void
+      const onConfirm = vi.fn(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectFn = reject
+          }),
+      )
+      const onClose = vi.fn()
+
+      render(
+        <ClosePositionDialog
+          position={createMockPosition()}
+          open={true}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />,
+      )
+
+      await user.click(screen.getByRole("button", { name: "Confirm Close" }))
+      expect(onConfirm).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole("button", { name: /Submitting/i })).toBeDisabled()
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled()
+      expect(onClose).not.toHaveBeenCalled()
+
+      rejectFn(new Error("Transaction rejected in your wallet. No changes were made."))
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/rejected in your wallet/i)
+      expect(onClose).not.toHaveBeenCalled()
+      expect(screen.getByRole("button", { name: "Confirm Close" })).toBeEnabled()
+    })
+
+    it("keeps the dialog open when the close action returns no transaction hash", async () => {
+      const onClose = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <ClosePositionDialog
+          position={createMockPosition()}
+          open={true}
+          onClose={onClose}
+          onConfirm={vi.fn().mockResolvedValue(null)}
+        />,
+      )
+
+      await user.click(screen.getByRole("button", { name: "Confirm Close" }))
+      expect(await screen.findByRole("alert")).toHaveTextContent(/not submitted/i)
+      expect(onClose).not.toHaveBeenCalled()
+      expect(screen.getByRole("button", { name: "Confirm Close" })).toBeEnabled()
+    })
+  })
 })

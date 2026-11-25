@@ -30,7 +30,7 @@ export function MobileTradeNav({ active, onChange, className }: MobileTradeNavPr
       role="tablist"
       aria-label="Trading panels"
       className={cn(
-        "flex shrink-0 border-t border-border bg-background",
+        "relative z-30 flex shrink-0 border-t border-border bg-background",
         "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         className
       )}
@@ -46,7 +46,7 @@ export function MobileTradeNav({ active, onChange, className }: MobileTradeNavPr
             aria-controls={`mobile-trade-view-${view}`}
             onClick={() => onChange(view)}
             className={cn(
-              "flex-1 py-3 text-center text-sm font-medium transition-colors motion-reduce:transition-none",
+              "min-h-11 flex-1 py-3 text-center text-sm font-medium transition-colors motion-reduce:transition-none",
               isActive
                 ? "text-foreground border-t-2 border-primary -mt-px"
                 : "text-muted-foreground"
@@ -70,10 +70,11 @@ export function MobileTradeNav({ active, onChange, className }: MobileTradeNavPr
  * Desktop (>= lg): all regions shown side by side
  */
 export function mobileViewClassName(view: MobileTradeView, active: MobileTradeView): string {
-  // Show chart and book at all times on tablet/desktop, use tabs for others
+  // Phone: one active panel at a time so controls stay on-screen.
+  // Tablet: chart + book plus the active trade/positions panel.
+  // Desktop: every region is shown side by side.
   if (view === "chart" || view === "book") {
-    return "flex md:flex"
+    return view === active ? "flex md:flex lg:flex" : "hidden md:flex lg:flex"
   }
-  // Trade and positions tabs: active on mobile, otherwise hidden until lg
-  return view === active ? "flex md:hidden lg:flex" : "hidden md:hidden lg:flex"
+  return view === active ? "flex md:flex lg:flex" : "hidden md:hidden lg:flex"
 }

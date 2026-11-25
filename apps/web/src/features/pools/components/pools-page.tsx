@@ -1,18 +1,24 @@
-import { Link } from "@tanstack/react-router"
+import { Link, getRouteApi } from "@tanstack/react-router"
 import { AppShell } from "@workspace/ui/components/app-shell"
 import { PageHeader } from "@workspace/ui/components/page-header"
 import { usePoolsData } from "../hooks/use-pools-data"
 import { usePoolsTimeRange } from "../hooks/use-pools-time-range"
 import { PoolsCard } from "./pools-card"
 import { PoolsTimeRangeFilter } from "./pools-time-range-filter"
-import { GmPoolsTable } from "./gm-pools-table"
+import { GM_POOL_SORT_COLUMNS, GmPoolsTable } from "./gm-pools-table"
 import { Navbar } from "@/ui/Navbar"
 import { NetworkMismatchBanner } from "@/features/wallet/components/NetworkMismatchBanner"
 import { formatUsd } from "@/shared/lib/format"
+import { formatSortParam, parseSortParam } from "@/shared/lib/table-sort"
+
+const poolsRoute = getRouteApi("/pools")
 
 export function PoolsPage() {
   const { timeRange, setTimeRange, options } = usePoolsTimeRange()
   const { markets, glvEnabled } = usePoolsData(timeRange)
+  const search = poolsRoute.useSearch()
+  const navigate = poolsRoute.useNavigate()
+  const sort = parseSortParam(search.sort, GM_POOL_SORT_COLUMNS)
 
   return (
     <AppShell
@@ -57,7 +63,17 @@ export function PoolsPage() {
             </p>
           }
         >
-          <GmPoolsTable markets={markets} />
+          <GmPoolsTable
+            markets={markets}
+            sort={sort}
+            onSortChange={(next) =>
+              void navigate({
+                search: (previous) => ({ ...previous, sort: formatSortParam(next) }),
+                replace: true,
+                resetScroll: false,
+              })
+            }
+          />
         </PoolsCard>
 
         {!glvEnabled ? (
