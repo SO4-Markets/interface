@@ -27,6 +27,7 @@ export function TradeHistoryList() {
     {
       id: "market",
       header: "Market",
+      sticky: true,
       accessor: (row) => (
         <div className="flex items-center gap-1.5">
           <span className="font-medium">{row.marketName}</span>
@@ -106,6 +107,7 @@ export function TradeHistoryList() {
       <DataTable
         columns={columns}
         data={rows}
+        ariaLabel="Trade history"
         animateRows
         isLoading={history.isLoading}
         emptyMessage={history.error ? "Trade history unavailable" : `No executed fills in ${HISTORY_TIME_RANGE_LABEL[filters.range].toLowerCase()}`}

@@ -27,6 +27,28 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+test("account and market workspace remains contained at mobile and desktop widths", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 })
+  await page.goto("/trade")
+
+  await expect(page.getByRole("tab", { name: /^positions/i })).toBeVisible()
+  await expect(page.getByRole("tab", { name: /^orders/i })).toBeVisible()
+
+  const mobileOverflow = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }))
+  expect(mobileOverflow.documentWidth).toBeLessThanOrEqual(mobileOverflow.viewport)
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(page.getByRole("tab", { name: /^positions/i })).toBeVisible()
+  const desktopOverflow = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }))
+  expect(desktopOverflow.documentWidth).toBeLessThanOrEqual(desktopOverflow.viewport)
+})
+
 test("trade page is reachable with no external network dependency", async ({ page }) => {
   await page.goto("/trade")
 

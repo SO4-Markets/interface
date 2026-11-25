@@ -93,6 +93,7 @@ export function OrdersList() {
     {
       id: "market",
       header: "Market",
+      sticky: true,
       accessor: (o) => (
         <div className="flex items-center gap-1.5">
           <span className="font-medium">{o.marketName}</span>
@@ -198,6 +199,7 @@ export function OrdersList() {
         <DataTable
           columns={columns}
           data={orders}
+          ariaLabel="Open orders"
           animateRows
           isLoading={isLoading}
           emptyMessage={isDisabled ? "Indexer disabled - showing contract-only data" : "No open orders"}

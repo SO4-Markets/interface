@@ -30,6 +30,7 @@ interface Column<T> {
   accessor: (row: T) => React.ReactNode
   align?: 'left' | 'right'
   className?: string
+  sticky?: boolean
   /**
    * Makes the column sortable when the table has `onSortChange`. Return the
    * raw value to order by; `null`/`undefined` (unknown, still loading) always
@@ -110,6 +111,7 @@ interface DataTableProps<T> {
   emptyMessage?: string
   emptyAction?: React.ReactNode
   keyExtractor: (row: T) => string
+  ariaLabel?: string
   onRowClick?: (row: T) => void
   selectedRowKey?: string
   /** FLIP insertion/removal/reorder animations for live trading data. */
@@ -135,6 +137,7 @@ function DataTable<T>({
   selectedRowKey,
   animateRows = false,
   className,
+  ariaLabel,
   sort,
   onSortChange,
 }: DataTableProps<T>) {
@@ -144,17 +147,22 @@ function DataTable<T>({
   const virtual = rows.length > 100
   const rowHeight = 46
   const maxRows = 50
+  const start = virtual ? Math.min(Math.max(0, Math.floor(scrollTop / rowHeight) - 10), data.length - maxRows) : 0
+  const end = virtual ? Math.min(data.length, start + maxRows) : data.length
+  const stickyClass = (col: Column<T>) => col.sticky
+    ? "sticky left-0 z-[1] bg-card shadow-[1px_0_0_var(--border)]"
+    : undefined
   const start = virtual ? Math.min(Math.max(0, Math.floor(scrollTop / rowHeight) - 10), rows.length - maxRows) : 0
   const end = virtual ? Math.min(rows.length, start + maxRows) : rows.length
 
   if (isLoading) {
     return (
-      <Table containerClassName={className}>
+      <Table aria-label={ariaLabel} containerClassName={className}>
         <TableBody>
           {[0, 1, 2].map((i) => (
             <TableRow key={i} interactive={false}>
               {columns.map((col) => (
-                <TableCell key={col.id} align={col.align}>
+                <TableCell key={col.id} align={col.align} className={cn(col.className, stickyClass(col))}>
                   <Skeleton className="h-4 w-full" />
                 </TableCell>
               ))}
@@ -168,7 +176,7 @@ function DataTable<T>({
   if (data.length === 0) {
     const colSpan = columns.length || 1
     return (
-      <Table containerClassName={className}>
+      <Table aria-label={ariaLabel} containerClassName={className}>
         <TableBody>
           <TableEmptyRow colSpan={colSpan}>
             <EmptyState
@@ -244,7 +252,11 @@ function DataTable<T>({
               className={cn(onRowClick && 'cursor-pointer', isSelected && 'bg-muted/30')}
             >
               {columns.map((col) => (
-                <TableCell key={col.id} align={col.align} className={col.className}>
+                <TableCell
+                  key={col.id}
+                  align={col.align}
+                  className={cn(col.className, stickyClass(col), isSelected && col.sticky && "bg-muted/30")}
+                >
                   {col.accessor(row)}
                 </TableCell>
               ))}
