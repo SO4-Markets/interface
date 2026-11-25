@@ -57,11 +57,60 @@ describe("DataTable", () => {
         columns={columns}
         data={[]}
         isLoading
+        loadingLabel="Loading account data…"
         keyExtractor={(r) => r.id}
       />
     )
     const skeletons = container.querySelectorAll('[data-slot="skeleton"]')
     expect(skeletons.length).toBe(columns.length * 3)
+    expect(container.querySelector('[role="status"]')).toBeInTheDocument()
+    expect(screen.getByText("Loading account data…")).toBeInTheDocument()
+  })
+
+  it("supports configurable skeleton row count", () => {
+    const { container } = render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        isLoading
+        skeletonRows={5}
+        keyExtractor={(r) => r.id}
+      />
+    )
+    const skeletons = container.querySelectorAll('[data-slot="skeleton"]')
+    expect(skeletons.length).toBe(columns.length * 5)
+  })
+
+  it("renders error state with retry recovery action", async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn()
+    render(
+      <DataTable
+        columns={columns}
+        data={[]}
+        error="Unable to connect to indexer"
+        onRetry={onRetry}
+        retryLabel="Retry loading"
+        keyExtractor={(r) => r.id}
+      />
+    )
+    expect(screen.getByText("Unable to connect to indexer")).toBeInTheDocument()
+    const retryBtn = screen.getByRole("button", { name: "Retry loading" })
+    expect(retryBtn).toBeInTheDocument()
+    await user.click(retryBtn)
+    expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("has no accessibility violations while loading or empty", async () => {
+    const { container: loadingContainer } = render(
+      <DataTable columns={columns} data={[]} isLoading keyExtractor={(r) => r.id} />
+    )
+    expect(await axe(loadingContainer)).toHaveNoViolations()
+
+    const { container: emptyContainer } = render(
+      <DataTable columns={columns} data={[]} emptyMessage="Nothing here" keyExtractor={(r) => r.id} />
+    )
+    expect(await axe(emptyContainer)).toHaveNoViolations()
   })
 
   it("renders empty state with message", () => {

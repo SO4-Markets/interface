@@ -4,6 +4,7 @@ import { Button } from "@workspace/ui/components/button"
 import { DataTable } from "@workspace/ui/components/data-table"
 import { StatusBadge } from "@workspace/ui/components/status-badge"
 import { Numeric } from "@workspace/ui/components/numeric"
+import { EmptyState, LoadingCardsState } from "@workspace/ui/components/states"
 import { useOrdersWithIndexer } from "../../hooks/useOrdersWithIndexer"
 import { amendOrderViaReplace, cancelOrder } from "../../lib/stellar"
 import {   getOrderAmendCapability } from "../../lib/order-amendment"
@@ -209,11 +210,12 @@ export function OrdersList() {
       {/* Narrow-screen cards mirror the table with identical labels and actions (OB-090). */}
       <div className="space-y-2 p-3 md:hidden" role="list" aria-label="Open orders">
         {isLoading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading orders…</p>
+          <LoadingCardsState count={3} label="Loading orders…" />
         ) : orders.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {isDisabled ? "Indexer disabled - showing contract-only data" : "No open orders"}
-          </p>
+          <EmptyState
+            title={isDisabled ? "Indexer disabled - showing contract-only data" : "No open orders"}
+            description={isDisabled ? "Showing contract-only data" : "Orders will appear here once placed."}
+          />
         ) : (
           orders.map((o) => {
             const capability = getOrderAmendCapability({

@@ -2,6 +2,7 @@ import * as React from 'react'
 
 import { cn } from '@workspace/ui/lib/utils'
 import { Skeleton } from '@workspace/ui/components/skeleton'
+import { Button } from '@workspace/ui/components/button'
 import { EmptyState } from '@workspace/ui/components/empty-state'
 import { useAnimatedRows } from '@workspace/ui/hooks/use-animated-rows'
 import {
@@ -108,6 +109,11 @@ interface DataTableProps<T> {
   columns: Array<Column<T>>
   data: Array<T>
   isLoading?: boolean
+  loadingLabel?: string
+  skeletonRows?: number
+  error?: React.ReactNode
+  onRetry?: () => void
+  retryLabel?: string
   emptyMessage?: string
   emptyAction?: React.ReactNode
   keyExtractor: (row: T) => string
@@ -130,6 +136,11 @@ function DataTable<T>({
   columns,
   data,
   isLoading = false,
+  loadingLabel = "Loading data…",
+  skeletonRows = 3,
+  error,
+  onRetry,
+  retryLabel = "Try again",
   emptyMessage = 'No data',
   emptyAction,
   keyExtractor,
@@ -147,19 +158,20 @@ function DataTable<T>({
   const virtual = rows.length > 100
   const rowHeight = 46
   const maxRows = 50
-  const start = virtual ? Math.min(Math.max(0, Math.floor(scrollTop / rowHeight) - 10), data.length - maxRows) : 0
-  const end = virtual ? Math.min(data.length, start + maxRows) : data.length
+  const start = virtual ? Math.min(Math.max(0, Math.floor(scrollTop / rowHeight) - 10), rows.length - maxRows) : 0
+  const end = virtual ? Math.min(rows.length, start + maxRows) : rows.length
   const stickyClass = (col: Column<T>) => col.sticky
     ? "sticky left-0 z-[1] bg-card shadow-[1px_0_0_var(--border)]"
     : undefined
-  const start = virtual ? Math.min(Math.max(0, Math.floor(scrollTop / rowHeight) - 10), rows.length - maxRows) : 0
-  const end = virtual ? Math.min(rows.length, start + maxRows) : rows.length
 
   if (isLoading) {
     return (
-      <Table aria-label={ariaLabel} containerClassName={className}>
-        <TableBody>
-          {[0, 1, 2].map((i) => (
+      <Table aria-label={ariaLabel} aria-busy="true" containerClassName={className} data-slot="data-table-loading">
+        <TableBody role="status" aria-live="polite">
+          <TableRow interactive={false} className="sr-only">
+            <TableCell colSpan={columns.length || 1}>{loadingLabel}</TableCell>
+          </TableRow>
+          {Array.from({ length: skeletonRows }, (_, i) => (
             <TableRow key={i} interactive={false}>
               {columns.map((col) => (
                 <TableCell key={col.id} align={col.align} className={cn(col.className, stickyClass(col))}>
@@ -173,15 +185,52 @@ function DataTable<T>({
     )
   }
 
-  if (data.length === 0) {
+  if (error) {
     const colSpan = columns.length || 1
     return (
       <Table aria-label={ariaLabel} containerClassName={className}>
         <TableBody>
           <TableEmptyRow colSpan={colSpan}>
             <EmptyState
+              title={typeof error === "string" ? error : "Failed to load data"}
+              description="An error occurred while loading this view."
+              actions={
+                onRetry
+                  ? {
+                      primary: (
+                        <Button size="sm" variant="outline" onClick={onRetry}>
+                          {retryLabel}
+                        </Button>
+                      ),
+                    }
+                  : undefined
+              }
+            />
+          </TableEmptyRow>
+        </TableBody>
+      </Table>
+    )
+  }
+
+  if (data.length === 0) {
+    const colSpan = columns.length || 1
+    const actionPrimary = emptyAction
+      ? emptyAction
+      : onRetry
+        ? (
+            <Button size="sm" variant="outline" onClick={onRetry}>
+              {retryLabel || "Refresh"}
+            </Button>
+          )
+        : undefined
+
+    return (
+      <Table aria-label={ariaLabel} containerClassName={className}>
+        <TableBody>
+          <TableEmptyRow colSpan={colSpan}>
+            <EmptyState
               title={emptyMessage}
-              actions={emptyAction ? { primary: emptyAction } : undefined}
+              actions={actionPrimary ? { primary: actionPrimary } : undefined}
             />
           </TableEmptyRow>
         </TableBody>
