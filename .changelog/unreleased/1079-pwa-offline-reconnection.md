@@ -1,7 +1,7 @@
 ﻿---
 type: changed
 area: wallet
-pr: 1107
+pr: 1109
 breaking: false
 ---
 
