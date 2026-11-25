@@ -22,6 +22,7 @@ import { sizeFromCollateralAndLeverage } from "../../lib/trade-math"
 import { getToken } from "../../data/tokens"
 import { clampLeverage, estimatePositionRisk } from "../../lib/risk"
 import { EXECUTION_SUPPORT } from "../../lib/execution-support"
+import { SizePresets } from "./SizePresets"
 import { TradeInfoRows } from "./TradeInfoRows"
 import { ConfirmationDialog } from "./ConfirmationDialog"
 import { ApplyReferralCodePrompt } from "./ApplyReferralCodePrompt"
@@ -32,6 +33,7 @@ import { explorerTxUrl } from "@/app/config/network"
 import { NumberInput } from "@/shared/components/NumberInput"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { TokenIcon } from "@/shared/components/TokenIcon"
+import { formatSorobanAmount, toSorobanAmount } from "@/shared/lib/bignum"
 import { formatAddress } from "@/shared/lib/format"
 import {
   validateAmount,
@@ -389,7 +391,8 @@ function TradeInputs({
   const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress!
   const fromPrice = getMidPrice(activeInputTokenAddress)
   const fromUsd = parseFloat(fromAmount || "0") * fromPrice
-  const walletBalance = balances?.[activeInputTokenAddress]
+  const inputToken = getToken(activeInputTokenAddress)
+  const walletBalance = balances?.[inputToken?.symbol ?? activeInputTokenAddress]
   const fromTokenLabel = formatTokenLabel(activeInputTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
 
@@ -406,13 +409,11 @@ function TradeInputs({
     onValidationChange(error)
   }
 
-  function handleFill(pct: number) {
+  function handleFill(percent: number) {
     if (walletBalance === undefined) return
-    if (pct === 1) {
-      handleAmountChange(walletBalance.toString())
-      return
-    }
-    handleAmountChange(String(walletBalance * pct))
+    const decimals = inputToken?.decimals ?? 7
+    const balance = toSorobanAmount(walletBalance, decimals)
+    handleAmountChange(formatSorobanAmount(balance * BigInt(percent) / 100n, decimals))
   }
 
   return (
@@ -451,6 +452,7 @@ function TradeInputs({
 
       {/* Size quick-fill buttons */}
       {walletBalance !== undefined && walletBalance > 0 && (
+        <SizePresets onFill={handleFill} />
         <div className="flex flex-wrap gap-2 pt-1 sm:gap-1">
           {[0.25, 0.5, 0.75, 1].map((pct) => (
             <Button
