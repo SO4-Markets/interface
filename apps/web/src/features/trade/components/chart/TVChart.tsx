@@ -53,17 +53,30 @@ export function TVChart({ symbol, onSelectToken }: Props) {
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null)
 
+  // Re-measure on resize too: the buttons grow to touch size on coarse
+  // pointers and the toolbar reflows on rotation, which left the highlight
+  // sitting beside the selected timeframe.
   useEffect(() => {
-    const activeEl = buttonRefs.current.get(period)
     const toolbar = toolbarRef.current
-    if (activeEl && toolbar) {
+    if (!toolbar) return
+
+    const measure = () => {
+      const activeEl = buttonRefs.current.get(period)
+      if (!activeEl) return
       const activeRect = activeEl.getBoundingClientRect()
       const toolbarRect = toolbar.getBoundingClientRect()
       setIndicatorStyle({
-        left: activeRect.left - toolbarRect.left,
+        // The indicator scrolls with the buttons, so measure in content space.
+        left: activeRect.left - toolbarRect.left + toolbar.scrollLeft,
         width: activeRect.width,
       })
     }
+
+    measure()
+    if (typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(measure)
+    observer.observe(toolbar)
+    return () => observer.disconnect()
   }, [period])
 
   return (
@@ -73,7 +86,7 @@ export function TVChart({ symbol, onSelectToken }: Props) {
       {/* Period selector toolbar */}
       <div
         ref={toolbarRef}
-        className="relative flex gap-1 border-b border-border px-3 py-1.5"
+        className="relative flex gap-1 overflow-x-auto border-b border-border px-3 py-1.5"
         role="group"
         aria-label="Chart timeframe selection"
         onKeyDown={handleKeyDown}
@@ -98,9 +111,9 @@ export function TVChart({ symbol, onSelectToken }: Props) {
             onClick={() => handlePeriodChange(p)}
             aria-pressed={period === p}
             aria-label={`${p} timeframe`}
-            title={`Switch to ${p} chart (${p === period ? "current" : ""})`}
+            title={p === period ? `${p} chart (current)` : `Switch to ${p} chart`}
             className={cn(
-              "relative z-10 rounded-sm px-2 py-0.5 font-mono text-xs transition-colors duration-fast ease-spring-snappy",
+              "touch-target relative z-10 inline-flex shrink-0 items-center justify-center rounded-sm px-2 py-0.5 font-mono text-xs transition-colors duration-fast ease-spring-snappy",
               "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
               period === p
                 ? "text-primary-foreground font-semibold"

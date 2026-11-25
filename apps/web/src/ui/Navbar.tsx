@@ -47,6 +47,7 @@ type Props = {
 }
 
 export function Navbar({ variant }: Props) {
+  const mobileMenuId = "app-navigation-menu"
   const { open, toggle, close } = useMobileMenu()
   const { scrolled, hidden } = useScrollHeader()
   const isApp = variant === "app"
@@ -68,8 +69,8 @@ export function Navbar({ variant }: Props) {
           <SiteLogo variant={variant} />
         </div>
 
-        {/* Desktop links */}
-        <ul className="hidden items-center gap-7 md:flex">
+        {/* Desktop links: the full app bar only fits once every action is visible. */}
+        <ul className="hidden items-center gap-7 xl:flex">
           {isApp
             ? APP_LINKS.map(({ label, to, whatsNew }) => (
                 <li key={label}>
@@ -106,28 +107,35 @@ export function Navbar({ variant }: Props) {
 
         {/* Actions */}
         <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
-          {isApp && <WhatsNew />}
-          {isApp && <NetworkHealthIndicator />}
+          {isApp && (
+            <span className="hidden xl:inline-flex">
+              <WhatsNew />
+            </span>
+          )}
+          {isApp && <NetworkHealthIndicator className="hidden xl:inline-flex" />}
           <ThemeToggle />
-          <ConnectButton />
+          <ConnectButton className="w-auto" />
           {!isApp && (
             <Button
               variant="default"
               className="hidden h-9.5 gap-2 btn-landing px-4 text-13-5 sm:inline-flex"
             >
               Launch app
-              <span className="transition-transform group-hover:translate-x-0.5">
+              <span className="transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
                 →
               </span>
             </Button>
           )}
-          <HamburgerButton open={open} onToggle={toggle} />
+          <HamburgerButton open={open} onToggle={toggle} controls={mobileMenuId} className="xl:hidden" />
         </div>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* Compact navigation for every width where the full app bar does not fit. */}
       {open && (
-        <div className="border-t border-border bg-background px-4 pb-4 md:hidden">
+        <div
+          id={mobileMenuId}
+          className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain border-t border-border bg-background px-4 pb-4 xl:hidden"
+        >
           <ul className="flex flex-col gap-1 pt-2">
             {isApp
               ? APP_LINKS.map(({ label, to, whatsNew }) => (
@@ -171,6 +179,12 @@ export function Navbar({ variant }: Props) {
             <Button variant="default" className="mt-3 w-full gap-2 btn-landing">
               Launch app →
             </Button>
+          )}
+          {isApp && (
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
+              <WhatsNew className="justify-start" />
+              <NetworkHealthIndicator />
+            </div>
           )}
         </div>
       )}

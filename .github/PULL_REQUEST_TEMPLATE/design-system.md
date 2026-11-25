@@ -2,6 +2,14 @@
 
 Use this checklist when your PR changes design tokens, shared components in `packages/ui`, or introduces a new component to the design system.
 
+See [AGENTS.md](../../AGENTS.md), especially [§2](../../AGENTS.md#2-never-weaken-a-check-to-make-it-pass) and [§3](../../AGENTS.md#3-fix-issues-completely), for the repository's complete-fix and no-suppression requirements.
+
+### Root cause and regression coverage
+
+- [ ] **Root cause stated** (for fixes/behavior changes): why the bad state was reachable, not just the symptom. Write "N/A" and explain why for non-fix changes.
+- [ ] **Sibling instances checked**: searched for the same bug/pattern elsewhere and fixed them, or documented what remains in a linked follow-up issue.
+- [ ] **Regression coverage**: named test(s) that fail before the fix and pass after, or explained why a regression test is not applicable. Add focused tests; do not skip/delete tests or weaken checks to get green.
+
 ### API compatibility
 
 - [ ] Component API follows existing conventions: `className` forwarding, `cva` variants, `...props` spread last
@@ -36,3 +44,4 @@ Use this checklist when your PR changes design tokens, shared components in `pac
 - [ ] `bun run typecheck --filter=@workspace/ui` passes
 - [ ] `bun run lint --filter=@workspace/ui` passes
 - [ ] `bun run test:e2e -- design-system-visual` passes (or snapshots intentionally updated)
+- [ ] No check was disabled, skipped, or weakened to obtain a passing result

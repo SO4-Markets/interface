@@ -86,3 +86,22 @@ test("SearchDialog displays empty results state when query matches nothing", asy
     expect(container.textContent).toContain('No results found for "nonexistent-query"')
   })
 })
+
+test("SearchDialog renders malicious excerpts as text and preserves highlights", async () => {
+  const malicious = '<script>alert("xss")</script> <img src=x onerror=alert(1)> <mark>safe match</mark>'
+  const { container, getByPlaceholderText } = render(
+    <SearchDialog
+      isOpen={true}
+      onClose={() => {}}
+      onSearch={async () => [{ url: "/unsafe", title: "Unsafe", excerpt: malicious }]}
+    />,
+  )
+
+  fireEvent.change(getByPlaceholderText("Search documentation..."), { target: { value: "unsafe" } })
+
+  await waitFor(() => expect(container.querySelector("a[href='/unsafe']")).not.toBeNull())
+  expect(container.querySelector("script")).toBeNull()
+  expect(container.querySelector("img")).toBeNull()
+  expect(container.querySelector("mark")?.textContent).toBe("safe match")
+  expect(container.querySelector("[href='/unsafe']")?.textContent).toContain("<script>")
+})

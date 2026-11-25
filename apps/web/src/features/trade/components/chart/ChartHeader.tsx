@@ -25,14 +25,14 @@ export function ChartHeader({ symbol, onSelectToken }: Props) {
 
   return (
     <div className="border-b border-border">
-      <div className="flex min-w-0 items-center gap-4 overflow-x-auto px-3 py-2 text-sm">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2 text-sm xl:flex-nowrap xl:overflow-x-auto">
       {/* Market selector */}
       <MarketSelector
         symbol={symbol}
         onSelect={onSelectToken}
       />
 
-      <div className="h-6 w-px shrink-0 bg-border" />
+      <div className="hidden h-6 w-px shrink-0 bg-border xl:block" />
 
       {/* Current price */}
       <div className="flex shrink-0 flex-col">

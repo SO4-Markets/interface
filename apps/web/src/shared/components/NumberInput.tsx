@@ -51,7 +51,7 @@ export function NumberInput({
             event.preventDefault()
             onWheel?.(event)
           }}
-          className={cn(onMax && "pe-14", className)}
+          className={cn(onMax && "pe-14 max-sm:min-h-11 max-sm:pe-16", className)}
           disabled={disabled}
           {...props}
         />
@@ -60,7 +60,7 @@ export function NumberInput({
             type="button"
             size="sm"
             variant="outline"
-            className="absolute end-2 top-1/2 -translate-y-1/2 px-2 text-11"
+            className="touch-target absolute end-1 top-1/2 -translate-y-1/2 px-2 text-11 sm:end-2"
             onClick={onMax}
             disabled={disabled}
           >

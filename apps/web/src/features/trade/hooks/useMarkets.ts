@@ -24,7 +24,7 @@ async function fetchMarkets(): Promise<Array<Market>> {
 export function useMarkets() {
   const { getToken } = useTokenList()
 
-  const { data: markets = MARKETS } = useQuery<Array<Market>>({
+  const { data: markets = MARKETS, isLoading, isError } = useQuery<Array<Market>>({
     queryKey: queryKeys.trade.markets(),
     queryFn: fetchMarkets,
     ...queryPolicy("metadata"),
@@ -44,7 +44,7 @@ export function useMarkets() {
     [markets, getToken],
   )
 
-  return { markets, getMarket, getMarketsForIndexToken }
+  return { markets, isLoading, isError, getMarket, getMarketsForIndexToken }
 }
 
 export type { Market }

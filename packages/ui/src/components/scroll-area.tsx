@@ -18,9 +18,9 @@ import type { VariantProps } from "class-variance-authority"
 const viewportVariants = cva("min-h-0 min-w-0 flex-1 scroll-area-scrollbars", {
   variants: {
     orientation: {
-      vertical: "overflow-x-hidden overflow-y-auto",
-      horizontal: "overflow-x-auto overflow-y-hidden",
-      both: "overflow-auto",
+      vertical: "overflow-x-hidden overflow-y-auto overscroll-contain",
+      horizontal: "overflow-x-auto overflow-y-hidden overscroll-x-contain",
+      both: "overflow-auto overscroll-contain",
     },
   },
   defaultVariants: { orientation: "vertical" },
@@ -92,10 +92,12 @@ export interface ScrollAreaProps
  * A native scroll container with optional edge shadows that appear only when
  * there is more content in that direction.
  *
- * Scrolling stays native — momentum, overscroll, wheel, trackpad, and the
+ * Scrolling stays native — momentum, wheel, trackpad, and the
  * user's own scrollbar preference are all untouched; only the scrollbar's
  * colours are themed (see the `scroll-area-scrollbars` utility). Nothing is
  * virtualized: long tables should still be windowed by the table layer.
+ * The viewport sets `overscroll-behavior: contain`, so reaching its end does
+ * not chain the scroll to the page (or trigger iOS rubber-banding of it).
  *
  * ```tsx
  * <ScrollArea className="max-h-80" tone="overlay">
@@ -133,7 +135,6 @@ function ScrollArea({
       data-orientation={orientation}
       className={cn(
         "group/scroll-area relative flex min-h-0 min-w-0 flex-col",
-        "flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-s data-vertical:border-s-transparent",
         className
       )}
       {...props}

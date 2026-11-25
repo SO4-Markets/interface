@@ -8,9 +8,13 @@ import type {VerifiedDepth} from "../lib/fee-preview";
 export type TradeFees = {
   positionFeeUsd: number | null
   priceImpactUsd: number | null
+  priceImpactPct?: number | null
   executionFeeUsd: number | null
   executionFeeXlm: number | null
   totalFeesUsd: number | null
+  feeBps?: number | null
+  borrowingRatePerHour?: number | null
+  isLoading?: boolean
   status: "estimated" | "unknown" | "stale" | "insufficient"
   feesBreakdown: Array<{ label: string; valueUsd: number | null }>
 }
@@ -28,23 +32,29 @@ export function useTradeFees(params: {
 }): TradeFees {
   const { sizeUsd, marketAddress, tradeType = "Long" } = params
 
-  const { data: feeConfig } = useQuery({
+  const feeConfigQuery = useQuery({
     queryKey: queryKeys.trade.feeConfig(CHAIN_ID, marketAddress),
     queryFn: () => fetchFeeConfig(marketAddress),
     staleTime: 120_000,
     enabled: !!marketAddress,
   })
+  const feeConfig = feeConfigQuery.data
 
-  const { getMidPrice } = useTokenPrices()
+  const { getMidPrice, isLoading: pricesLoading } = useTokenPrices()
   const xlmPrice = getMidPrice("XLM")
+  const isLoading = feeConfigQuery.isLoading || pricesLoading
 
   if (!sizeUsd || sizeUsd <= 0) {
     return {
       positionFeeUsd: null,
       priceImpactUsd: null,
+      priceImpactPct: null,
       executionFeeUsd: null,
       executionFeeXlm: null,
       totalFeesUsd: null,
+      feeBps: null,
+      borrowingRatePerHour: null,
+      isLoading,
       status: "unknown",
       feesBreakdown: [],
     }
@@ -54,9 +64,13 @@ export function useTradeFees(params: {
     return {
       positionFeeUsd: null,
       priceImpactUsd: null,
+      priceImpactPct: null,
       executionFeeUsd: null,
       executionFeeXlm: null,
       totalFeesUsd: null,
+      feeBps: null,
+      borrowingRatePerHour: null,
+      isLoading,
       status: "unknown",
       feesBreakdown: [],
     }
@@ -66,9 +80,13 @@ export function useTradeFees(params: {
     return {
       positionFeeUsd: null,
       priceImpactUsd: null,
+      priceImpactPct: null,
       executionFeeUsd: null,
       executionFeeXlm: null,
       totalFeesUsd: null,
+      feeBps: null,
+      borrowingRatePerHour: null,
+      isLoading,
       status: "stale",
       feesBreakdown: [],
     }
@@ -85,7 +103,8 @@ export function useTradeFees(params: {
     referencePrice: params.referencePrice ?? 0,
     depth: params.depth,
   })
-  const priceImpactUsd = depthImpact.impactPct === null ? null : (sizeUsd * depthImpact.impactPct) / 100
+  const priceImpactPct = depthImpact.impactPct
+  const priceImpactUsd = priceImpactPct === null ? null : (sizeUsd * priceImpactPct) / 100
 
   const totalFeesUsd = priceImpactUsd === null || executionFeeUsd === null
     ? null
@@ -94,9 +113,13 @@ export function useTradeFees(params: {
   return {
     positionFeeUsd,
     priceImpactUsd,
+    priceImpactPct,
     executionFeeUsd,
     executionFeeXlm,
     totalFeesUsd,
+    feeBps,
+    borrowingRatePerHour: feeConfig.borrowingRatePerHour,
+    isLoading,
     status: depthImpact.status,
     feesBreakdown: [
       { label: tradeType === "Swap" ? "Swap fee" : "Position fee", valueUsd: positionFeeUsd },

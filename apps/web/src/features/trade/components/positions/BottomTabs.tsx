@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs"
 import { usePositions } from "../../hooks/usePositions"
 import { hasFrozenOrders, useOrders } from "../../hooks/useOrders"
+import { LiquidationWarningAnnouncer } from "../LiquidationWarningAnnouncer"
 import { OrderExecutionFrozenBanner } from "./OrderExecutionFrozenBanner"
 import { PositionsList } from "./PositionsList"
 import { OrdersList } from "./OrdersList"
@@ -8,14 +9,23 @@ import { OrderHistoryList } from "./OrderHistoryList"
 import { TradeHistoryList } from "./TradeHistoryList"
 import { FundingActivityList } from "./FundingActivityList"
 import type { Position } from "../../hooks/usePositions"
+import type { SortState } from "@workspace/ui/components/data-table"
 
 type Props = {
   onSelectPosition?: (position: Position) => void
   value?: "positions" | "orders" | "history" | "trades" | "claims"
   onValueChange?: (value: "positions" | "orders" | "history" | "trades" | "claims") => void
+  positionsSort?: SortState | null
+  onPositionsSortChange?: (next: SortState | null) => void
 }
 
-export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
+export function BottomTabs({
+  onSelectPosition,
+  value,
+  onValueChange,
+  positionsSort,
+  onPositionsSortChange,
+}: Props) {
   const { data: positions = [] } = usePositions()
   const { data: orders = [] } = useOrders()
 
@@ -27,27 +37,40 @@ export function BottomTabs({ onSelectPosition, value, onValueChange }: Props) {
   return (
     <Tabs value={value} defaultValue="positions" onValueChange={(next) => onValueChange?.(next as NonNullable<Props["value"]>)}>
       <OrderExecutionFrozenBanner visible={hasFrozenOrders(orders)} />
-      <TabsList className="border-b border-border bg-transparent px-4">
-        <TabsTrigger value="positions">
-          Positions {positions.length > 0 && `(${positions.length})`}
-        </TabsTrigger>
-        <TabsTrigger value="orders">
-          Orders {orders.length > 0 && `(${orders.length})`}
-        </TabsTrigger>
-        <TabsTrigger value="history">Order history</TabsTrigger>
-        <TabsTrigger value="trades">
-          Trades
-        </TabsTrigger>
-        <TabsTrigger value="claims">
-          {/* OB-088: Label updated to "Funding & Fees" to reflect that this tab
-              now shows the full activity history (accrued, settled, claimed) —
-              not just a snapshot of claimable amounts. */}
-          Funding &amp; Fees
-        </TabsTrigger>
-      </TabsList>
+      {/* issue 956: mounted with the tabs (not the positions panel) so warnings are
+          spoken whichever tab is open. */}
+      <LiquidationWarningAnnouncer positions={positions} />
+      <div data-testid="account-tabs-viewport" className="min-w-0 overflow-x-auto overscroll-x-contain">
+        <TabsList aria-label="Account activity" className="w-full min-w-max border-b border-border bg-transparent px-4">
+          <TabsTrigger value="positions">
+            Positions {positions.length > 0 && `(${positions.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="orders">
+            Orders {orders.length > 0 && `(${orders.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="history" aria-label="Order history">
+            <span className="sm:hidden">History</span>
+            <span className="hidden sm:inline">Order history</span>
+          </TabsTrigger>
+          <TabsTrigger value="trades">
+            Trades
+          </TabsTrigger>
+          <TabsTrigger value="claims" aria-label="Funding & Fees">
+            {/* OB-088: Label updated to "Funding & Fees" to reflect that this tab
+                now shows the full activity history (accrued, settled, claimed) —
+                not just a snapshot of claimable amounts. */}
+            <span className="sm:hidden">Funding</span>
+            <span className="hidden sm:inline">Funding &amp; Fees</span>
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="positions">
-        <PositionsList onSelectPosition={onSelectPosition} />
+        <PositionsList
+          onSelectPosition={onSelectPosition}
+          sort={positionsSort}
+          onSortChange={onPositionsSortChange}
+        />
       </TabsContent>
 
       <TabsContent value="orders">

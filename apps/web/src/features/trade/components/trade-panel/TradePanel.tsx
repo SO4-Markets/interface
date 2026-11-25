@@ -22,6 +22,7 @@ import { sizeFromCollateralAndLeverage } from "../../lib/trade-math"
 import { getToken } from "../../data/tokens"
 import { clampLeverage, estimatePositionRisk } from "../../lib/risk"
 import { EXECUTION_SUPPORT } from "../../lib/execution-support"
+import { SizePresets } from "./SizePresets"
 import { TradeInfoRows } from "./TradeInfoRows"
 import { ConfirmationDialog } from "./ConfirmationDialog"
 import { ApplyReferralCodePrompt } from "./ApplyReferralCodePrompt"
@@ -32,6 +33,7 @@ import { explorerTxUrl } from "@/app/config/network"
 import { NumberInput } from "@/shared/components/NumberInput"
 import { useWalletStore } from "@/features/wallet/store/wallet-store"
 import { TokenIcon } from "@/shared/components/TokenIcon"
+import { formatSorobanAmount, toSorobanAmount } from "@/shared/lib/bignum"
 import { formatAddress } from "@/shared/lib/format"
 import {
   validateAmount,
@@ -72,9 +74,9 @@ export function TradePanel({ trade }: TradePanelProps) {
   } = trade
 
   const marketRisk = useMarketRiskParams(marketAddress)
-  const { data: positions = [] } = usePositions()
-  const existingExposure = positions.find(
-    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong,
+  const { data: positions } = usePositions()
+  const existingExposure = positions?.find(
+    (position) => position.marketAddress === marketAddress && position.isLong === tradeFlags.isLong && position.collateralToken === collateralAddress,
   )
   const maxLeverage = marketRisk.params?.maxLeverage ?? 1
   const boundedLeverage = marketRisk.params
@@ -205,7 +207,7 @@ export function TradePanel({ trade }: TradePanelProps) {
 
       {/* ── Trigger price input (Limit / Stop-Loss only) ─────────── */}
       {(tradeMode === "Limit" || tradeMode === "Trigger") && (
-        <div className="space-y-1 animate-in fade-in duration-base">
+        <div className="space-y-1 animate-in fade-in duration-base motion-reduce:animate-none">
           <label className="text-xs text-muted-foreground">
             {tradeMode === "Trigger" ? "Trigger price" : "Limit price"}
           </label>
@@ -240,7 +242,7 @@ export function TradePanel({ trade }: TradePanelProps) {
       {/* ── Leverage slider (positions only) ─────────────────────── */}
       {tradeFlags.isPosition && (
         marketRisk.state === "available" ? (
-          <div className="animate-in fade-in duration-base">
+          <div className="animate-in fade-in duration-base motion-reduce:animate-none">
             <LeverageSlider
               value={boundedLeverage}
               max={maxLeverage}
@@ -284,6 +286,7 @@ export function TradePanel({ trade }: TradePanelProps) {
           <button
             type="button"
             className="text-xs font-medium text-primary hover:text-primary/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+            className="touch-target inline-flex items-center justify-center px-2 text-xs font-medium text-primary hover:text-primary/80"
             onClick={() => trade.setAdvanced({ advancedDisplay: !advanced.advancedDisplay })}
           >
             {advanced.advancedDisplay ? "Hide" : "Show"}
@@ -359,6 +362,7 @@ export function TradePanel({ trade }: TradePanelProps) {
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirmed={setConfirmedHash}
+        existingPosition={positions ? existingExposure ?? null : undefined}
         tradeState={trade}
         sizeUsd={sizeUsd}
         entryPrice={entryPrice}
@@ -388,7 +392,8 @@ function TradeInputs({
   const activeInputTokenAddress = tradeFlags.isSwap ? fromTokenAddress : collateralAddress!
   const fromPrice = getMidPrice(activeInputTokenAddress)
   const fromUsd = parseFloat(fromAmount || "0") * fromPrice
-  const walletBalance = balances?.[activeInputTokenAddress]
+  const inputToken = getToken(activeInputTokenAddress)
+  const walletBalance = balances?.[inputToken?.symbol ?? activeInputTokenAddress]
   const fromTokenLabel = formatTokenLabel(activeInputTokenAddress)
   const toTokenLabel = formatTokenLabel(toTokenAddress)
 
@@ -405,13 +410,11 @@ function TradeInputs({
     onValidationChange(error)
   }
 
-  function handleFill(pct: number) {
+  function handleFill(percent: number) {
     if (walletBalance === undefined) return
-    if (pct === 1) {
-      handleAmountChange(walletBalance.toString())
-      return
-    }
-    handleAmountChange(String(walletBalance * pct))
+    const decimals = inputToken?.decimals ?? 7
+    const balance = toSorobanAmount(walletBalance, decimals)
+    handleAmountChange(formatSorobanAmount(balance * BigInt(percent) / 100n, decimals))
   }
 
   return (
@@ -450,7 +453,8 @@ function TradeInputs({
 
       {/* Size quick-fill buttons */}
       {walletBalance !== undefined && walletBalance > 0 && (
-        <div className="flex flex-wrap gap-1 pt-1">
+        <SizePresets onFill={handleFill} />
+        <div className="flex flex-wrap gap-2 pt-1 sm:gap-1">
           {[0.25, 0.5, 0.75, 1].map((pct) => (
             <Button
               key={pct}
@@ -458,7 +462,7 @@ function TradeInputs({
               variant="outline"
               size="xs"
               onClick={() => handleFill(pct)}
-              className="text-xs shrink-0"
+              className="touch-target shrink-0 text-xs"
             >
               {pct === 1 ? "Max" : `${Math.round(pct * 100)}%`}
             </Button>
@@ -469,8 +473,10 @@ function TradeInputs({
       {/* Swap arrow */}
       {tradeFlags.isSwap && (
         <button
+          type="button"
+          aria-label="Switch pay and receive tokens"
           onClick={switchTokens}
-          className="mx-auto flex size-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+          className="touch-target mx-auto flex size-6 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
         >
           ↕
         </button>

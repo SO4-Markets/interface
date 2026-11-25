@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
+import { useFocusTrap } from "@workspace/ui/hooks/use-focus-trap"
 import { HamburgerButton, SiteLogo, useMobileMenu } from "../nav/primitives"
 import { useScrollHeader } from "@/shared/hooks/useScrollHeader"
 
@@ -68,36 +69,17 @@ export function HeaderMenu() {
     const { body } = document
     const previousOverflow = body.style.overflow
     body.style.overflow = "hidden"
-
-    const panel = panelRef.current
-    panel?.querySelector<HTMLElement>("a, button")?.focus()
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Tab" || !panel) return
-
-      const focusables = panel.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      )
-      if (focusables.length === 0) return
-
-      const first = focusables[0]
-      const last = focusables[focusables.length - 1]
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown)
     return () => {
-      document.removeEventListener("keydown", onKeyDown)
       body.style.overflow = previousOverflow
     }
   }, [open])
+
+  useFocusTrap({
+    active: open,
+    containerRef: panelRef,
+    include: () => [triggerRef.current],
+    returnFocus: () => triggerRef.current,
+  })
 
   return (
     <>
@@ -171,7 +153,7 @@ export function HeaderMenu() {
         data-instant={instant}
         className="landing-mobile-menu fixed inset-0 top-16 z-20 flex flex-col bg-gmx-slate-900 sm:hidden"
       >
-        <ul className="flex flex-1 flex-col overflow-y-auto px-4">
+        <ul className="flex flex-1 flex-col overflow-y-auto overscroll-contain px-4">
           {NAV_LINKS.map(({ label, to }) => (
             <li
               key={label}

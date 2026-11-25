@@ -16,15 +16,23 @@ import geistLatinFont from "@fontsource-variable/geist/files/geist-latin-wght-no
 import { ENV } from "../app/config/env"
 import { buildResourceHints } from "../shared/lib/resource-hints"
 import { AppProviders } from "../app/providers"
-import { SITE_NAME, SITE_URL, SOCIAL_URLS } from "../shared/lib/site-identity"
+import {
+  ORGANIZATION_NAME,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "../shared/lib/site-identity"
+import { serializeJsonLd, websiteJsonLd } from "../shared/lib/structured-data"
 import { RouteAnnouncer } from "../shared/components/RouteAnnouncer"
 import { RouteProgressBar } from "../shared/components/RouteProgressBar"
 import { useCspNonce } from "../shared/lib/csp-nonce"
 import { installWebVitalsReporting } from "@/features/observability/lib/web-vitals"
+import { TransactionActivityCenter } from "@/features/trade/components/TransactionActivityCenter"
 
-const TITLE = `${SITE_NAME} · On-chain perpetuals`
-const DESCRIPTION =
-  "A unified-liquidity perp DEX. Deep books, sub-second matching, and self-custodied risk — built for traders who care where their fills come from."
+const TITLE = `${SITE_NAME} · ${SITE_TAGLINE}`
+const DESCRIPTION = SITE_DESCRIPTION
 // TODO(GF3-003): apply the dot-separator convention (no em dashes as list
 // separators, "." between clauses — e.g. "Trade · Long/Short") through the
 // rest of the landing copy pass. This file's list-style SEO strings (title,
@@ -32,47 +40,10 @@ const DESCRIPTION =
 // surface; DESCRIPTION's dash is a genuine sentence break, not a list
 // separator, and stays.
 const OG_IMAGE = `${SITE_URL}/og-image.webp`
-const TWITTER_HANDLE = "@so4market"
 
-// JSON-LD structured data (WebApplication + FinancialService)
-const JSON_LD = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "@id": `${SITE_URL}/#app`,
-      name: SITE_NAME,
-      url: SITE_URL,
-      description: DESCRIPTION,
-      applicationCategory: "FinanceApplication",
-      operatingSystem: "Web",
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
-    },
-    {
-      "@type": "Organization",
-      "@id": `${SITE_URL}/#org`,
-      name: "SO4 Markets",
-      url: SITE_URL,
-      logo: `${SITE_URL}/favicon.svg`,
-      sameAs: [
-        SOCIAL_URLS.x,
-        SOCIAL_URLS.discord,
-        SOCIAL_URLS.telegram,
-      ],
-    },
-    {
-      "@type": "WebSite",
-      "@id": `${SITE_URL}/#website`,
-      url: SITE_URL,
-      name: SITE_NAME,
-      publisher: { "@id": `${SITE_URL}/#org` },
-    },
-  ],
-}
+// Site-wide structured data. Page-specific schemas (Organization on `/`,
+// FAQPage on `/referrals`) are attached by those routes' `head()` (issue 954).
+const WEBSITE_JSON_LD = serializeJsonLd(websiteJsonLd())
 
 export const Route = createRootRoute({
   head: () => ({
@@ -88,7 +59,7 @@ export const Route = createRootRoute({
         content:
           "perpetual DEX, on-chain perps, crypto derivatives, DeFi trading, BTC perp, ETH perp, low fee perp, self-custodied trading, unified liquidity",
       },
-      { name: "author", content: "SO4 Markets" },
+      { name: "author", content: ORGANIZATION_NAME },
       { name: "robots", content: "index, follow, max-image-preview:large" },
       // ds-allow: <meta content> requires a literal color string for
       // mobile browser chrome tinting — can't reference a CSS custom
@@ -112,7 +83,7 @@ export const Route = createRootRoute({
       {
         property: "og:image:alt",
         content:
-          `${SITE_NAME} · On-chain perpetuals DEX · unified liquidity for modern markets`,
+          `${SITE_NAME} · ${SITE_TAGLINE} DEX · unified liquidity for modern markets`,
       },
 
       // ── Twitter / X Card ────────────────────────────────────────
@@ -125,7 +96,7 @@ export const Route = createRootRoute({
       {
         name: "twitter:image:alt",
         content:
-          `${SITE_NAME} · On-chain perpetuals DEX · unified liquidity for modern markets`,
+          `${SITE_NAME} · ${SITE_TAGLINE} DEX · unified liquidity for modern markets`,
       },
     ],
     links: [
@@ -245,6 +216,7 @@ function RootComponent() {
   return (
     <>
       <RouteAnnouncer />
+      <TransactionActivityCenter />
       <Outlet />
     </>
   )
@@ -271,11 +243,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {/* Must be first — runs before any CSS is applied */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <HeadContent />
-        {/* JSON-LD structured data */}
+        {/* Site-wide JSON-LD structured data */}
         <script
           type="application/ld+json"
           nonce={nonce}
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+          dangerouslySetInnerHTML={{ __html: WEBSITE_JSON_LD }}
         />
       </head>
       <body>

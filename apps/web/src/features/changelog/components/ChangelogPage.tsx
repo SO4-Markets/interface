@@ -177,8 +177,8 @@ export function ChangelogPage() {
       <div className="min-h-screen bg-background">
         <div className="border-b border-border px-[var(--gutter-page-sm)] pt-6 pb-4 md:px-[var(--gutter-page-md)] md:pt-8 md:pb-6 lg:px-[var(--gutter-page-lg)] lg:pt-10">
           <div className="mx-auto flex max-w-4xl flex-col gap-2">
-            <div className="h-10 w-48 animate-pulse rounded-sm bg-muted" />
-            <div className="h-4 w-96 animate-pulse rounded-sm bg-muted" />
+            <div className="h-10 w-48 motion-safe:animate-pulse rounded-sm bg-muted" />
+            <div className="h-4 w-96 motion-safe:animate-pulse rounded-sm bg-muted" />
           </div>
         </div>
         <div className="mx-auto max-w-4xl px-[var(--gutter-page-sm)] py-6 md:px-[var(--gutter-page-md)] md:py-8 lg:px-[var(--gutter-page-lg)]">
@@ -326,7 +326,7 @@ export function ChangelogPage() {
               <span className="flex items-center gap-2">
                 {archiveStatus === "loading" ? (
                   <>
-                    <Icon icon={RefreshIcon} className="animate-spin" />
+                    <Icon icon={RefreshIcon} className="motion-safe:animate-spin" />
                     Loading older releases…
                   </>
                 ) : (

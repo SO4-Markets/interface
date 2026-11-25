@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
+import { cn } from "@workspace/ui/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import { CHANGELOG_ENTRY_TYPES } from "../types"
 import { formatDate, typeLabel } from "../utils"
 import { ChangelogEntry } from "./ChangelogEntry"
 
-export function WhatsNew() {
+export function WhatsNew({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const changelog = useChangelog()
   const newestRelease = changelog.data?.releases[0]
@@ -72,7 +73,7 @@ export function WhatsNew() {
         size="sm"
         aria-keyshortcuts="Alt+N"
         onClick={() => setOpen(true)}
-        className="relative"
+        className={cn("relative", className)}
       >
         What&apos;s new
         {showIndicator && (
@@ -103,7 +104,7 @@ export function WhatsNew() {
           </DialogHeader>
 
           {newestRelease && (
-            <div className="max-h-96 space-y-4 overflow-y-auto pe-1">
+            <div className="max-h-96 space-y-4 overflow-y-auto overscroll-contain pe-1">
               {groupedEntries.map((group) => (
                 <section
                   key={group.type}

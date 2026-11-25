@@ -1,9 +1,10 @@
+import * as React from "react"
 import { describe, expect, it, vi } from "vitest"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe } from "vitest-axe"
-import { DataTable } from "./data-table"
-import type { Column } from "./data-table"
+import { DataTable, nextSortState, sortRows } from "./data-table"
+import type { Column, SortState } from "./data-table"
 
 interface TestRow {
   id: string
@@ -157,6 +158,136 @@ describe("DataTable", () => {
         keyExtractor={(r) => r.id}
       />
     )
+    expect(await axe(container)).toHaveNoViolations()
+  })
+})
+
+describe("DataTable sorting (issue 966)", () => {
+  interface SortRow {
+    id: string
+    name: string
+    value: number | null
+  }
+
+  const sortColumns: Array<Column<SortRow>> = [
+    { id: "name", header: "Name", accessor: (r) => r.name, sortValue: (r) => r.name },
+    {
+      id: "value",
+      header: "Value",
+      accessor: (r) => (r.value === null ? "…" : r.value),
+      align: "right",
+      sortValue: (r) => r.value,
+    },
+    { id: "note", header: "Note", accessor: () => "-" },
+  ]
+
+  const sortData: Array<SortRow> = [
+    { id: "b", name: "Beta", value: 20 },
+    { id: "x", name: "Pending", value: null },
+    { id: "a", name: "alpha", value: 300 },
+    { id: "c", name: "Gamma", value: 4 },
+  ]
+
+  const ids = (rows: Array<SortRow>) => rows.map((r) => r.id)
+
+  it("cycles unsorted → ascending → descending → unsorted", () => {
+    expect(nextSortState(null, "value")).toEqual({ columnId: "value", direction: "asc" })
+    expect(nextSortState({ columnId: "value", direction: "asc" }, "value")).toEqual({
+      columnId: "value",
+      direction: "desc",
+    })
+    expect(nextSortState({ columnId: "value", direction: "desc" }, "value")).toBeNull()
+    expect(nextSortState({ columnId: "name", direction: "desc" }, "value")).toEqual({
+      columnId: "value",
+      direction: "asc",
+    })
+  })
+
+  it("sorts numbers numerically and keeps missing values last in both directions", () => {
+    expect(ids(sortRows(sortData, sortColumns, { columnId: "value", direction: "asc" }))).toEqual([
+      "c", "b", "a", "x",
+    ])
+    expect(ids(sortRows(sortData, sortColumns, { columnId: "value", direction: "desc" }))).toEqual([
+      "a", "b", "c", "x",
+    ])
+  })
+
+  it("sorts strings case-insensitively and leaves order alone when unsorted", () => {
+    expect(ids(sortRows(sortData, sortColumns, { columnId: "name", direction: "asc" }))).toEqual([
+      "a", "b", "c", "x",
+    ])
+    expect(ids(sortRows(sortData, sortColumns, null))).toEqual(ids(sortData))
+    expect(ids(sortRows(sortData, sortColumns, { columnId: "note", direction: "asc" }))).toEqual(
+      ids(sortData),
+    )
+  })
+
+  function SortableTable({ initial = null }: { initial?: SortState | null }) {
+    const [sort, setSort] = React.useState<SortState | null>(initial)
+    return (
+      <DataTable
+        columns={sortColumns}
+        data={sortData}
+        keyExtractor={(r) => r.id}
+        sort={sort}
+        onSortChange={setSort}
+      />
+    )
+  }
+
+  const firstColumn = () =>
+    screen.getAllByRole("row").slice(1).map((row) => row.querySelector("td")?.textContent)
+
+  it("exposes aria-sort only on sortable headers and reorders rows on click", async () => {
+    const user = userEvent.setup()
+    render(<SortableTable />)
+
+    const valueHeader = screen.getByRole("columnheader", { name: "Value" })
+    expect(valueHeader).toHaveAttribute("aria-sort", "none")
+    expect(screen.getByRole("columnheader", { name: "Note" })).not.toHaveAttribute("aria-sort")
+
+    await user.click(screen.getByRole("button", { name: "Value" }))
+    expect(valueHeader).toHaveAttribute("aria-sort", "ascending")
+    expect(firstColumn()).toEqual(["Gamma", "Beta", "alpha", "Pending"])
+
+    await user.click(screen.getByRole("button", { name: "Value" }))
+    expect(valueHeader).toHaveAttribute("aria-sort", "descending")
+    expect(valueHeader.querySelector('[data-slot="sort-indicator"]')).toHaveAttribute(
+      "data-direction",
+      "desc",
+    )
+    expect(firstColumn()).toEqual(["alpha", "Beta", "Gamma", "Pending"])
+
+    await user.click(screen.getByRole("button", { name: "Value" }))
+    expect(valueHeader).toHaveAttribute("aria-sort", "none")
+    expect(firstColumn()).toEqual(["Beta", "Pending", "alpha", "Gamma"])
+  })
+
+  it("is keyboard operable", async () => {
+    const user = userEvent.setup()
+    render(<SortableTable />)
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Name" })).toHaveFocus()
+    await user.keyboard("{Enter}")
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "ascending")
+  })
+
+  it("animates the indicator only when motion is allowed", () => {
+    render(<SortableTable initial={{ columnId: "name", direction: "desc" }} />)
+    const indicator = screen
+      .getByRole("columnheader", { name: "Name" })
+      .querySelector('[data-slot="sort-indicator"]')
+    expect(indicator).toHaveClass("rotate-180", "duration-fast", "motion-reduce:transition-none")
+  })
+
+  it("renders plain headers when the table is not sortable", () => {
+    render(<DataTable columns={sortColumns} data={sortData} keyExtractor={(r) => r.id} />)
+    expect(screen.queryByRole("button", { name: "Value" })).not.toBeInTheDocument()
+    expect(screen.getByRole("columnheader", { name: "Value" })).not.toHaveAttribute("aria-sort")
+  })
+
+  it("has no accessibility violations when sortable", async () => {
+    const { container } = render(<SortableTable initial={{ columnId: "value", direction: "asc" }} />)
     expect(await axe(container)).toHaveNoViolations()
   })
 })

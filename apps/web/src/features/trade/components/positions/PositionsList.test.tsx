@@ -108,8 +108,27 @@ function createMockPosition(overrides: Record<string, unknown> = {}) {
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 let PositionsList: typeof import("./PositionsList").PositionsList
 
+// The shared web vitest setup has no matchMedia; rolling numerics and the
+// reduced-motion checks read it on render.
+function stubMatchMedia() {
+  vi.stubGlobal(
+    "matchMedia",
+    (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  )
+}
+
 describe("PositionsList", () => {
   beforeEach(async () => {
+    stubMatchMedia()
     PositionsList = (await import("./PositionsList")).PositionsList
     mockPositions = []
     mockIsLoading = false
@@ -171,7 +190,7 @@ describe("PositionsList", () => {
   it("renders action buttons for each position", () => {
     mockPositions = [createMockPosition()]
     render(<PositionsList />, { wrapper: createWrapper() })
-    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Share PnL for BTC/USD long" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "+ Collateral" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "- Collateral" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument()
@@ -201,16 +220,92 @@ describe("PositionsList", () => {
     render(<PositionsList />, { wrapper: createWrapper() })
     const pnlElements = screen.getAllByText(/\$950\.00/)
     expect(pnlElements.length).toBeGreaterThanOrEqual(1)
-    expect(pnlElements[0].className).toContain("text-green-500")
+    const numeric = pnlElements[0].closest("[data-slot='numeric']")
+    expect(numeric?.className).toContain("text-green-500")
   })
 
   it("shows negative PnL in red", () => {
     mockPositions = [createMockPosition({ pnlAfterFees: -500 })]
     render(<PositionsList />, { wrapper: createWrapper() })
-    const pnlElements = screen.getAllByText((_content, element) => {
-      const text = element?.textContent ?? ""
-      return text.includes("$-") && text.includes("500")
-    })
+    const pnlElements = screen.getAllByText("-$500.00")
     expect(pnlElements.length).toBeGreaterThanOrEqual(1)
+    const numeric = pnlElements[0].closest("[data-slot='numeric']")
+    expect(numeric?.className).toContain("text-red-500")
+  })
+})
+
+describe("PositionsList share PnL (issue 955)", () => {
+  beforeEach(async () => {
+    stubMatchMedia()
+    PositionsList = (await import("./PositionsList")).PositionsList
+    mockIsLoading = false
+    mockIsDisabled = false
+    mockPositions = [createMockPosition()]
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it("opens the Share PnL card for the clicked position", async () => {
+    render(<PositionsList />, { wrapper: createWrapper() })
+    screen.getByRole("button", { name: "Share PnL for BTC/USD long" }).click()
+
+    const dialog = await screen.findByRole("dialog", { name: "Share PnL" })
+    expect(dialog).toHaveTextContent("Long BTC/USD · +10.00%")
+    expect(screen.getByRole("img", { name: /Long BTC\/USD at 10x, PnL \+10\.00%/ })).toBeInTheDocument()
+  })
+})
+
+describe("PositionsList sorting (issue 966)", () => {
+  beforeEach(async () => {
+    stubMatchMedia()
+    PositionsList = (await import("./PositionsList")).PositionsList
+    mockIsLoading = false
+    mockIsDisabled = false
+    mockPositions = [
+      createMockPosition({ key: "eth", marketName: "ETH/USD", sizeUsd: 2000 }),
+      createMockPosition({ key: "btc", marketName: "BTC/USD", sizeUsd: 90000 }),
+      createMockPosition({ key: "sol", marketName: "SOL/USD", sizeUsd: 500 }),
+    ]
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  const marketOrder = () =>
+    screen
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => row.querySelector("td .font-medium")?.textContent)
+
+  it("orders rows by the controlled sort and reports header clicks", async () => {
+    const { PositionsList: List } = await import("./PositionsList")
+    const onSortChange = vi.fn()
+    render(<List sort={{ columnId: "size", direction: "desc" }} onSortChange={onSortChange} />, {
+      wrapper: createWrapper(),
+    })
+
+    expect(marketOrder()).toEqual(["BTC/USD", "ETH/USD", "SOL/USD"])
+    expect(screen.getByRole("columnheader", { name: "Size" })).toHaveAttribute("aria-sort", "descending")
+
+    screen.getByRole("button", { name: "Size" }).click()
+    expect(onSortChange).toHaveBeenCalledWith(null)
+    screen.getByRole("button", { name: "Market" }).click()
+    expect(onSortChange).toHaveBeenLastCalledWith({ columnId: "market", direction: "asc" })
+  })
+
+  it("never offers price-derived columns as sort keys (OB-085)", async () => {
+    const { PositionsList: List, POSITION_SORT_COLUMNS } = await import("./PositionsList")
+    render(<List sort={null} onSortChange={vi.fn()} />, { wrapper: createWrapper() })
+
+    for (const name of ["Mark", "PnL", "Available risk"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument()
+    }
+    expect(POSITION_SORT_COLUMNS).not.toContain("pnl")
+    expect(POSITION_SORT_COLUMNS).not.toContain("mark")
   })
 })

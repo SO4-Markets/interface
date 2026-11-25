@@ -21,6 +21,12 @@ const tabsSource = readFileSync(
 )
 
 describe("shared focus-ring motion contract", () => {
+  it("keeps the relative-position affordance in the base layer so fixed utilities win", () => {
+    expect(stylesheet).toMatch(
+      /@layer base\s*\{[\s\S]*?:where\(button, a, \[role="button"\]\)\s*\{[\s\S]*?position: relative;/
+    )
+  })
+
   it("uses the existing fast motion tokens and compositor-friendly properties", () => {
     expect(stylesheet).toMatch(
       /:where\(button, a, \[role="button"\]\):after\s*\{[\s\S]*transition:[\s\S]*opacity var\(--duration-fast\) var\(--ease-out\),[\s\S]*transform var\(--duration-fast\) var\(--ease-out\)/

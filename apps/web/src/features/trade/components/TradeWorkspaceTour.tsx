@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
-import { useReducedMotion } from "@/lib/use-reduced-motion"
+import { useFocusTrap } from "@workspace/ui/hooks/use-focus-trap"
 import type { MobileTradeView } from "./MobileTradeNav"
+import { useReducedMotion } from "@/lib/use-reduced-motion"
 
 const TOUR_COMPLETE_KEY = "so4-trade-workspace-tour-v1-complete"
 
@@ -72,6 +73,14 @@ export function TradeWorkspaceTour({ replayKey, onViewChange }: Props) {
     if (replayKey > 0) setStepIndex(0)
   }, [replayKey])
 
+  useFocusTrap({
+    active: step !== null,
+    containerRef: cardRef,
+    initialFocus: () => cardRef.current,
+    returnFocus: () => document.querySelector<HTMLElement>("[data-tour-help-trigger]"),
+    onEscape: dismiss,
+  })
+
   useEffect(() => {
     if (!step) return
     onViewChange(step.view)
@@ -118,22 +127,7 @@ export function TradeWorkspaceTour({ replayKey, onViewChange }: Props) {
   function dismiss() {
     setStepIndex(null)
     writeTourComplete()
-    window.setTimeout(() => {
-      document.querySelector<HTMLButtonElement>("[data-tour-help-trigger]")?.focus()
-    }, 0)
   }
-
-  useEffect(() => {
-    if (!step) return
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        dismiss()
-      }
-    }
-    document.addEventListener("keydown", onKeyDown)
-    return () => document.removeEventListener("keydown", onKeyDown)
-  }, [step])
 
   if (!step || stepIndex === null) return null
 

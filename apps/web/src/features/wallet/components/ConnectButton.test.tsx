@@ -95,6 +95,13 @@ describe("ConnectButton - Disconnected State", () => {
       const button = screen.getByRole("button", { name: /Connect wallet/i })
       expect(button).toBeDisabled()
     })
+
+    it("offers a reconnect action after a recoverable connection failure", () => {
+      useWalletStore.setState({ status: "error" })
+      render(<ConnectButton />)
+
+      expect(screen.getByRole("button", { name: "Reconnect wallet" })).toHaveTextContent("Reconnect Wallet")
+    })
   })
 
   describe("Modal Opening", () => {
@@ -170,6 +177,7 @@ describe("ConnectButton - Disconnected State", () => {
       const button = screen.getByRole("button", { name: /Connecting wallet/i })
       expect(button).toBeInTheDocument()
       expect(button).toHaveAttribute("aria-busy", "true")
+      expect(screen.getByRole("status")).toHaveTextContent("Connecting")
     })
 
     it("should disable button when connecting", () => {

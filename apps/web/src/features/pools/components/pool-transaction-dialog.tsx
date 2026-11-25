@@ -219,7 +219,7 @@ export function PoolTransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden sm:max-w-md">
+      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain overflow-x-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -278,7 +278,7 @@ export function PoolTransactionDialog({
 
           {validationError ? <p className="break-words text-xs text-red-500">{validationError}</p> : null}
           {error ? (
-            <p className="max-h-32 overflow-y-auto break-words rounded-md border border-red-500/20 bg-red-500/5 p-2 text-xs text-red-500">
+            <p className="max-h-32 overflow-y-auto overscroll-contain break-words rounded-md border border-red-500/20 bg-red-500/5 p-2 text-xs text-red-500">
               {error}
             </p>
           ) : null}

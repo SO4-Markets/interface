@@ -305,9 +305,16 @@
 
 /* Shared keyboard focus treatment (OB-021). Keep the outline present for
  * keyboard users and animate only the paint-layer affordance so focus never
- * changes layout or moves the active control. */
-:where(button, a, [role="button"]) {
-  position: relative;
+ * changes layout or moves the active control. This lives in Tailwind's base
+ * layer so explicit `fixed` / `absolute` utilities can override it. */
+@layer base {
+  :where(button, a, [role="button"]) {
+    position: relative;
+  }
+}
+
+.tsqd-open-btn-container {
+  z-index: 20 !important;
 }
 
 :where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
@@ -558,9 +565,9 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
 }
-/* Minimum 44px hit area on touch devices without changing desktop layout. */
+/* Minimum 44px hit area on touch devices and mobile widths without changing desktop density. */
 @utility touch-target {
-    @media (pointer: coarse) {
+    @media (pointer: coarse), (max-width: 639px) {
         min-width: 44px;
         min-height: 44px;
     }
@@ -841,6 +848,35 @@
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
     }
+
+  /* Typographic wrapping (#967): balanced headings, no orphaned last words
+     in body copy. Unsupported browsers fall back to normal wrapping. */
+  h1, h2, h3, h4, h5, h6,
+  [data-slot="dialog-title"], [data-slot="sheet-title"] {
+    text-wrap: balance;
+  }
+  p, li, dd, blockquote, figcaption,
+  [data-slot="dialog-description"], [data-slot="sheet-description"] {
+    text-wrap: pretty;
+  }
+
+  /* Branded text selection (#968) instead of the browser-default blue. */
+  ::selection {
+    background-color: color-mix(in oklch, var(--primary) 40%, transparent);
+    color: var(--foreground);
+  }
+
+  /* Mobile tap polish (#970): no grey tap flash, and no double-tap-zoom
+     delay on interactive elements. Focus-visible rings are unaffected. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :where(a, button, input, select, textarea, label, summary,
+    [role="button"], [role="link"], [role="tab"], [role="menuitem"],
+    [role="option"], [role="checkbox"], [role="radio"], [role="switch"],
+    [role="slider"]) {
+    touch-action: manipulation;
+  }
 }
 
 @layer base {
@@ -1363,6 +1399,28 @@
         transition: opacity var(--duration-fast) var(--ease-out);
     }
     .so4-dialog-content, .so4-sheet-content, .so4-popover-content { transform: none; }
+}
+/* Menus and listboxes keep their opacity fade (it marks open/close) but lose the
+   zoom and slide. The overrides beat the side-specific slide utilities. */
+@media (prefers-reduced-motion: reduce) {
+    [data-slot="select-content"],
+    [data-slot="dropdown-menu-content"] {
+        --tw-enter-scale: 1 !important;
+        --tw-exit-scale: 1 !important;
+        --tw-enter-translate-x: 0 !important;
+        --tw-enter-translate-y: 0 !important;
+        --tw-exit-translate-x: 0 !important;
+        --tw-exit-translate-y: 0 !important;
+    }
+}
+:root[data-reduced-motion="true"] [data-slot="select-content"],
+:root[data-reduced-motion="true"] [data-slot="dropdown-menu-content"] {
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
 }
 :root[data-reduced-motion="true"] .so4-dialog-overlay,
 :root[data-reduced-motion="true"] .so4-sheet-overlay,
