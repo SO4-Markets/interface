@@ -70,7 +70,7 @@ function IconButton({
             size={ICON_BUTTON_SIZE_MAP[size]}
             aria-label={label}
             data-slot="icon-button"
-            className={cn("touch-target", className)} // <-- Add
+            className={cn("touch-target", className)}
             {...props}
           >
             {icon}

@@ -168,17 +168,17 @@ export function TradePanel({ trade }: TradePanelProps) {
         >
           <TabsTrigger
             value="Long"
-            className="flex-1 text-green-500 data-[state=active]:text-green-400 font-medium"
+            className="flex-1 text-green-500 data-[state=active]:text-green-400 font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
           >
             Long
           </TabsTrigger>
           <TabsTrigger
             value="Short"
-            className="flex-1 text-red-500 data-[state=active]:text-red-400 font-medium"
+            className="flex-1 text-red-500 data-[state=active]:text-red-400 font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
           >
             Short
           </TabsTrigger>
-          <TabsTrigger value="Swap" className="flex-1 font-medium">
+          <TabsTrigger value="Swap" className="flex-1 font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none">
             Swap
           </TabsTrigger>
         </TabsList>
@@ -187,7 +187,7 @@ export function TradePanel({ trade }: TradePanelProps) {
         <Tabs value={tradeMode} onValueChange={(v) => setTradeMode(v as TradeMode)}>
           <TabsList variant="line" className="w-full transition-colors duration-base">
             {availableTradeModes.map((mode) => (
-              <TabsTrigger key={mode} value={mode} className="flex-1">
+              <TabsTrigger key={mode} value={mode} className="flex-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none">
                 {mode}
               </TabsTrigger>
             ))}
@@ -285,6 +285,7 @@ export function TradePanel({ trade }: TradePanelProps) {
           <span className="font-medium">Advanced options</span>
           <button
             type="button"
+            className="text-xs font-medium text-primary hover:text-primary/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
             className="touch-target inline-flex items-center justify-center px-2 text-xs font-medium text-primary hover:text-primary/80"
             onClick={() => trade.setAdvanced({ advancedDisplay: !advanced.advancedDisplay })}
           >
